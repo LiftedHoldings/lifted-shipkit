@@ -125,7 +125,9 @@ class Handlers(
 
             io.javalin.http.HandlerType.GET -> {
                 path.startsWith("/api/payment/status/") ||
-                    path.startsWith("/api/payment/return/")
+                    path.startsWith("/api/payment/return/") ||
+                    // Non-secret pricing/tier config — safe for the browser widget.
+                    path == "/api/config/tier"
             }
 
             else -> {
@@ -366,7 +368,21 @@ class Handlers(
             val sessionId = UUID.randomUUID().toString()
             val createdAt = System.currentTimeMillis()
             val externalId = "shipkit-$createdAt-$sessionId"
-            val amount = BigDecimal(quote.amount)
+            // `subtotal` is the shipping price (carrier rate + merchant markup).
+            // The amount the card is actually charged is that plus the tier-2 buyer
+            // surcharge when enabled (3.75% + $0.15) — off by default, so the total
+            // equals the subtotal. Exact BigDecimal money; the total is what the
+            // 3-D Secure authorization/reconciliation runs against.
+            val subtotal = BigDecimal(quote.amount)
+            val surchargeFee =
+                if (config.surcharge.enabled) {
+                    config.surcharge.feeOn(
+                        subtotal,
+                    )
+                } else {
+                    null
+                }
+            val amount = config.surcharge.applyTo(subtotal)
             // Advertised expiry derives from the SAME window enforced at purchase
             // time (isPaymentWindowOpen), so the two can never drift apart.
             val expiresAt =
@@ -409,7 +425,17 @@ class Handlers(
                 mapOf(
                     "session_id" to sessionId,
                     "form_url" to result.url,
-                    "amount" to quote.amount,
+                    // `amount` is the total charged (subtotal + surcharge). The
+                    // widget reads this; it stays a decimal string.
+                    "amount" to amount.toPlainString(),
+                    "subtotal" to subtotal.toPlainString(),
+                    "surcharge" to
+                        mapOf(
+                            "enabled" to config.surcharge.enabled,
+                            "amount" to (surchargeFee?.toPlainString() ?: "0.00"),
+                            "percentage" to config.surcharge.percentage.toPlainString(),
+                            "fixed_cents" to config.surcharge.fixedCents,
+                        ),
                     "currency" to quote.currency.uppercase(),
                     "expires_at" to expiresAt,
                 ),
@@ -631,6 +657,59 @@ class Handlers(
             "tracking_code" to session.trackingCode,
             "carrier" to label?.carrier,
             "service" to label?.service,
+        )
+    }
+
+    // ---- Tier + pricing model ------------------------------------------------
+
+    /**
+     * Report the deployment's adoption tier and its pricing knobs — the honest
+     * three-tier story surfaced to the widget/demo:
+     *
+     *  - `tier` — `selfhost` | `merchant` | `managed` (informational only).
+     *  - `surcharge` — the tier-2 buyer surcharge (3.75% + $0.15) and whether it
+     *    is passed to the buyer.
+     *  - `shipping_markup` — the tier-3 markup Lifted earns on managed shipping.
+     *  - `payments` — the gateway environment + browser card-entry model.
+     *
+     * Non-secret marketing/config data, so it is reachable by publishable keys.
+     * Apply for a merchant/managed account: https://liftedholdings.com/payments
+     */
+    fun getTierConfig(ctx: Context) {
+        val markup = store.getMarkupConfig()
+        ctx.json(
+            mapOf(
+                "tier" to config.tier.slug,
+                "label" to config.tier.label,
+                "surcharge" to
+                    mapOf(
+                        "enabled" to config.surcharge.enabled,
+                        "percentage" to config.surcharge.percentage.toPlainString(),
+                        "fixed_cents" to config.surcharge.fixedCents,
+                        "monthly_fee_usd" to MERCHANT_MONTHLY_FEE_USD,
+                    ),
+                "shipping_markup" to
+                    mapOf(
+                        "percentage_markup" to markup.percentageMarkup,
+                        "fixed_fee_cents" to markup.fixedFeeCents,
+                    ),
+                "payments" to
+                    mapOf(
+                        "configured" to config.paymentsEnabled,
+                        "environment" to (
+                            config.payments
+                                ?.environment
+                                ?.name
+                                ?.lowercase()
+                        ),
+                        "card_entry" to (
+                            config.payments
+                                ?.cardEntryMode
+                                ?.name
+                                ?.lowercase()
+                        ),
+                    ),
+            ),
         )
     }
 
@@ -1021,6 +1100,13 @@ class Handlers(
 
         /** Canonical header carrying the caller's `sk_live_…`/`sk_test_…` API key. */
         private const val API_KEY_HEADER = "ShipKit-Api-Key"
+
+        /**
+         * The tier-2 Lifted 3-D Secure merchant-account monthly fee (USD),
+         * surfaced by `/api/config/tier` alongside the per-transaction surcharge.
+         * Pricing lives at https://liftedholdings.com/payments.
+         */
+        private const val MERCHANT_MONTHLY_FEE_USD = 25
 
         /**
          * How long a payment session stays chargeable/buyable. Advertised to the

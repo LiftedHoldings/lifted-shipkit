@@ -24,11 +24,17 @@ services:
       EASYPOST_API_KEY: "${EASYPOST_API_KEY:-}"
       EASYPOST_WEBHOOK_SECRET: "${EASYPOST_WEBHOOK_SECRET:-}"
       # Lifted Payments — 3-D Secure (always enforced)
+      LIFTED_PAYMENTS_ENV: "${LIFTED_PAYMENTS_ENV:-live}"
       LIFTED_PAYMENTS_API_BASE: "${LIFTED_PAYMENTS_API_BASE:-https://gateway.maverickpayments.com}"
       LIFTED_PAYMENTS_DASHBOARD_BASE: "${LIFTED_PAYMENTS_DASHBOARD_BASE:-https://dashboard.maverickpayments.com}"
+      LIFTED_PAYMENTS_CARD_ENTRY: "${LIFTED_PAYMENTS_CARD_ENTRY:-hosted_fields}"
+      LIFTED_PAYMENTS_HOSTED_FORM_PATH: "${LIFTED_PAYMENTS_HOSTED_FORM_PATH:-/api/gateway/hosted-form}"
       LIFTED_PAYMENTS_BEARER: "${LIFTED_PAYMENTS_BEARER:-}"
       LIFTED_PAYMENTS_TERMINAL_ID: "${LIFTED_PAYMENTS_TERMINAL_ID:-}"
       LIFTED_PAYMENTS_DBA_ID: "${LIFTED_PAYMENTS_DBA_ID:-}"
+      # Adoption tier + tier-2 buyer surcharge (3.75% + $0.15)
+      SHIPKIT_TIER: "${SHIPKIT_TIER:-selfhost}"
+      SHIPKIT_SURCHARGE_ENABLED: "${SHIPKIT_SURCHARGE_ENABLED:-false}"
       # Label store — memory (default) or postgres
       SHIPKIT_STORE: "${SHIPKIT_STORE:-memory}"
       SHIPKIT_DATABASE_URL: "${SHIPKIT_DATABASE_URL:-jdbc:postgresql://db:5432/shipkit?sslmode=require}"

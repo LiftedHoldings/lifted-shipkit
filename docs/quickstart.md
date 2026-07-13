@@ -1,6 +1,6 @@
 # Quickstart — multi-carrier shipping labels in 60 seconds
 
-Get ShipKit running in about a minute. Pick the tier that fits: **self-host** for full control, or **managed** for a one-tag drop-in.
+Get ShipKit running in about a minute. This guide covers the two integration paths — **self-host** for full control and **managed** for a one-tag drop-in. For the full commercial picture (self-host, the Lifted 3-D Secure merchant-account tier, and fully managed, with exact pricing), see **[docs/tiers.md](tiers.md)**.
 
 - [Self-host (free, MIT)](#self-host-free-mit)
 - [Managed (plug-and-play)](#managed-plug-and-play)
@@ -127,7 +127,7 @@ Prefer to configure in JavaScript instead of markup? The widget is a UMD global 
 </script>
 ```
 
-Rates, labels, and 3-D Secure card payment all route through the managed Lifted endpoint. The free tooling stays free via a small managed service fee per label — see [docs/managed.md](managed.md) for the details.
+Rates, labels, and 3-D Secure card payment all route through the managed Lifted endpoint. The free tooling stays free via a small markup on the shipping rate — no per-label fee, no monthly minimum. See [docs/managed.md](managed.md) for the details, or [docs/tiers.md](tiers.md) for all three tiers.
 
 ---
 

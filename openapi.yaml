@@ -253,6 +253,8 @@ paths:
                 session_id: "sess_9f8e7d"
                 form_url: "https://dashboard.maverickpayments.com/hosted-fields/sess_9f8e7d"
                 amount: "9.48"
+                subtotal: "9.48"
+                surcharge: { enabled: false, amount: "0.00", percentage: "3.75", fixed_cents: 15 }
                 currency: "USD"
                 expires_at: "2026-07-12T18:05:00Z"
         "400": { $ref: "#/components/responses/BadRequest" }
@@ -458,6 +460,30 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "503": { $ref: "#/components/responses/FeatureUnconfigured" }
+
+  /api/config/tier:
+    get:
+      tags: [Configuration]
+      summary: Read the adoption tier and pricing model (self-host / merchant / managed).
+      description: |
+        The honest three-tier story: the declared `tier`, the tier-2 buyer
+        `surcharge` (3.75% + $0.15 + $25/mo), the tier-3 `shipping_markup`, and
+        the payments environment / card-entry model. Non-secret — a publishable
+        (`pk_…`) key may read it.
+      operationId: getTierConfig
+      responses:
+        "200":
+          description: The tier and pricing configuration.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TierConfig" }
+              example:
+                tier: "merchant"
+                label: "Lifted 3-D Secure merchant account"
+                surcharge: { enabled: true, amount: "0.00", percentage: "3.75", fixed_cents: 15, monthly_fee_usd: 25 }
+                shipping_markup: { percentage_markup: 12.0, fixed_fee_cents: 50 }
+                payments: { configured: true, environment: "live", card_entry: "hosted_fields" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
 
   /api/config/markup:
     get:
@@ -829,9 +855,44 @@ components:
       properties:
         session_id: { type: string }
         form_url: { type: string, description: "Canonical hosted 3-D Secure form URL." }
-        amount: { type: string, description: "Server-computed; money as a STRING." }
+        amount: { type: string, description: "Total charged (subtotal + surcharge); money as a STRING." }
+        subtotal: { type: string, description: "Shipping price (carrier rate + merchant markup)." }
+        surcharge: { $ref: "#/components/schemas/Surcharge" }
         currency: { type: string }
         expires_at: { type: string, format: date-time }
+    Surcharge:
+      type: object
+      description: |
+        The tier-2 buyer surcharge — the Lifted 3-D Secure merchant-account fee
+        (3.75% + $0.15) optionally passed to the buyer.
+      properties:
+        enabled: { type: boolean, description: "Whether the surcharge is added to the charge." }
+        amount: { type: string, description: "The surcharge fee for this charge; money as a STRING." }
+        percentage: { type: string, examples: ["3.75"] }
+        fixed_cents: { type: integer, examples: [15] }
+    TierConfig:
+      type: object
+      description: The deployment's adoption tier and pricing knobs.
+      properties:
+        tier: { type: string, enum: [selfhost, merchant, managed] }
+        label: { type: string }
+        surcharge:
+          allOf:
+            - { $ref: "#/components/schemas/Surcharge" }
+            - type: object
+              properties:
+                monthly_fee_usd: { type: integer, examples: [25] }
+        shipping_markup:
+          type: object
+          properties:
+            percentage_markup: { type: number }
+            fixed_fee_cents: { type: integer }
+        payments:
+          type: object
+          properties:
+            configured: { type: boolean }
+            environment: { type: [string, "null"], enum: [live, sandbox, null] }
+            card_entry: { type: [string, "null"], enum: [hosted_fields, hosted_form, null] }
     ThreeDs:
       type: [object, "null"]
       properties:

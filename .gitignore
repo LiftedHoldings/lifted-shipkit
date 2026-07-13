@@ -61,3 +61,5 @@ desktop.ini
 
 # --- Docker -----------------------------------------------------------------
 docker-compose.override.yml
+_reference/
+.eztk

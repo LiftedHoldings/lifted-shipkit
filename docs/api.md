@@ -29,8 +29,8 @@ widget calls it under a configurable `endpoint` (default `/api`).
 | `POST` | `/api/shipment/smartrates` | Get delivery-date-accurate SmartRates for a shipment. |
 | `POST` | `/api/shipment/buy` | Buy a label directly for a chosen rate (no card step). |
 | `POST` | `/api/payment/session` | Open a Lifted Payments 3-D Secure payment session. |
-| `GET` | `/api/payment/status/{session_id}` | Poll the server-verified payment / 3-D Secure status. |
-| `POST` | `/api/payment/purchase-label/{session_id}` | Buy the label for an approved session (idempotent). |
+| `GET` | `/api/payment/status/{sessionId}` | Poll the server-verified payment / 3-D Secure status. |
+| `POST` | `/api/payment/purchase-label/{sessionId}` | Buy the label for an approved session (idempotent). |
 | `POST` | `/api/batch/create` | Create and buy a batch of shipments. |
 | `POST` | `/api/scanform/create` | Generate a SCAN form (manifest) for a batch. |
 | `POST` | `/api/customs/create` | Create customs info + items for international shipments. |
@@ -230,10 +230,18 @@ interactive 3-D Secure card step). For card-secured purchases, use the payment f
 
 ## Payment — Lifted Payments 3-D Secure
 
-Card entry uses tokenized hosted fields, and 3-D Secure runs on Lifted Payments — the raw
-card number never touches ShipKit or your server. **3-D Secure is always enforced; there is
-no code path that authorizes a charge without a completed authentication result.** Read
-[3-D Secure explained](3d-secure.md) for why this matters.
+Card entry happens off ShipKit entirely — either on **tokenized hosted fields** (the primary
+model: the card is tokenized in the browser and only the token reaches the server) or on a
+**Maverick-hosted payment form** — and 3-D Secure runs on Lifted Payments. The raw card
+number never touches ShipKit or your server. **3-D Secure is always enforced; there is no
+code path that authorizes a charge without a completed authentication result.**
+
+You call the three `/api/payment/*` routes below; ShipKit translates them into the underlying
+gateway contract (`POST /payment/sale` with the card token nested under `card` and a boolean
+`3ds`, plus `capture` / `refund` / transaction lookup). That contract, both browser capture
+models, and the sandbox-vs-live hosts are documented in
+[3-D Secure → How ShipKit talks to the gateway](3d-secure.md#how-shipkit-talks-to-the-gateway).
+Read [3-D Secure explained](3d-secure.md) for why any of this matters.
 
 ### `POST /api/payment/session`
 
@@ -270,7 +278,7 @@ The canonical payment URL key is **`form_url`** — the browser mounts the token
 fields and 3-D Secure step there. `amount` is a **string**, server-computed and
 authoritative.
 
-### `GET /api/payment/status/{session_id}`
+### `GET /api/payment/status/{sessionId}`
 
 Polls the session's server-verified payment and 3-D Secure state. The status is confirmed
 against Lifted Payments — it is **never** derived from redirect / return-URL parameters.
@@ -298,7 +306,7 @@ The `eci` value is scheme-specific (Visa `05` / Mastercard `02` = fully authenti
 { "success": false, "error": "Payment session not found" }
 ```
 
-### `POST /api/payment/purchase-label/{session_id}`
+### `POST /api/payment/purchase-label/{sessionId}`
 
 Buys the label for an approved session. **Idempotent** — a second call returns the same
 label rather than buying again.

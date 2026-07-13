@@ -1,16 +1,18 @@
 # ShipKit Managed — hosted shipping widget, no PCI scope
 
-There are two ways to run ShipKit. This page is about the second one.
+ShipKit ships in [three tiers](tiers.md). This page is about the third — **fully managed**.
 
-- **Self-host (free, MIT)** — run the backend yourself, bring your own EasyPost account and
-  your own 3-D Secure merchant account. Full control, your infrastructure. See the
-  [integration guide](integration.md) and [architecture](architecture.md).
-- **ShipKit Managed (plug-and-play)** — a drop-in hosted widget, pre-funded and fully
-  managed by Lifted. No backend, no API keys, no PCI scope. One script tag and a managed
-  key. This page.
+- **Tier 1 · Self-host (DIY, free)** — run the backend yourself, bring your own EasyPost
+  account and your own 3-D Secure merchant account. Full control, your infrastructure. See
+  the [integration guide](integration.md) and [architecture](architecture.md).
+- **Tier 2 · Lifted 3-D Secure merchant account** — host it yourself or let us host it (both
+  free), and run your payments on our 3DS merchant account. See [tiers.md](tiers.md#tier-2--lifted-3-d-secure-merchant-account).
+- **Tier 3 · ShipKit Managed (plug & play)** — a drop-in hosted widget on our rails, fully
+  managed by Lifted. No backend, no API keys, no PCI scope. One script tag and a managed key.
+  This page.
 
-Both are legitimate. Self-host is for teams that want control; **managed is for teams that
-just want it to work.**
+All three are legitimate. Self-host is for teams that want control; **managed is for teams
+that just want it to work.**
 
 ## What Managed is
 
@@ -19,11 +21,11 @@ When you pass a `managedKey` instead of an `endpoint`, the widget routes every c
 address verification, rating, the 3-D Secure card step, and label purchase — to Lifted's
 managed edge.
 
-That means Lifted operates, on your behalf:
+That means Lifted operates, on your behalf, **our rails end to end**:
 
-- the ShipKit backend (servers, updates, uptime),
-- the EasyPost carrier account and label funding,
-- the Lifted Payments 3-D Secure payment account,
+- the ShipKit backend (servers, updates, uptime, free hosting),
+- **our** EasyPost carrier account and label funding,
+- **our** Lifted Payments 3-D Secure payment account,
 - and all card handling, so **card data never touches your systems** — you carry no PCI
   scope for it.
 
@@ -39,7 +41,7 @@ You ship one script tag. Everything behind it is someone else's pager.
 | Label funding | You pre-fund EasyPost | Pre-funded |
 | PCI scope for card data | Out of scope (hosted 3DS form) | Out of scope |
 | API keys on your servers | Yes | None |
-| Cost | Free code; your carrier + processing costs | Per-label managed fee (below) |
+| Cost | Free code; your carrier + processing costs | Free — we earn on the shipping-rate markup (below) |
 | Best for | Teams wanting control | Teams that want it live in minutes |
 | Get started | Run the backend | Get a managed key |
 
@@ -92,20 +94,25 @@ Everything else — configuration, callbacks, theming, framework snippets — is
 self-host. See the [integration guide](integration.md). The only difference is `managedKey`
 in place of `endpoint`.
 
-## The managed fee — transparently
+## How managed is priced — transparently
 
-Managed adds a **flat per-label service fee** (a few cents) on top of the carrier's rate —
-**no monthly minimum, and no markup on the carrier rate itself**. That fee is how the free,
-MIT-licensed tooling stays free and how Lifted funds the carrier accounts, payment
-processing, and infrastructure you no longer have to run.
+Managed makes its margin on a **markup over the carrier's shipping rate** — **no per-label
+fee, no monthly minimum, and no charge for the code, the widget, or the hosting.** That
+shipping-rate markup is how the free, MIT-licensed tooling stays free and how Lifted funds the
+carrier accounts, payment processing, and infrastructure you no longer have to run.
 
-- The fee is **per label** — you pay it only when a label is actually bought.
-- It is disclosed on your managed account and shown at checkout before purchase.
-- Carrier rates pass through untouched — the fee is the only add-on.
-- There is no charge for the code, the widget, or self-hosting — those are and stay free.
+- It's the **same markup engine** ShipKit uses everywhere — a percentage of the carrier rate
+  plus an optional flat add-on (`percentage_markup` + `fixed_fee_cents`, see
+  [`POST /api/config/markup`](api.md#markup-configuration)). On managed, Lifted configures it.
+- The charge amount is always **computed server-side** from the carrier rate plus that markup —
+  a client can never underpay for a label.
+- The marked-up rate is **shown at checkout before the buyer pays** — nothing hidden.
+- We earn **only when a label ships.** No label, no cost.
+- The code, the widget, and self-hosting are and stay **free**.
 
-If you would rather not pay a per-label fee, self-host: bring your own EasyPost account and
-your own 3-D Secure merchant account, and you pay only your carrier and processing costs.
+If you'd rather not run on our shipping markup, use another tier: **[self-host](tiers.md#tier-1--self-host-diy-free)**
+with your own EasyPost and merchant account, or the **[Lifted 3-D Secure merchant account](tiers.md#tier-2--lifted-3-d-secure-merchant-account)**
+tier where you bring your own EasyPost and pay only the merchant-account pricing.
 
 ## How to get a managed key
 

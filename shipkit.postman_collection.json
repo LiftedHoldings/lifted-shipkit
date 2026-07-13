@@ -1,0 +1,428 @@
+{
+  "info": {
+    "_postman_id": "5f2a9c34-8d1e-4b6a-9f70-2a1c6e3d7b40",
+    "name": "ShipKit API",
+    "description": "ShipKit — the open shipping toolkit, secured by Lifted Payments 3-D Secure.\n\nBuy multi-carrier shipping labels (USPS, UPS, FedEx and more via EasyPost) and take card payment authenticated by 3-D Secure, so fraud-chargeback liability shifts to the issuer.\n\n## Getting started\n1. Set the collection variables `baseUrl` (your ShipKit host — `http://localhost:8080` self-hosted) and `apiKey` (a ShipKit `sk_live_…`/`sk_test_…` secret key, or a `pk_…` publishable key for the customer flow).\n2. Every `/api/*` request is pre-authorized with the `ShipKit-Api-Key: {{apiKey}}` header at the collection level — `GET /api/health` and the HMAC-verified EasyPost webhook override it to no-auth.\n3. Admin-gated routes (`/api/keys`, key management) also send `X-Session-ID: {{adminSessionId}}` — a verified admin SMS session.\n\n## Money\nAll amounts — carrier rates and charges — are **strings** (e.g. `\"8.42\"`). Parse them as decimals; never float- or string-compare.\n\n## More\nRaw OpenAPI 3.1 spec at `GET {{baseUrl}}/openapi.yaml`; interactive reference at `GET {{baseUrl}}/docs`. Take live payments through a 3-D Secure merchant account at https://liftedholdings.com/payments.\n\nMaintained by Daniel Wilson Kemp · Lifted Holdings.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      { "key": "key", "value": "ShipKit-Api-Key", "type": "string" },
+      { "key": "value", "value": "{{apiKey}}", "type": "string" },
+      { "key": "in", "value": "header", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+    { "key": "apiKey", "value": "sk_live_your_secret_key_here", "type": "string" },
+    { "key": "adminSessionId", "value": "your_admin_sms_session_id", "type": "string" },
+    { "key": "sessionId", "value": "sess_9f8e7d", "type": "string" },
+    { "key": "labelId", "value": "lbl_1a2b3c", "type": "string" },
+    { "key": "keyId", "value": "b2f1c0de-1111-2222-3333-444455556666", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Shipping",
+      "description": "Carriers, rates, labels, bulk/international, and the EasyPost tracking webhook.",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            },
+            "description": "Liveness / readiness probe. No API key required. Reports which features are configured (`shipping`, `payments`)."
+          }
+        },
+        {
+          "name": "Verify address",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ada Lovelace\",\n  \"company\": \"Analytical Engines\",\n  \"street1\": \"1600 Pennsylvania Ave NW\",\n  \"street2\": \"\",\n  \"city\": \"Washington\",\n  \"state\": \"DC\",\n  \"zip\": \"20500\",\n  \"country\": \"US\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/address/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "address", "verify"]
+            },
+            "description": "Verify and normalize a delivery address (USPS delivery verification). `street1`, `city`, `state`, `zip` required; `country` defaults to `US`. Read back `residential` before comparing rates."
+          }
+        },
+        {
+          "name": "Create shipment (rates)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from\": {\n    \"name\": \"Analytical Engines\",\n    \"street1\": \"1 Foundry St\",\n    \"city\": \"Atlanta\",\n    \"state\": \"GA\",\n    \"zip\": \"30301\",\n    \"country\": \"US\",\n    \"phone\": \"4045551234\"\n  },\n  \"to\": {\n    \"name\": \"Ada Lovelace\",\n    \"street1\": \"1600 Pennsylvania Ave NW\",\n    \"city\": \"Washington\",\n    \"state\": \"DC\",\n    \"zip\": \"20500\",\n    \"country\": \"US\"\n  },\n  \"parcel\": {\n    \"weight_oz\": 32,\n    \"length_in\": 10,\n    \"width_in\": 8,\n    \"height_in\": 4\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/shipment/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shipment", "create"]
+            },
+            "description": "Create an EasyPost shipment and return carrier rates. `weight_oz` is OUNCES (required, > 0). Each `rate` is a STRING — sort as a decimal, select by explicit `id`. An empty `rates` with a populated `messages` is a carrier error."
+          }
+        },
+        {
+          "name": "SmartRates",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipment_id\": \"shp_1a2b3c\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/shipment/smartrates",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shipment", "smartrates"]
+            },
+            "description": "Delivery-date-accurate SmartRates for an already-created shipment (EasyPost delivery-date percentiles)."
+          }
+        },
+        {
+          "name": "Buy label (direct)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipment_id\": \"shp_1a2b3c\",\n  \"rate_id\": \"rate_aaa\",\n  \"end_shipper_id\": \"es_123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/shipment/buy",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "shipment", "buy"]
+            },
+            "description": "Buy a label directly for a chosen rate when payment is handled out of band (no interactive 3-D Secure step). Secret-key only. `end_shipper_id` optional — the configured EndShipper is used when omitted."
+          }
+        },
+        {
+          "name": "Create batch",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipment_ids\": [\"shp_a\", \"shp_b\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/batch/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "batch", "create"]
+            },
+            "description": "Create and buy a batch of shipments in one call."
+          }
+        },
+        {
+          "name": "Create SCAN form",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"batch_id\": \"batch_1\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/scanform/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "scanform", "create"]
+            },
+            "description": "Generate a single SCAN form (manifest) for a batch so the carrier scans one barcode instead of every label."
+          }
+        },
+        {
+          "name": "Create customs info",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customs_signer\": \"Ada Lovelace\",\n  \"contents_type\": \"merchandise\",\n  \"eel_pfc\": \"NOEEI 30.37(a)\",\n  \"items\": [\n    {\n      \"description\": \"Cotton t-shirt\",\n      \"quantity\": 2,\n      \"value\": 20.0,\n      \"weight\": 8.0,\n      \"hs_tariff_number\": \"610910\",\n      \"origin_country\": \"US\"\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/customs/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customs", "create"]
+            },
+            "description": "Create customs info + items for an international shipment."
+          }
+        },
+        {
+          "name": "Get EndShipper",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/endshipper/get",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "endshipper", "get"]
+            },
+            "description": "Read the configured EndShipper identity (the registered commercial shipper reused across purchases)."
+          }
+        },
+        {
+          "name": "Create / update EndShipper",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Analytical Engines\",\n  \"company\": \"Analytical Engines LLC\",\n  \"phone\": \"4045551234\",\n  \"street1\": \"1 Foundry St\",\n  \"city\": \"Atlanta\",\n  \"state\": \"GA\",\n  \"zip\": \"30301\",\n  \"country\": \"US\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/endshipper/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "endshipper", "create"]
+            },
+            "description": "Register / update the EndShipper identity."
+          }
+        },
+        {
+          "name": "Get label by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/label/{{labelId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "label", "{{labelId}}"]
+            },
+            "description": "Fetch a stored label by its id. `404` when no label with that id exists."
+          }
+        },
+        {
+          "name": "Get label by session",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/label/session/{{sessionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "label", "session", "{{sessionId}}"]
+            },
+            "description": "Fetch the stored label for a payment session id — handy right after a purchase when you hold the `session_id` but not the label id."
+          }
+        },
+        {
+          "name": "Shred stored label",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/label/session/{{sessionId}}/shred",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "label", "session", "{{sessionId}}", "shred"]
+            },
+            "description": "Remove a label from ShipKit storage. This only deletes the local record — it does NOT void or refund the label with the carrier."
+          }
+        },
+        {
+          "name": "EasyPost tracking webhook",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Hmac-Signature", "value": "hmac-sha256-hex=REPLACE_WITH_HEX_HMAC_OF_RAW_BODY" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"evt_123\",\n  \"description\": \"tracker.updated\",\n  \"result\": {\n    \"tracking_code\": \"9400100000000000000000\",\n    \"status\": \"in_transit\",\n    \"carrier\": \"USPS\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/webhook/easypost",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "webhook", "easypost"]
+            },
+            "description": "Receive EasyPost event webhooks. Authenticated by EasyPost's HMAC-SHA256 signature (NOT an API key) — send `X-Hmac-Signature: hmac-sha256-hex=` + the hex HMAC-SHA256 of the RAW body, keyed by the NFKD-normalized `EASYPOST_WEBHOOK_SECRET`. Verified in constant time."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "description": "The Lifted Payments 3-D Secure payment flow: open a session, poll the server-verified status, then buy the label for an approved (liability-shifted) session.",
+      "item": [
+        {
+          "name": "Open payment session",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipment_id\": \"shp_1a2b3c\",\n  \"rate_id\": \"rate_aaa\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/session",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "session"]
+            },
+            "description": "Open a Lifted Payments 3-D Secure payment session for a chosen rate. The charge `amount` is computed on the SERVER (carrier rate + configured markup) — any client-sent amount is ignored. Returns `session_id`, the hosted 3-D Secure `form_url`, the server-computed `amount` (STRING), `currency`, and `expires_at`."
+          }
+        },
+        {
+          "name": "Poll payment status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/status/{{sessionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "status", "{{sessionId}}"]
+            },
+            "description": "Poll the server-verified payment / 3-D Secure state. Status is confirmed against Lifted Payments — NEVER from return-URL params. `status` ∈ {pending, authenticated, approved, declined, failed}. A label may be bought ONLY when `status == \"approved\"` AND `three_ds.liability_shift == true`."
+          }
+        },
+        {
+          "name": "Purchase label (approved session)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/purchase-label/{{sessionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "purchase-label", "{{sessionId}}"]
+            },
+            "description": "Re-verify the charge server-side, then buy the label. Idempotent — a second call returns the same label. Refuses (`402`) unless approved with a 3-D Secure liability shift; `410` when the session is past its charge window; `409` when a purchase is already in progress."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Keys",
+      "description": "Admin-gated API-key management. Requires a valid API key (the `/api/*` gate) AND a verified admin session (`X-Session-ID: {{adminSessionId}}`).",
+      "item": [
+        {
+          "name": "Mint API key",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Session-ID", "value": "{{adminSessionId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"prod-checkout\",\n  \"mode\": \"live\",\n  \"scope\": \"secret\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/keys",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "keys"]
+            },
+            "description": "Mint a new API key. `scope`: `secret` (`sk_…`, full server key, default) or `publishable` (`pk_…`, browser-safe, customer flow only). `mode`: `live` or `test`. The returned `api_key` is shown ONCE — store it immediately; only a SHA-256 hash is kept."
+          }
+        },
+        {
+          "name": "List API keys",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Session-ID", "value": "{{adminSessionId}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/keys",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "keys"]
+            },
+            "description": "List API keys, newest first — metadata only (never the key or its hash)."
+          }
+        },
+        {
+          "name": "Revoke API key",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "X-Session-ID", "value": "{{adminSessionId}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/keys/{{keyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "keys", "{{keyId}}"]
+            },
+            "description": "Revoke an API key by id. Idempotent — revoking an already-revoked key returns `already_revoked: true`."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "description": "Merchant configuration. The markup set here is added on top of carrier rates and is the amount a customer is charged in the payment flow (computed server-side).",
+      "item": [
+        {
+          "name": "Get markup",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/config/markup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "config", "markup"]
+            },
+            "description": "Read the merchant markup applied on top of carrier rates. `percentage_markup` is a percent (e.g. `12.0` = +12%); `fixed_fee_cents` is a flat add-on in cents; `fixed_fee_dollars` is the same value in dollars."
+          }
+        },
+        {
+          "name": "Update markup",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"percentage_markup\": 12.0,\n  \"fixed_fee_cents\": 50\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/config/markup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "config", "markup"]
+            },
+            "description": "Update the merchant markup. Both fields required. Negative or non-numeric values return `400`. On the managed tier this markup on the shipping rate is how the service is funded."
+          }
+        }
+      ]
+    }
+  ]
+}

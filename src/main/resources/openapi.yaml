@@ -253,6 +253,8 @@ paths:
                 session_id: "sess_9f8e7d"
                 form_url: "https://dashboard.maverickpayments.com/hosted-fields/sess_9f8e7d"
                 amount: "9.48"
+                subtotal: "9.48"
+                surcharge: { enabled: false, amount: "0.00", percentage: "3.75", fixed_cents: 15 }
                 currency: "USD"
                 expires_at: "2026-07-12T18:05:00Z"
         "400": { $ref: "#/components/responses/BadRequest" }
@@ -260,7 +262,7 @@ paths:
         "502": { $ref: "#/components/responses/GatewayError" }
         "503": { $ref: "#/components/responses/FeatureUnconfigured" }
 
-  /api/payment/status/{session_id}:
+  /api/payment/status/{sessionId}:
     get:
       tags: [Payment]
       summary: Poll the server-verified payment / 3-D Secure status.
@@ -270,7 +272,7 @@ paths:
         `three_ds.liability_shift == true`.
       operationId: getPaymentStatus
       parameters:
-        - { $ref: "#/components/parameters/SessionId" }
+        - { $ref: "#/components/parameters/SessionIdCamel" }
       responses:
         "200":
           description: The verified status and 3-D Secure result.
@@ -285,17 +287,17 @@ paths:
         "502": { $ref: "#/components/responses/GatewayError" }
         "503": { $ref: "#/components/responses/FeatureUnconfigured" }
 
-  /api/payment/purchase-label/{session_id}:
+  /api/payment/purchase-label/{sessionId}:
     post:
       tags: [Payment]
       summary: Buy the label for an approved session (idempotent).
       description: |
         Re-verifies the charge server-side, then buys the label. **Idempotent** —
         a second call returns the same label. Refuses unless approved with a
-        3-D Secure liability shift.
+        3-D Secure liability shift, and refuses a session past its charge window.
       operationId: purchaseLabel
       parameters:
-        - { $ref: "#/components/parameters/SessionId" }
+        - { $ref: "#/components/parameters/SessionIdCamel" }
       responses:
         "200":
           description: The purchased label.
@@ -317,6 +319,11 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409":
           description: A label purchase is already in progress for this session.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "410":
+          description: The payment session has expired (past its charge window).
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -453,6 +460,30 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "503": { $ref: "#/components/responses/FeatureUnconfigured" }
+
+  /api/config/tier:
+    get:
+      tags: [Configuration]
+      summary: Read the adoption tier and pricing model (self-host / merchant / managed).
+      description: |
+        The honest three-tier story: the declared `tier`, the tier-2 buyer
+        `surcharge` (3.75% + $0.15 + $25/mo), the tier-3 `shipping_markup`, and
+        the payments environment / card-entry model. Non-secret — a publishable
+        (`pk_…`) key may read it.
+      operationId: getTierConfig
+      responses:
+        "200":
+          description: The tier and pricing configuration.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TierConfig" }
+              example:
+                tier: "merchant"
+                label: "Lifted 3-D Secure merchant account"
+                surcharge: { enabled: true, amount: "0.00", percentage: "3.75", fixed_cents: 15, monthly_fee_usd: 25 }
+                shipping_markup: { percentage_markup: 12.0, fixed_fee_cents: 50 }
+                payments: { configured: true, environment: "live", card_entry: "hosted_fields" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
 
   /api/config/markup:
     get:
@@ -598,6 +629,15 @@ paths:
               properties:
                 label: { type: string, examples: ["prod-checkout"] }
                 mode: { type: string, enum: [live, test], default: live }
+                scope:
+                  type: string
+                  enum: [secret, publishable]
+                  default: secret
+                  description: |
+                    `secret` (`sk_…`) is a full server key. `publishable` (`pk_…`)
+                    is browser-embeddable and limited to the customer rating +
+                    3-D Secure payment flow — it cannot buy a free label, rewrite
+                    pricing, or purge data, so it is safe in page source.
       responses:
         "201":
           description: The minted key (with the one-time `api_key`).
@@ -608,6 +648,7 @@ paths:
                 id: "b2f1c0de-1111-2222-3333-444455556666"
                 label: "prod-checkout"
                 prefix: "sk_live_Ab12Cd"
+                scope: "sk"
                 created_at: "2026-07-12T17:00:00Z"
                 last_used_at: null
                 revoked: false
@@ -673,18 +714,12 @@ components:
         route except `GET /api/health` and the HMAC-verified EasyPost webhook.
 
   parameters:
-    SessionId:
-      name: session_id
-      in: path
-      required: true
-      schema: { type: string }
-      description: Payment session id from `POST /api/payment/session`.
     SessionIdCamel:
       name: sessionId
       in: path
       required: true
       schema: { type: string }
-      description: Payment session id.
+      description: Payment session id from `POST /api/payment/session`.
     AdminSession:
       name: X-Session-ID
       in: header
@@ -820,9 +855,44 @@ components:
       properties:
         session_id: { type: string }
         form_url: { type: string, description: "Canonical hosted 3-D Secure form URL." }
-        amount: { type: string, description: "Server-computed; money as a STRING." }
+        amount: { type: string, description: "Total charged (subtotal + surcharge); money as a STRING." }
+        subtotal: { type: string, description: "Shipping price (carrier rate + merchant markup)." }
+        surcharge: { $ref: "#/components/schemas/Surcharge" }
         currency: { type: string }
         expires_at: { type: string, format: date-time }
+    Surcharge:
+      type: object
+      description: |
+        The tier-2 buyer surcharge — the Lifted 3-D Secure merchant-account fee
+        (3.75% + $0.15) optionally passed to the buyer.
+      properties:
+        enabled: { type: boolean, description: "Whether the surcharge is added to the charge." }
+        amount: { type: string, description: "The surcharge fee for this charge; money as a STRING." }
+        percentage: { type: string, examples: ["3.75"] }
+        fixed_cents: { type: integer, examples: [15] }
+    TierConfig:
+      type: object
+      description: The deployment's adoption tier and pricing knobs.
+      properties:
+        tier: { type: string, enum: [selfhost, merchant, managed] }
+        label: { type: string }
+        surcharge:
+          allOf:
+            - { $ref: "#/components/schemas/Surcharge" }
+            - type: object
+              properties:
+                monthly_fee_usd: { type: integer, examples: [25] }
+        shipping_markup:
+          type: object
+          properties:
+            percentage_markup: { type: number }
+            fixed_fee_cents: { type: integer }
+        payments:
+          type: object
+          properties:
+            configured: { type: boolean }
+            environment: { type: [string, "null"], enum: [live, sandbox, null] }
+            card_entry: { type: [string, "null"], enum: [hosted_fields, hosted_form, null] }
     ThreeDs:
       type: [object, "null"]
       properties:
@@ -855,6 +925,7 @@ components:
         id: { type: string }
         label: { type: string }
         prefix: { type: string, description: "Short display prefix, e.g. sk_live_Ab12Cd." }
+        scope: { type: string, enum: [sk, pk], description: "sk = secret server key; pk = publishable widget key." }
         created_at: { type: string, format: date-time }
         last_used_at: { type: [string, "null"], format: date-time }
         revoked: { type: boolean }

@@ -4,12 +4,16 @@ import com.lifted.shipkit.buildApp
 import com.lifted.shipkit.config.ShipKitConfig
 import com.lifted.shipkit.model.BoughtLabel
 import com.lifted.shipkit.model.PaymentSession
+import com.lifted.shipkit.model.SurchargeConfig
+import com.lifted.shipkit.model.TierMode
+import com.lifted.shipkit.payments.HostedPaymentResult
 import com.lifted.shipkit.payments.LiftedPaymentsClient
 import com.lifted.shipkit.payments.PaymentVerification
 import com.lifted.shipkit.security.ApiKeyStore
 import com.lifted.shipkit.security.InMemoryApiKeyStore
 import com.lifted.shipkit.security.KeyGenerator
 import com.lifted.shipkit.shipping.EasyPostService
+import com.lifted.shipkit.shipping.PaymentPricing
 import com.lifted.shipkit.sms.DisabledSmsVerifier
 import com.lifted.shipkit.sms.SmsConfig
 import com.lifted.shipkit.sms.SmsVerifier
@@ -20,6 +24,7 @@ import io.javalin.Javalin
 import io.javalin.testtools.JavalinTest
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -457,5 +462,66 @@ class ApiIntegrationTest {
             }
         }
         verify(exactly = 0) { easyPost.buyLabel(any(), any(), any(), any()) }
+    }
+
+    // ---- Tier-2 buyer surcharge + tier config surface ------------------------
+
+    @Test
+    fun `payment session adds the tier-2 buyer surcharge to the charged amount`() {
+        val easyPost = mockk<EasyPostService>()
+        val payments = mockk<LiftedPaymentsClient>()
+        // Subtotal (rate + markup) is 8.74; surcharge STANDARD = 3.75% + $0.15.
+        every { easyPost.priceRate(any(), any(), any()) } returns
+            PaymentPricing.Quote(amount = "8.74", baseRate = BigDecimal("7.36"), currency = "USD")
+        val amountSlot = slot<BigDecimal>()
+        every { payments.createHostedPayment(capture(amountSlot), any(), any()) } returns
+            HostedPaymentResult(
+                url = "https://dashboard.maverickpayments.com/pay/x",
+                code = "",
+                amount = BigDecimal("9.22"),
+            )
+        val cfg = config().copy(surcharge = SurchargeConfig.STANDARD, tier = TierMode.MERCHANT)
+        val w = wire(easyPost = easyPost, payments = payments, config = cfg)
+
+        JavalinTest.test(w.app) { _, client ->
+            val (code, bodyText) =
+                post(
+                    client.origin,
+                    "/api/payment/session",
+                    w.key,
+                    """{"shipment_id":"shp_1","rate_id":"rate_1"}""",
+                ).use { it.code to it.body!!.string() }
+            assertEquals(200, code)
+            // 8.74 + (8.74*3.75% + 0.15 = 0.48) = 9.22 charged; subtotal 8.74.
+            assertTrue(bodyText.contains(""""amount":"9.22""""), "total charged: $bodyText")
+            assertTrue(bodyText.contains(""""subtotal":"8.74""""), "subtotal: $bodyText")
+            assertTrue(bodyText.contains(""""enabled":true"""), "surcharge on: $bodyText")
+        }
+        // The gateway was asked to charge the SURCHARGED total, to the cent.
+        assertEquals(0, amountSlot.captured.compareTo(BigDecimal("9.22")))
+    }
+
+    @Test
+    fun `tier config endpoint reports the tier, surcharge, and is publishable-readable`() {
+        val cfg = config().copy(surcharge = SurchargeConfig.STANDARD, tier = TierMode.MANAGED)
+        val w = wire(config = cfg)
+        val pub =
+            KeyGenerator.mint("widget", KeyGenerator.Mode.TEST, KeyGenerator.Scope.PUBLISHABLE)
+        w.keys.add(pub.record)
+
+        JavalinTest.test(w.app) { _, client ->
+            // A secret key sees the full tier story.
+            get(client.origin, "/api/config/tier", w.key).use {
+                assertEquals(200, it.code)
+                val body = it.body!!.string()
+                assertTrue(body.contains(""""tier":"managed""""), body)
+                assertTrue(body.contains(""""fixed_cents":15"""), body)
+                assertTrue(body.contains(""""monthly_fee_usd":25"""), body)
+            }
+            // A publishable (browser) key may read this non-secret pricing config.
+            get(client.origin, "/api/config/tier", pub.plaintext).use {
+                assertEquals(200, it.code, "publishable key can read tier config")
+            }
+        }
     }
 }

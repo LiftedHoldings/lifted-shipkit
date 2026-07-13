@@ -80,6 +80,80 @@ See the [payment flow in the API reference](api.md#payment--lifted-payments-3-d-
 and the [session lifecycle in the architecture doc](architecture.md#payment-session-lifecycle)
 for the mechanics.
 
+## How ShipKit talks to the gateway
+
+Under the hood, Lifted Payments 3-D Secure runs on the **Maverick** gateway. You never call
+it directly — ShipKit's `/api/payment/*` routes wrap it — but this is the contract those
+routes speak, so you can reason about it.
+
+**Hosts and auth.** Two bases, never interchanged:
+
+- **Gateway (processing):** `https://gateway.maverickpayments.com`, or
+  `https://sandbox-gateway.maverickpayments.com` for sandbox. This is where charges are made
+  and transactions are verified.
+- **Dashboard (hosted assets / vault):** the hosted 3-D Secure form and the card vault.
+
+Every request carries `Authorization: Bearer <token>`, and **every money call includes the
+`terminal.id`** (plus the `dbaId`). Which base is used is set by the
+`LIFTED_PAYMENTS_API_BASE` / `LIFTED_PAYMENTS_DASHBOARD_BASE` environment variables — point
+them at the sandbox hosts to run against sandbox, the live hosts to run against production.
+The bearer token, terminal id, and DBA id come from `LIFTED_PAYMENTS_BEARER`,
+`LIFTED_PAYMENTS_TERMINAL_ID`, and `LIFTED_PAYMENTS_DBA_ID`.
+
+### Two ways the browser captures a card — both supported
+
+- **Hosted Fields (primary).** ShipKit mints a short-lived hosted-fields token, the card is
+  tokenized **in the browser** (the PAN never reaches ShipKit or your server), and the
+  resulting card token is charged server-side with 3-D Secure required. This is the
+  Launchpad-proven default.
+- **Hosted Form / hosted payment page.** The buyer is sent to a Maverick-hosted payment page
+  that captures the card and runs 3-D Secure — even less card data in scope. The **exact
+  hosted-form-creation endpoint lives only in Maverick's developer portal**, so ShipKit
+  treats the hosted-form base and path as a **configuration value** rather than hardcoding a
+  guess. `// UNVERIFIED:` confirm the exact path in
+  [developers.maverickpayments.com](https://developers.maverickpayments.com) when wiring your
+  account.
+
+### The charge contract
+
+Once a card token exists, the charge is a single call:
+
+```
+POST {gateway}/payment/sale
+Authorization: Bearer <token>
+
+{
+  "terminal": { "id": 000000 },
+  "amount": "9.48",
+  "card": { "token": "<card-token-from-hosted-fields>" },
+  "3ds": true,
+  "billing": { "name": "Ada Lovelace", "zip": "20500" }
+}
+```
+
+Two details that bite integrators:
+
+- The card token is **nested under `card`** — a top-level `token` is rejected with `422`.
+- **`3ds` is a boolean** (`true`), not a string. ShipKit always sends `true`; there is no code
+  path that omits it.
+
+Amounts are decimal strings with two places, rounded half-up. The follow-on operations:
+
+| Operation | Call | Body |
+|---|---|---|
+| Capture an auth | `POST {gateway}/payment/{txnId}/capture` | `{ "terminal": { "id": … } }` |
+| Refund / void¹ | `POST {gateway}/payment/{txnId}/refund` | `{ "terminal": { "id": … } }` (+ `amount` for a partial refund) |
+| Read a transaction | `GET {gateway}/payment/{txnId}` | — |
+
+¹ There is **no separate `/void`** — a refund covers both. A transaction is treated as
+approved when its status is one of `approved`, `approval`, `success`, `succeeded`, or
+`captured`; ShipKit then reads the `eci` and `cavv` to derive the liability shift (see the
+four-pillars section above).
+
+**Error handling.** A connection failure is **retryable**; a `4xx` is a **definitive
+decline** (do not retry); any other transport error is **unknown — do not retry**. ShipKit
+never buys a label off an ambiguous result.
+
 ## Frictionless vs. challenge — a quick model
 
 | Signal profile | Issuer decision | Cardholder experience |

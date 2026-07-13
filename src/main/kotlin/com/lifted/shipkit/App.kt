@@ -164,6 +164,9 @@ private fun registerRoutes(
     app.get("/api/payment/status/{sessionId}") { h.paymentStatus(it) }
     app.post("/api/payment/purchase-label/{sessionId}") { h.purchaseLabelForSessionEndpoint(it) }
 
+    // Tier + pricing model (honest three-tier story; publishable-key readable)
+    app.get("/api/config/tier") { h.getTierConfig(it) }
+
     // Markup configuration
     app.get("/api/config/markup") { h.getMarkupConfig(it) }
     app.post("/api/config/markup") { h.updateMarkupConfig(it) }

@@ -27,6 +27,7 @@
         <a href="#tiers">Pricing</a>
         <a href="#quickstart">Quickstart</a>
         <a href="#secure">3-D Secure</a>
+        <a href="#developers">API</a>
         <a href="https://github.com/Lifted-Holdings/shipkit" rel="noopener">GitHub</a>
         <a class="nav__cta" href="https://liftedholdings.com/payments" rel="noopener">Get a merchant account</a>
         <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle color theme" title="Toggle theme">
@@ -138,37 +139,120 @@
     <section class="section" id="tiers">
       <div class="wrap">
         <div class="section__head">
-          <h2>Two ways to use ShipKit.</h2>
-          <p>Self-host for full control, or let Lifted run the payments and infrastructure for you. Both are first-class. Managed is recommended for teams that just want it to work.</p>
+          <h2>Three ways to run ShipKit.</h2>
+          <p>Start free and self-hosted, bring our 3-D Secure processing to your own stack, or hand us the whole thing. Every tier is powered by Lifted Payments 3-D Secure — pick your level of control.</p>
         </div>
         <div class="tiers">
+          <!-- Tier 1 -->
           <article class="tier">
+            <span class="tier__eyebrow">Tier 1</span>
             <h3>Self-host</h3>
-            <p class="tier__price">Free · MIT · your infrastructure</p>
+            <p class="tier__blurb">Total freedom, heaviest lift. Clone the repo and plug in your own payments and your own EasyPost.</p>
+            <div class="tier__price">
+              <span class="amt">$0 <small>forever · MIT</small></span>
+              <span class="note">You run the backend and own everything.</span>
+            </div>
             <ul>
-              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> Run the Kotlin backend yourself</li>
-              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> Bring your own EasyPost account</li>
-              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> Full control of data and deploys</li>
-              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> Bring a Lifted Payments 3-D Secure merchant account</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> Full Kotlin + Javalin source, deploy anywhere</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> Bring your OWN payments + OWN EasyPost</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> Your infrastructure, data and rate agreements</li>
+              <li class="dim"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" stroke-linecap="round" stroke-linejoin="round" /></svg> Full control — the most developer work</li>
             </ul>
-            <a class="btn btn--ghost" href="https://liftedholdings.com/payments" rel="noopener">Apply for a 3-D Secure account</a>
+            <a class="btn btn--ghost" href="https://github.com/Lifted-Holdings/shipkit" rel="noopener">Clone on GitHub</a>
+            <p class="tier__subcta">Need a hand? <a href="mailto:support@liftedholdings.com">support@liftedholdings.com</a></p>
           </article>
+
+          <!-- Tier 2 -->
           <article class="tier tier--managed">
-            <span class="tier__badge">Recommended</span>
-            <h3>ShipKit Managed</h3>
-            <p class="tier__price">Plug-and-play · small managed fee per label</p>
+            <span class="tier__eyebrow">Tier 2</span>
+            <span class="tier__badge">Most popular</span>
+            <h3>Lifted 3-D Secure account</h3>
+            <p class="tier__blurb">Our 3-D Secure processing, your choice of host. Bring your own EasyPost — you host or we host, both free.</p>
+            <div class="tier__price">
+              <span class="amt compact">3.75% + 15¢ <small>/ transaction</small></span>
+              <span class="note">plus <strong style="color:var(--heading)">$25 / month</strong> — the merchant account only. Hosting is free either way.</span>
+            </div>
+            <p class="tier__surcharge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+              Surcharge the 3.75% + 15¢ to the buyer with a built-in toggle — net-zero processing cost to you.
+            </p>
             <ul>
-              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> One <code>&lt;script&gt;</code> tag and a managed key</li>
-              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> No backend, no API keys, no PCI scope</li>
-              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> Pre-funded and fully managed by Lifted</li>
-              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> Powered by Lifted Payments 3-D Secure</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> OUR 3-D Secure account — forced 3DS, liability shift</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> Bring your own EasyPost account and rates</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> Self-host it OR let us host it — both free</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> Apply once — the account stays yours</li>
+            </ul>
+            <a class="btn btn--primary" href="https://liftedholdings.com/payments" rel="noopener">Apply for 3-D Secure</a>
+            <p class="tier__subcta">Apply at <a href="https://liftedholdings.com/payments">liftedholdings.com/payments</a></p>
+          </article>
+
+          <!-- Tier 3 -->
+          <article class="tier tier--managed">
+            <span class="tier__eyebrow">Tier 3</span>
+            <span class="tier__badge tier__badge--turn">Turnkey</span>
+            <h3>Fully managed</h3>
+            <p class="tier__blurb">Plug &amp; play. One JS snippet on our rails — our 3-D Secure account and our EasyPost. Zero infrastructure.</p>
+            <div class="tier__price">
+              <span class="amt">$0 <small>setup · free hosting</small></span>
+              <span class="note">We earn only on a configurable markup of the shipping rate.</span>
+            </div>
+            <ul>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> One <code>&lt;script&gt;</code> tag — live in minutes</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> OUR 3-D Secure account + OUR EasyPost</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> No keys to manage, no PCI scope, free hosting</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> Best for "just make it work"</li>
             </ul>
             <a class="btn btn--primary" href="https://liftedholdings.com/payments" rel="noopener">Get a managed key</a>
+            <p class="tier__subcta">Get your key at <a href="https://liftedholdings.com/payments">liftedholdings.com/payments</a></p>
           </article>
         </div>
-        <p style="color:var(--muted);font-size:.82rem;margin-top:16px;">
-          A small managed service fee per label is what keeps the open-source tooling free. No subscriptions, no minimums.
-        </p>
+
+        <!-- Custom development upsell -->
+        <div class="custom-band">
+          <div class="custom-band__copy">
+            <span class="custom-band__ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6" /></svg>
+            </span>
+            <div>
+              <h3>Custom integration &amp; software development</h3>
+              <p>Want ShipKit woven into your custom framework, or a bespoke build from the ground up? Our team does that — tell us what you need.</p>
+            </div>
+          </div>
+          <a class="btn btn--primary" href="mailto:support@liftedholdings.com?subject=ShipKit%20custom%20development">support@liftedholdings.com</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== Developer resources ===================== -->
+    <section class="section" id="developers">
+      <div class="wrap">
+        <div class="section__head">
+          <h2>Built to be integrated in an afternoon.</h2>
+          <p>A machine-readable OpenAPI spec, a rendered API reference, and a ready-to-run Postman collection — every endpoint authenticated with a single <code>ShipKit-Api-Key</code> header.</p>
+        </div>
+        <div class="devres">
+          <article class="devres__card">
+            <span class="devres__ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /><path d="M9 13h6M9 17h6" /></svg></span>
+            <h3>OpenAPI 3.1 spec</h3>
+            <p>The full contract for every route — schemas, error shapes, and the tier &amp; surcharge fields. Import into any codegen or client.</p>
+            <span class="devres__path">GET /openapi.yaml</span>
+            <a class="devres__link" href="/openapi.yaml"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 10l5 5 5-5" /><path d="M12 15V3" /></svg> openapi.yaml</a>
+          </article>
+          <article class="devres__card">
+            <span class="devres__ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg></span>
+            <h3>API reference</h3>
+            <p>A self-contained, dependency-free reference page — browse every endpoint, parameter, and example without leaving your network.</p>
+            <span class="devres__path">GET /docs</span>
+            <a class="devres__link" href="/docs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><path d="M15 3h6v6" /><path d="M10 14L21 3" /></svg> Open reference</a>
+          </article>
+          <article class="devres__card">
+            <span class="devres__ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z" /><path d="M8 12a4 4 0 0 1 4-4 3 3 0 0 1 0 6 4 4 0 0 0-4 4" /></svg></span>
+            <h3>Postman collection</h3>
+            <p>Every endpoint pre-built with example bodies and <code>{{baseUrl}}</code> / <code>{{apiKey}}</code> variables. Import and send in seconds.</p>
+            <span class="devres__path">shipkit.postman_collection.json</span>
+            <a class="devres__link" href="/shipkit.postman_collection.json" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 10l5 5 5-5" /><path d="M12 15V3" /></svg> Import into Postman</a>
+          </article>
+        </div>
       </div>
     </section>
 
@@ -276,8 +360,10 @@
         <p style="margin-top:8px;">ShipKit is open-source software. MIT © 2026 Lifted Holdings.</p>
       </div>
       <nav class="footer__links" aria-label="Footer">
+        <a href="/openapi.yaml">OpenAPI</a>
+        <a href="/docs">API reference</a>
+        <a href="/shipkit.postman_collection.json" download>Postman</a>
         <a href="https://github.com/Lifted-Holdings/shipkit" rel="noopener">GitHub</a>
-        <a href="https://github.com/Lifted-Holdings/shipkit/blob/main/docs/integration.md" rel="noopener">Docs</a>
         <a href="https://liftedholdings.com/payments" rel="noopener">Payments</a>
         <a href="mailto:support@liftedholdings.com">Support</a>
       </nav>

@@ -1,5 +1,8 @@
 package com.lifted.shipkit.config
 
+import com.lifted.shipkit.model.TierMode
+import com.lifted.shipkit.payments.CardEntryMode
+import com.lifted.shipkit.payments.PaymentsEnvironment
 import com.lifted.shipkit.store.StoreBackend
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -29,6 +32,74 @@ class ShipKitConfigTest {
         assertEquals(StoreBackend.MEMORY, config.storeBackend)
         assertNull(config.db)
         assertTrue(config.adminPhoneWhitelist.isEmpty())
+        // Tier defaults to the free self-host tier with the surcharge OFF.
+        assertEquals(TierMode.SELF_HOST, config.tier)
+        assertFalse(config.surcharge.enabled)
+    }
+
+    @Test
+    fun `tier and buyer surcharge are read from the environment`() {
+        val config =
+            ShipKitConfig.fromEnv(
+                env(
+                    mapOf(
+                        "SHIPKIT_TIER" to "merchant",
+                        "SHIPKIT_SURCHARGE_ENABLED" to "true",
+                    ),
+                ),
+            )
+        assertEquals(TierMode.MERCHANT, config.tier)
+        assertTrue(config.surcharge.enabled)
+        assertEquals(0, config.surcharge.percentage.compareTo(java.math.BigDecimal("3.75")))
+        assertEquals(15, config.surcharge.fixedCents)
+    }
+
+    @Test
+    fun `sandbox env selects the sandbox gateway and dashboard bases`() {
+        val config =
+            ShipKitConfig.fromEnv(
+                env(
+                    mapOf(
+                        "LIFTED_PAYMENTS_BEARER" to "token",
+                        "LIFTED_PAYMENTS_TERMINAL_ID" to "1",
+                        "LIFTED_PAYMENTS_DBA_ID" to "2",
+                        "LIFTED_PAYMENTS_ENV" to "sandbox",
+                        "LIFTED_PAYMENTS_CARD_ENTRY" to "hosted_form",
+                    ),
+                ),
+            )
+        assertEquals(PaymentsEnvironment.SANDBOX, config.payments?.environment)
+        assertEquals(
+            "https://sandbox-gateway.maverickpayments.com",
+            config.payments?.gatewayBaseUrl,
+        )
+        assertEquals(
+            "https://sandbox-dashboard.maverickpayments.com",
+            config.payments?.dashboardBaseUrl,
+        )
+        assertEquals(CardEntryMode.HOSTED_FORM, config.payments?.cardEntryMode)
+    }
+
+    @Test
+    fun `an explicit base URL overrides the env-derived sandbox base`() {
+        val config =
+            ShipKitConfig.fromEnv(
+                env(
+                    mapOf(
+                        "LIFTED_PAYMENTS_BEARER" to "token",
+                        "LIFTED_PAYMENTS_TERMINAL_ID" to "1",
+                        "LIFTED_PAYMENTS_DBA_ID" to "2",
+                        "LIFTED_PAYMENTS_ENV" to "sandbox",
+                        "LIFTED_PAYMENTS_API_BASE" to "https://gw.internal.test",
+                    ),
+                ),
+            )
+        assertEquals("https://gw.internal.test", config.payments?.gatewayBaseUrl)
+        // Dashboard still derives from the sandbox env when not overridden.
+        assertEquals(
+            "https://sandbox-dashboard.maverickpayments.com",
+            config.payments?.dashboardBaseUrl,
+        )
     }
 
     @Test

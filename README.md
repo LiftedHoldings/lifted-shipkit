@@ -29,23 +29,34 @@ Buying a shipping label should be a few lines of code, not a project. ShipKit gi
 
 - **Real carriers, real rates.** Address verification, live multi-carrier rate compare, SmartRates, label purchase, batch, scan forms, customs, tracking webhooks.
 - **Built for shipping's fraud problem.** Labels bought with stolen cards are a top chargeback category — real goods, shipped fast, disputed weeks later. ShipKit forces **Lifted Payments 3-D Secure** on every card charge, so the issuer authenticates the buyer before the label prints and fraud-and-chargeback liability shifts off you.
-- **Two ways to run it.** Self-host the Kotlin backend, or drop in one managed `<script>` tag. Same widget, same API.
+- **Three ways to run it.** Self-host it all, put your checkout on our 3-D Secure merchant account, or drop in one managed `<script>` tag. Same widget, same API.
 - **No lock-in.** MIT licensed, dependency-free frontend, clean modular backend. Read it, fork it, ship it.
 
 ---
 
 ## Choose your tier
 
-| | **Self-host** (free, MIT) | **ShipKit Managed** (plug-and-play) |
-|---|---|---|
-| Setup | Run the backend, bring your keys | One `<script>` tag + a managed key |
-| Infrastructure | Yours | Fully managed by Lifted |
-| API keys / PCI scope | You hold EasyPost + payment keys | None — Lifted holds them |
-| Payments | Your 3-D Secure merchant account | Pre-funded, managed for you |
-| Best for | Teams that want full control | Teams that just want it to work |
-| Cost | Free | Free tooling + a flat per-label service fee (a few cents, shown before you ship) — no monthly minimum, no markup on carrier rates |
+ShipKit comes in three tiers — pick how much you want to run yourself. All three are powered by **Lifted Payments 3-D Secure**.
 
-Both tiers are powered by **Lifted Payments 3-D Secure**. Self-host needs your own 3DS merchant account — [apply at liftedholdings.com/payments](https://liftedholdings.com/payments). Managed is pre-funded — [get a managed key](https://liftedholdings.com/payments).
+| | **1 · Self-host** · DIY, free | **2 · Lifted 3-D Secure merchant account** | **3 · Fully managed** · plug & play |
+|---|---|---|---|
+| What you run | Everything — your own rails | Your checkout on **our** 3DS merchant account | One JS snippet on **our** rails |
+| Payments | Your own processor | **Our** 3-D Secure merchant account | **Our** 3-D Secure account |
+| EasyPost (carriers) | Your own account | Your own account | **Ours** — included |
+| Hosting | You host | **You host _or_ we host — both free** | We host — free |
+| PCI scope for card data | Yours | Out of scope (hosted 3DS form) | Out of scope (hosted 3DS form) |
+| Cost | **Free** (MIT) | **3.75% + $0.15 / transaction + $25 / month** — the merchant account only¹ | **Free** — we earn on the shipping rate² |
+| Best for | Full control, heaviest dev work | Our processing, your choice of host | "Just make it work" |
+| Get started | [GitHub](https://github.com/Lifted-Holdings/shipkit) · [support@](mailto:support@liftedholdings.com) | [Apply → liftedholdings.com/payments](https://liftedholdings.com/payments) | [Get a managed key →](https://liftedholdings.com/payments) |
+
+¹ The **3.75% + 15¢** processing cost can be **surcharged to the buyer** with a built-in surcharge-framework toggle, so the per-transaction fee lands on the cardholder rather than on you. The **$25/month** is the standard merchant-account fee.
+² **Managed** runs on our 3DS account and our EasyPost with free hosting; we make our margin on a **configurable markup over the carrier's shipping rate** (set via `POST /api/config/markup`), shown at checkout before the buyer pays. Carrier rates, the code, the widget, and self-hosting stay free.
+
+Full side-by-side breakdown with the exact numbers: **[docs/tiers.md](docs/tiers.md)**.
+
+### Need something custom?
+
+Want ShipKit woven into your own framework, or a bespoke build on top of it? We do **custom integration and software development** — tell us what you're building: **[support@liftedholdings.com](mailto:support@liftedholdings.com)**.
 
 ---
 
@@ -169,15 +180,30 @@ Read the full explainer: [docs/3d-secure.md](docs/3d-secure.md).
 
 | Doc | What's in it |
 |---|---|
+| [Tiers & pricing](docs/tiers.md) | The three tiers side by side, with exact pricing and the surcharge toggle |
 | [Quickstart](docs/quickstart.md) | Run self-host or embed managed in 60 seconds |
 | [Integration](docs/integration.md) | Script-tag setup, config table, callbacks, React/Vue snippets |
-| [Managed tier](docs/managed.md) | How the managed widget works, keys, and fee transparency |
+| [Managed tier](docs/managed.md) | How the managed widget works, keys, and how the shipping-rate markup funds it |
 | [Authentication](docs/authentication.md) | Minting API keys, the `ShipKit-Api-Key` header, admin-gated key management |
 | [Architecture](docs/architecture.md) | Module map and request flow |
 | [API](docs/api.md) | HTTP endpoints and payloads |
 | [3-D Secure](docs/3d-secure.md) | How 3DS protects you, and how to apply |
 
 A running server also serves an **interactive API reference at `/docs`** and the raw **OpenAPI 3.1 spec at `/openapi.yaml`**.
+
+---
+
+## Import into Postman
+
+[![Run in Postman](https://run.pstmn.io/button.svg)](https://god.gw.postman.com/run-collection/36630865-bd2412e8-cfe6-42e4-9fe6-e3ae9d025750?action=collection%2Ffork)
+
+One click forks the live **ShipKit API** collection into your own Postman. Prefer to do it by hand?
+
+1. **Import the collection** — [`shipkit.postman_collection.json`](shipkit.postman_collection.json) (Postman Collection v2.1). In Postman, choose **Import → File** and pick the JSON, or drag it into the sidebar.
+2. **Set two collection variables** — `baseUrl` (e.g. `http://localhost:8080`) and `apiKey` (a ShipKit `sk_…` secret key, or a `pk_…` publishable key for the customer-flow routes). Admin-gated key management also reads `adminSessionId`.
+3. **Send.** Auth is wired at the collection level, so the `ShipKit-Api-Key: {{apiKey}}` header rides on every `/api/*` request automatically — `GET /api/health` and the HMAC-verified EasyPost webhook are exempt. Requests are grouped into **Shipping**, **Payments**, **Keys**, and **Admin** folders, each with a ready-to-edit example body.
+
+Prefer OpenAPI? A running server serves the raw spec at **`/openapi.yaml`** and an interactive reference at **`/docs`** — see [docs/api.md](docs/api.md).
 
 ---
 

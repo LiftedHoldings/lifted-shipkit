@@ -1,5 +1,6 @@
 package com.lifted.shipkit.payments
 
+import io.mockk.CapturingSlot
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.IOException
+import java.math.BigDecimal
 
 /**
  * The [LiftedPaymentsClient] HTTP surface exercised against a mocked OkHttp
@@ -140,5 +142,169 @@ class LiftedPaymentsClientHttpTest {
     fun `verifyPayment raises IOException on a gateway error`() {
         val client = LiftedPaymentsClient(config, http(503, "unavailable"))
         assertThrows(IOException::class.java) { client.verifyPayment("shipkit-1") }
+    }
+
+    // ---- Real Maverick contract: sale / capture / refund / get / hosted-fields ----
+
+    /** Mock that captures the outgoing request AND returns a canned response. */
+    private fun capturing(
+        code: Int,
+        body: String,
+        slot: CapturingSlot<Request>,
+    ): OkHttpClient {
+        val http = mockk<OkHttpClient>()
+        every { http.newCall(capture(slot)) } answers {
+            val call = mockk<Call>()
+            every { call.execute() } returns
+                Response
+                    .Builder()
+                    .request(slot.captured)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(code)
+                    .message("mock")
+                    .body(body.toResponseBody("application/json".toMediaType()))
+                    .build()
+            call
+        }
+        return http
+    }
+
+    private fun bodyOf(request: Request): String {
+        val buffer = okio.Buffer()
+        request.body?.writeTo(buffer)
+        return buffer.readUtf8()
+    }
+
+    @Test
+    fun `sale posts the real payment-sale contract and reports approval plus shift`() {
+        val slot = slot<Request>()
+        val http =
+            capturing(
+                200,
+                """{"id":"txn_9","status":{"status":"Approved"},"authCode":"OK123",
+                    "threeds":{"eci":"05","cavv":"crypto123"}}""",
+                slot,
+            )
+        val client = LiftedPaymentsClient(config, http)
+
+        val result = client.sale(BigDecimal("9.22"), cardToken = "tok_abc")
+
+        assertEquals("txn_9", result.transactionId)
+        assertEquals("approved", result.status)
+        assertTrue(result.approved)
+        assertTrue(result.liabilityShift)
+        assertEquals("OK123", result.authCode)
+
+        val url = slot.captured.url.toString()
+        assertTrue(
+            url == "https://gateway.maverickpayments.com/payment/sale",
+            "posts to /payment/sale, got $url",
+        )
+        assertEquals("Bearer test-bearer", slot.captured.header("Authorization"))
+        val sent = bodyOf(slot.captured)
+        // Card nested under `card` as a token, forced 3ds BOOLEAN, terminal.id, 2dp amount.
+        assertTrue(sent.contains(""""card":{"token":"tok_abc"}"""), "card token nested: $sent")
+        assertTrue(sent.contains(""""3ds":true"""), "forced 3ds boolean: $sent")
+        assertTrue(sent.contains(""""terminal":{"id":3}"""), "terminal id: $sent")
+        assertTrue(sent.contains(""""amount":"9.22""""), "2dp amount: $sent")
+    }
+
+    @Test
+    fun `sale approved WITHOUT a shift is refused (forced 3DS)`() {
+        val slot = slot<Request>()
+        val http =
+            capturing(
+                200,
+                """{"id":"txn_x","status":{"status":"Approved"},"threeds":{"eci":"07"}}""",
+                slot,
+            )
+        val result =
+            LiftedPaymentsClient(
+                config,
+                http,
+            ).sale(BigDecimal("9.22"), cardToken = "tok_abc")
+        assertEquals("declined", result.status)
+        assertFalse(result.approved)
+    }
+
+    @Test
+    fun `sale raises IOException on a gateway error`() {
+        val client = LiftedPaymentsClient(config, http(500, "boom"))
+        assertThrows(
+            IOException::class.java,
+        ) { client.sale(BigDecimal("1.00"), cardToken = "tok_abc") }
+    }
+
+    @Test
+    fun `capture posts terminal plus a partial amount and approves without a shift`() {
+        val slot = slot<Request>()
+        val http = capturing(200, """{"id":"txn_9","status":{"status":"captured"}}""", slot)
+        val result = LiftedPaymentsClient(config, http).capture("txn_9", BigDecimal("5.00"))
+
+        assertTrue(result.approved, "captured status approves")
+        assertEquals(
+            "https://gateway.maverickpayments.com/payment/txn_9/capture",
+            slot.captured.url.toString(),
+        )
+        val sent = bodyOf(slot.captured)
+        assertTrue(sent.contains(""""terminal":{"id":3}"""), sent)
+        assertTrue(
+            sent.contains(""""partial":{"amount":"5.00"}"""),
+            "partial capture amount: $sent",
+        )
+    }
+
+    @Test
+    fun `refund posts terminal plus amount to the refund path`() {
+        val slot = slot<Request>()
+        val http = capturing(200, """{"id":"txn_9","status":{"status":"success"}}""", slot)
+        val result = LiftedPaymentsClient(config, http).refund("txn_9", BigDecimal("2.50"))
+
+        assertTrue(result.approved, "success status approves")
+        assertEquals(
+            "https://gateway.maverickpayments.com/payment/txn_9/refund",
+            slot.captured.url.toString(),
+        )
+        assertTrue(bodyOf(slot.captured).contains(""""amount":"2.50""""))
+    }
+
+    @Test
+    fun `getPayment reads a single transaction by id under forced 3DS`() {
+        val body = """{"id":"txn_9","status":{"status":"Approved"},"threeds":{"eci":"05","cavv":"c"}}"""
+        val v = LiftedPaymentsClient(config, http(200, body)).getPayment("txn_9")
+        assertEquals("approved", v.status)
+        assertTrue(v.liabilityShift)
+    }
+
+    @Test
+    fun `getPayment unwraps a record nested under item`() {
+        val body =
+            """{"item":{"id":"txn_9","status":{"status":"Approved"},"threeds":{"eci":"07"}}}"""
+        val v = LiftedPaymentsClient(config, http(200, body)).getPayment("txn_9")
+        // Approved but no shift -> declined under forced 3DS.
+        assertEquals("declined", v.status)
+    }
+
+    @Test
+    fun `hostedFieldsToken mints a token on the dashboard host with forced 3ds`() {
+        val slot = slot<Request>()
+        val http = capturing(200, """{"accessToken":"hf_abc","expiration":15}""", slot)
+        val token = LiftedPaymentsClient(config, http).hostedFieldsToken("https://shop.example")
+
+        assertEquals("hf_abc", token.accessToken)
+        assertEquals(
+            "https://dashboard.maverickpayments.com/api/hosted-fields/token",
+            slot.captured.url.toString(),
+        )
+        val sent = bodyOf(slot.captured)
+        assertTrue(sent.contains(""""3ds":true"""), "forced 3ds: $sent")
+        assertTrue(sent.contains(""""terminal":3"""), "terminal: $sent")
+        assertTrue(sent.contains(""""domain":"https://shop.example""""), sent)
+    }
+
+    @Test
+    fun `hostedFieldsToken rejects a non-https domain`() {
+        val client = LiftedPaymentsClient(config, http(200, "{}"))
+        assertThrows(IOException::class.java) { client.hostedFieldsToken("http://shop.example") }
     }
 }
