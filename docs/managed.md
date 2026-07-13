@@ -43,7 +43,7 @@ You ship one script tag. Everything behind it is someone else's pager.
 | API keys on your servers | Yes | None |
 | Cost | Free code; your carrier + processing costs | Free — we earn on the shipping-rate markup (below) |
 | Best for | Teams wanting control | Teams that want it live in minutes |
-| Get started | Run the backend | [Create a free account](https://liftedholdings.com/shipkit) |
+| Get started | Run the backend | [Create a free account](https://liftedholdings.com/shipkit/start) |
 
 ## Quickstart
 
@@ -119,12 +119,12 @@ tier where you bring your own EasyPost and pay only the merchant-account pricing
 **No merchant-account application.** Managed runs on Lifted's rails, so you just create a free
 account and get your key instantly — no infrastructure, no underwriting, no PCI paperwork.
 
-1. Create a free account at **[liftedholdings.com/shipkit](https://liftedholdings.com/shipkit)** —
+1. Create a free account at **[liftedholdings.com/shipkit/start](https://liftedholdings.com/shipkit/start)** —
    just your name, email, and company.
 2. Receive your managed key — a **publishable** `pk_live_…` key, safe to embed in the browser.
 3. Paste it into the script tag above. You're live.
 
-**Create your free account → get the JS at [liftedholdings.com/shipkit](https://liftedholdings.com/shipkit)**
+**Create your free account → get the JS at [liftedholdings.com/shipkit/start](https://liftedholdings.com/shipkit/start)**
 
 Questions about setup? Reach the team at
 [support@liftedholdings.com](mailto:support@liftedholdings.com).

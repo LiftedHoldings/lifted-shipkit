@@ -38,7 +38,7 @@ browser. See [Authentication](authentication.md).
 The `integrity` and `crossorigin` attributes pin the script to a published, verified build —
 copy the exact Subresource Integrity hash for your version from the
 [releases page](https://github.com/Lifted-Holdings/shipkit/releases). Create a free account and
-get a managed key at **[liftedholdings.com/shipkit](https://liftedholdings.com/shipkit)** — no
+get a managed key at **[liftedholdings.com/shipkit/start](https://liftedholdings.com/shipkit/start)** — no
 merchant-account application.
 
 ### Self-host (your backend)

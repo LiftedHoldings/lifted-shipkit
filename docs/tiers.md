@@ -19,7 +19,7 @@ happens without an authenticated, liability-shifted result.
 | Dev effort | Highest | Low — apply, plug in keys | Lowest — one tag |
 | **Cost** | **Free** (MIT) | **3.75% + $0.15 / transaction + $25 / month** — the merchant account only¹ | **Free** — we earn on the shipping rate² |
 | Best for | Full control | Our processing, your choice of host | "Just make it work" |
-| Get started | [GitHub](https://github.com/Lifted-Holdings/shipkit) | [Apply →](https://liftedholdings.com/payments) | [Create free account →](https://liftedholdings.com/shipkit) |
+| Get started | [GitHub](https://github.com/Lifted-Holdings/shipkit) | [Apply →](https://liftedholdings.com/payments) | [Create free account →](https://liftedholdings.com/shipkit/start) |
 
 ¹ Surchargeable — see [Tier 2](#tier-2--lifted-3-d-secure-merchant-account) below.
 ² Configurable shipping-rate markup — see [Tier 3](#tier-3--fully-managed-plug--play) below.
@@ -119,7 +119,7 @@ checkout **before** the buyer pays — nothing hidden.
 
 See **[managed.md](managed.md)** for the full managed walkthrough.
 
-> **Get started:** [Create your free account → get the JS at liftedholdings.com/shipkit](https://liftedholdings.com/shipkit).
+> **Get started:** [Create your free account → get the JS at liftedholdings.com/shipkit/start](https://liftedholdings.com/shipkit/start).
 
 ---
 

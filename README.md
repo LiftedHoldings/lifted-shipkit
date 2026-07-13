@@ -75,14 +75,14 @@ ShipKit comes in three tiers — pick how much you want to run yourself. All thr
 | PCI scope for card data | Yours | Out of scope (hosted 3DS form) | Out of scope (hosted 3DS form) |
 | Cost | **Free** (MIT) | **3.75% + $0.15 / transaction + $25 / month** — the merchant account only¹ | **Free** — we earn on the shipping rate² |
 | Best for | Full control, heaviest dev work | Our processing, your choice of host | "Just make it work" |
-| Get started | [GitHub](https://github.com/Lifted-Holdings/shipkit) · [support@](mailto:support@liftedholdings.com) | [Apply → liftedholdings.com/payments](https://liftedholdings.com/payments) | [Create free account → get the JS](https://liftedholdings.com/shipkit) |
+| Get started | [GitHub](https://github.com/Lifted-Holdings/shipkit) · [support@](mailto:support@liftedholdings.com) | [Apply → liftedholdings.com/payments](https://liftedholdings.com/payments) | [Create free account → get the JS](https://liftedholdings.com/shipkit/start) |
 
 ¹ The **3.75% + 15¢** processing cost can be **surcharged to the buyer** with a built-in surcharge-framework toggle, so the per-transaction fee lands on the cardholder rather than on you. The **$25/month** is the standard merchant-account fee.
 ² **Managed** needs **no merchant-account application** — you just create a free account (name, email, company) and instantly get your plug-and-play JS snippet and managed key. It runs on our 3DS account and our EasyPost with free hosting; we make our margin on a **configurable markup over the carrier's shipping rate** (set via `POST /api/config/markup`), shown at checkout before the buyer pays. Carrier rates, the code, the widget, and self-hosting stay free.
 
 Full side-by-side breakdown with the exact numbers: **[docs/tiers.md](docs/tiers.md)**.
 
-> Two Lifted links, two jobs: **[liftedholdings.com/shippingtool](https://liftedholdings.com/shippingtool)** is the working live demo you can play with; **[liftedholdings.com/shipkit](https://liftedholdings.com/shipkit)** is where you create a free managed account and get your snippet.
+> Two Lifted links, two jobs: the **live demo** is at **[liftedholdings.com/shippingtool](https://liftedholdings.com/shippingtool)** (also served at /shipkit) — play with it; you **create a free managed account** and get your snippet at **[liftedholdings.com/shipkit/start](https://liftedholdings.com/shipkit/start)**.
 
 ### Need something custom?
 
@@ -121,7 +121,7 @@ Keys come in two scopes: the browser widget uses a **publishable** `pk_…` key 
 
 ### Managed (plug-and-play)
 
-No application, no infra — [create a free account](https://liftedholdings.com/shipkit), get your managed key, and add one tag:
+No application, no infra — [create a free account](https://liftedholdings.com/shipkit/start), get your managed key, and add one tag:
 
 ```html
 <div id="ship"></div>
@@ -132,7 +132,7 @@ No application, no infra — [create a free account](https://liftedholdings.com/
   data-managed-key="pk_live_your_publishable_key"></script>
 ```
 
-That's the whole integration — the widget routes rates, labels, and 3-D Secure card payment through the managed Lifted endpoint. [Create your free account → get the JS](https://liftedholdings.com/shipkit)
+That's the whole integration — the widget routes rates, labels, and 3-D Secure card payment through the managed Lifted endpoint. [Create your free account → get the JS](https://liftedholdings.com/shipkit/start)
 
 > **Placeholders:** the CDN host and the `integrity` hash above are placeholders until the first published release. A browser refuses to run a script whose SRI hash doesn't match, so the tag stays inert until you drop in the real values — get the live host and hash from your managed account or the [releases page](https://github.com/Lifted-Holdings/shipkit/releases). A non-loading tag before then is expected, not a mistake on your end.
 
