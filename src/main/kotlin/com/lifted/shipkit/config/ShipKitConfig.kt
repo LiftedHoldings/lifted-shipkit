@@ -57,11 +57,30 @@ data class ShipKitConfig(
      * server-side source of truth; it is never a client/widget toggle.
      */
     val frictionlessAllowed: Boolean = false,
+    /**
+     * Requests allowed per rolling minute, per **(publishable-key id + client IP)**,
+     * on the browser-reachable paid paths (address verify, shipment create,
+     * SmartRates, payment session/status, purchase-label). Closes the
+     * "denial-of-wallet" faucet: a `pk_…` key is embedded in page source by design,
+     * so a lifted key could otherwise loop the EasyPost-billed / gateway calls for
+     * free. Secret (`sk_…`) keys are server-side and trusted, so they are not
+     * limited. Read from `SHIPKIT_RATE_LIMIT_PER_MINUTE`; `0` (or negative) disables
+     * limiting. Defaults to a generous [DEFAULT_RATE_LIMIT_PER_MINUTE].
+     */
+    val rateLimitPerMinute: Int = DEFAULT_RATE_LIMIT_PER_MINUTE,
 ) {
     val shippingEnabled: Boolean get() = easyPostApiKey != null
     val paymentsEnabled: Boolean get() = payments != null
 
     companion object {
+        /**
+         * Default per-minute request budget for the publishable-key paid paths when
+         * `SHIPKIT_RATE_LIMIT_PER_MINUTE` is unset. Generous enough that a real
+         * customer checkout (verify → rate → session → a few status polls → buy)
+         * never trips it, while still closing the open faucet on a lifted `pk_` key.
+         */
+        const val DEFAULT_RATE_LIMIT_PER_MINUTE = 120
+
         /** How the [ShipKitConfig] reads the environment (overridable for tests). */
         fun interface Env {
             operator fun get(name: String): String?
@@ -76,6 +95,10 @@ data class ShipKitConfig(
                     ?: "http://localhost:8080"
             val corsOrigins =
                 env["SHIPKIT_CORS_ORIGINS"]?.trim()?.takeIf { it.isNotEmpty() } ?: "*"
+            // Denial-of-wallet throttle for the publishable-key paid paths; 0 disables.
+            val rateLimitPerMinute =
+                env["SHIPKIT_RATE_LIMIT_PER_MINUTE"]?.trim()?.toIntOrNull()
+                    ?: DEFAULT_RATE_LIMIT_PER_MINUTE
 
             val easyPostApiKey = env["EASYPOST_API_KEY"]?.trim()?.takeIf { it.isNotEmpty() }
             val easyPostWebhookSecret =
@@ -191,6 +214,7 @@ data class ShipKitConfig(
                 tier = tier,
                 surcharge = surcharge,
                 frictionlessAllowed = frictionlessAllowed,
+                rateLimitPerMinute = rateLimitPerMinute,
             )
         }
 

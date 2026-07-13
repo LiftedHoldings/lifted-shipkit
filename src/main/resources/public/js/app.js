@@ -189,8 +189,9 @@
         if (!s) return json({ status: 'failed' });
         // §2: purchase is allowed ONLY when status==="approved" AND
         // three_ds.liability_shift===true. Frictionless Visa result: ECI 05.
+        // (CAVV is never returned to the client — it stays server-side; see Handlers.)
         if (s.status === 'approved') {
-          return json({ status: 'approved', three_ds: { eci: '05', cavv: 'AAABBWcSNI...demo', liability_shift: true } });
+          return json({ status: 'approved', three_ds: { eci: '05', liability_shift: true } });
         }
         return json({ status: s.status, three_ds: null });
       }

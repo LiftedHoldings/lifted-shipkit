@@ -281,7 +281,7 @@ paths:
               schema: { $ref: "#/components/schemas/PaymentStatusResponse" }
               example:
                 status: "approved"
-                three_ds: { eci: "05", cavv: "AAABBABZUAAAAAAAxxxxxxxx=", liability_shift: true }
+                three_ds: { eci: "05", liability_shift: true }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
         "502": { $ref: "#/components/responses/GatewayError" }
@@ -1049,9 +1049,10 @@ components:
             amount: { type: string, description: "The amount charged; money as a STRING." }
     ThreeDs:
       type: [object, "null"]
+      # The CAVV cryptogram is intentionally NOT exposed to API clients — it is
+      # cardholder-authentication data and stays server-side (audit only).
       properties:
         eci: { type: [string, "null"], description: "Scheme-specific (Visa 05 / MC 02 = fully authenticated)." }
-        cavv: { type: [string, "null"] }
         liability_shift: { type: boolean }
     PaymentStatusResponse:
       type: object

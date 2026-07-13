@@ -234,6 +234,8 @@ class EasyPostServiceTest {
         val shipmentService = mockk<ShipmentService>()
         val original = mockk<Shipment>()
         every { original.rates } returns listOf(rate("rate_orig", 7.36f, "UPS", "Ground"))
+        // Not yet purchased → the idempotency fast-path is skipped and a buy proceeds.
+        every { original.postageLabel } returns null
         val refreshed = mockk<Shipment>()
         every { refreshed.rates } returns
             listOf(
@@ -273,6 +275,7 @@ class EasyPostServiceTest {
             mockk<Shipment>().also {
                 every { it.rates } returns
                     listOf(rate("rate_orig", 7.36f, "UPS", "Ground"))
+                every { it.postageLabel } returns null
             }
         every { shipmentService.newRates("shp_1") } returns
             mockk<Shipment>().also {
@@ -301,6 +304,7 @@ class EasyPostServiceTest {
             mockk<Shipment>().also {
                 every { it.rates } returns
                     listOf(rate("rate_orig", 7.36f, "UPS", "Ground"))
+                every { it.postageLabel } returns null
             }
         every { shipmentService.newRates("shp_1") } returns
             mockk<Shipment>().also {
@@ -319,7 +323,10 @@ class EasyPostServiceTest {
     fun `buyLabel with no prior selection picks the cheapest fresh rate`() {
         val shipmentService = mockk<ShipmentService>()
         every { shipmentService.retrieve("shp_1") } returns
-            mockk<Shipment>().also { every { it.rates } returns emptyList() }
+            mockk<Shipment>().also {
+                every { it.rates } returns emptyList()
+                every { it.postageLabel } returns null
+            }
         every { shipmentService.newRates("shp_1") } returns
             mockk<Shipment>().also {
                 every { it.rates } returns
@@ -341,6 +348,32 @@ class EasyPostServiceTest {
         @Suppress("UNCHECKED_CAST")
         val rateParam = buyParams.captured["rate"] as Map<String, Any>
         assertEquals("rate_cheap", rateParam["id"])
+    }
+
+    @Test
+    fun `buyLabel is idempotent — an already-purchased shipment returns its label and never re-buys`() {
+        val shipmentService = mockk<ShipmentService>()
+        // The retrieved shipment is ALREADY purchased (a crash/retry between the
+        // carrier buy and our persistence). A second buy would error at EasyPost and
+        // orphan the paid-for label, so buyLabel must return the existing label.
+        every { shipmentService.retrieve("shp_1") } returns
+            boughtShipment(carrier = "UPS", service = "Ground", rate = 7.36f)
+
+        val bought =
+            serviceWith("shipment" to shipmentService)
+                .buyLabel(
+                    "shp_1",
+                    "rate_orig",
+                    endShipperId = "es_1",
+                    maxBaseRate = BigDecimal("7.36"),
+                )
+
+        assertEquals("https://label/1.png", bought.labelUrl)
+        assertEquals("1Z999", bought.trackingCode)
+        assertEquals("UPS", bought.carrier)
+        // No fresh-rate regeneration and no second carrier buy occurred.
+        verify(exactly = 0) { shipmentService.newRates(any()) }
+        verify(exactly = 0) { shipmentService.buy(any(), any<Map<String, Any>>()) }
     }
 
     // ---- EndShipper / customs / batch / scanform -----------------------------

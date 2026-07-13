@@ -4,6 +4,7 @@ import io.mockk.CapturingSlot
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.verify
 import okhttp3.Call
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -233,6 +234,26 @@ class LiftedPaymentsClientHttpTest {
         assertThrows(
             IOException::class.java,
         ) { client.sale(BigDecimal("1.00"), cardToken = "tok_abc") }
+    }
+
+    @Test
+    fun `the amount guard rejects a non-positive or absurd charge before any HTTP call`() {
+        val http = mockk<OkHttpClient>()
+        val client = LiftedPaymentsClient(config, http)
+        // A 0.00 (test/free carrier rate) or negative amount (malformed markup) is
+        // refused LOCALLY, not POSTed to draw an opaque gateway 422.
+        assertThrows(IOException::class.java) { client.sale(BigDecimal("0.00"), cardToken = "tok") }
+        assertThrows(
+            IOException::class.java,
+        ) { client.sale(BigDecimal("-1.00"), cardToken = "tok") }
+        // Above the gateway's maximum is likewise refused.
+        assertThrows(IOException::class.java) {
+            client.sale(BigDecimal("1000000.01"), cardToken = "tok")
+        }
+        // Partial refunds/captures are guarded through the same path.
+        assertThrows(IOException::class.java) { client.refund("txn_1", BigDecimal("0.00")) }
+        // Not a single money call left the process.
+        verify(exactly = 0) { http.newCall(any()) }
     }
 
     @Test

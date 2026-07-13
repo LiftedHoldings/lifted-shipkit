@@ -27,7 +27,7 @@
   /* Text */
   --sk-text: #AEB8D0;
   --sk-heading: #EFF3F9;
-  --sk-muted: #6B7C9C;
+  --sk-muted: #8A97B4; /* WCAG-AA on the dark widget surface */
 
   /* Brand + intent — lift blue + cyan trust */
   --sk-primary: #2E6BFF;
@@ -56,6 +56,18 @@
   --sk-heading: #0B1020;
   --sk-muted: #4A5A78;
   --sk-shadow: 0 14px 34px -16px rgba(11, 16, 32, 0.24);
+}
+
+/*
+ * Keyboard focus ring — scoped to the widget and marked !important so it
+ * survives a host page that does the common `input:focus{outline:none}`.
+ * Without this the embedded card / OTP / address fields could show no focus
+ * at all, breaking keyboard checkout.
+ */
+.sk :focus-visible {
+  outline: 2px solid var(--sk-primary) !important;
+  outline-offset: 2px !important;
+  border-radius: var(--sk-radius-sm);
 }
 
 /* Follow the page when the host prefers light and hasn't forced a theme. */

@@ -5,6 +5,40 @@ All notable changes to ShipKit are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Framework examples** in `src/main/resources/public/examples/`: Next.js
+  (App Router, via `next/script`), Svelte, React + TypeScript (`ShipWidget.tsx`),
+  a managed-CDN page (`cdn.html`), and a server-side Node/Express example
+  (`server-node.js`) that buys labels with a secret key.
+- **TypeScript type definitions** (`examples/shipkit.d.ts`) — typed
+  `ShipKit.init(...)`, the `endpoint`+`apiKey` **xor** `managedKey` config union,
+  and the `Rate` / `PurchaseResult` / `QuoteResult` payloads.
+- **`docs/comparison.md`** — ShipKit vs raw EasyPost, Shippo/ShipEngine, and
+  rolling your own; surfaced as a "How ShipKit compares" section in the README.
+- **`docs/good-first-issues.md`** — a seeded set of scoped starter tasks, linked
+  from the README and CONTRIBUTING.
+- **Zero-credential "Try it now" path** at the top of `docs/quickstart.md` and a
+  no-account callout in the README, pointing at the self-contained `demo/index.html`.
+
+### Changed
+
+- **`docs/api.md`** now documents the account-gated saved-card / frictionless
+  routes (`POST /api/payment/save-card`, `POST /api/payment/charge-saved-card`),
+  the tier gate (`GET /api/config/tier`), and the SMS admin-session handshake
+  (`/api/verification/start` + `/check`, `X-Session-ID`), with matching rows in
+  the endpoint-summary table. Fixed the `docs/authentication.md` "admin flow"
+  link to resolve to that new section.
+- **README** gains a table of contents, a live GitHub Actions CI badge and a
+  Codecov badge (replacing the static build/coverage shields), a clarifier
+  distinguishing the `/shippingtool` demo from the `/shipkit` signup host, and
+  expanded framework-example pointers.
+- **`docs/integration.md`** framework snippets expanded with Next.js, Svelte,
+  TypeScript, and a server-side Node example, plus a copy-paste table linking
+  every example file.
+
 ## [1.0.0] - 2026-01-01
 
 Initial public release of ShipKit — the open shipping toolkit, secured by
@@ -65,4 +99,5 @@ Lifted Payments 3-D Secure.
 - Continuous integration: `./gradlew build` (build + tests) on every push and
   pull request.
 
+[Unreleased]: https://github.com/Lifted-Holdings/shipkit/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/Lifted-Holdings/shipkit/releases/tag/v1.0.0

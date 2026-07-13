@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShipKit — managed CDN example</title>
+</head>
+<body>
+  <!--
+    ShipKit · Managed (CDN) integration
+    ===================================
+    The zero-backend path: no server, no keys to mint, no PCI scope. Create a
+    free account at https://liftedholdings.com/shipkit, get your publishable
+    managed key (pk_live_…), and paste ONE tag.
+
+    Auto-init: when the tag carries `data-mount`, the widget initializes itself
+    from the script attributes — no inline JS needed (option A below). Prefer to
+    configure in JavaScript? Drop `data-mount` and call ShipKit.init (option B).
+
+    integrity + crossorigin pin the script to a published, verified build. Copy
+    the exact sha384 Subresource Integrity hash for your version from the
+    releases page: https://github.com/Lifted-Holdings/shipkit/releases
+
+    NOTE: the CDN host and the integrity hash below are placeholders until the
+    first published release. A browser refuses to run a script whose SRI hash
+    doesn't match, so the tag stays inert until you drop in the real host + hash
+    from your managed account. A non-loading tag before then is expected.
+  -->
+
+  <div id="ship"></div>
+
+  <!-- Option A — auto-init from the tag (no inline JS). -->
+  <script
+    src="https://cdn.liftedholdings.com/shipkit.js"
+    integrity="sha384-REPLACE_WITH_PUBLISHED_SRI_HASH"
+    crossorigin="anonymous"
+    data-managed-key="pk_live_your_publishable_key"
+    data-mount="#ship"
+    data-theme="auto"></script>
+
+  <!--
+    Option B — configure in JavaScript (omit data-mount above so it does not
+    auto-init, then):
+
+    <script
+      src="https://cdn.liftedholdings.com/shipkit.js"
+      integrity="sha384-REPLACE_WITH_PUBLISHED_SRI_HASH"
+      crossorigin="anonymous"></script>
+    <script>
+      ShipKit.init({
+        mount: '#ship',
+        managedKey: 'pk_live_your_publishable_key', // routes to the managed Lifted edge
+        theme: 'auto',                              // 'auto' | 'light' | 'dark'
+        onPurchase: (label) => console.log('bought', label.trackingCode),
+        onError:    (err)   => console.warn(err.stage, err.message),
+      });
+    </script>
+  -->
+</body>
+</html>

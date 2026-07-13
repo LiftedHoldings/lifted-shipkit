@@ -11,9 +11,10 @@ easy to merge. Read it once; it takes five minutes.
 - Sharpen documentation, examples, or the demo.
 - Triage issues and help other developers in Discussions.
 
-New here? Look for issues labeled **`good first issue`** and **`help wanted`** —
-they are scoped for a first contribution and we are glad to guide you through
-them.
+New here? Start with a curated starter task from
+[docs/good-first-issues.md](docs/good-first-issues.md), or look for issues
+labeled **`good first issue`** and **`help wanted`** — they are scoped for a
+first contribution and we are glad to guide you through them.
 
 ## Ground rules
 

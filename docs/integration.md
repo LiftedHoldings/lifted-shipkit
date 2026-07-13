@@ -229,6 +229,95 @@ onBeforeUnmount(() => widget?.destroy());
 </template>
 ```
 
+### Next.js (App Router)
+
+The widget is a UMD global, so load it with `next/script` (not `import`) inside a
+Client Component. `strategy="afterInteractive"` loads it after hydration and
+fires `onLoad` when `window.ShipKit` is ready.
+
+```jsx
+'use client';
+import { useEffect, useRef, useState } from 'react';
+import Script from 'next/script';
+
+export default function ShipWidget({ managedKey }) {
+  const ref = useRef(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (!ready || !ref.current) return;
+    const widget = window.ShipKit.init({ mount: ref.current, managedKey });
+    return () => widget.destroy();
+  }, [ready, managedKey]);
+
+  return (
+    <>
+      <Script src="https://cdn.liftedholdings.com/shipkit.js"
+              strategy="afterInteractive" onLoad={() => setReady(true)} />
+      <div ref={ref} />
+    </>
+  );
+}
+```
+
+### Svelte
+
+```svelte
+<script>
+  import { onMount, onDestroy } from 'svelte';
+  let mount, widget;
+  onMount(() => { widget = window.ShipKit.init({ mount, endpoint: '/api', apiKey: 'pk_live_…' }); });
+  onDestroy(() => widget?.destroy());
+</script>
+
+<div bind:this={mount}></div>
+```
+
+### TypeScript
+
+Copy [`shipkit.d.ts`](../src/main/resources/public/examples/shipkit.d.ts) into
+your project (e.g. `types/shipkit.d.ts`) to get autocomplete and type-checking on
+`ShipKit.init(...)`, the config union (`endpoint`+`apiKey` **xor** `managedKey`),
+and the `Rate` / `PurchaseResult` / `QuoteResult` payloads. `window.ShipKit` is
+then typed with no import; a full typed React wrapper is in
+[`ShipWidget.tsx`](../src/main/resources/public/examples/ShipWidget.tsx).
+
+### Server-side (Node / Express)
+
+Buying labels from your own backend — order webhooks, an admin tool, a batch job
+— uses the same [REST API](api.md) server-to-server with a **secret** `sk_…` key
+(never the browser's publishable key). A complete worked example
+([`server-node.js`](../src/main/resources/public/examples/server-node.js)) does
+verify → create shipment → buy the cheapest rate:
+
+```js
+const res = await fetch(`${SHIPKIT_URL}/api/shipment/buy`, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json', 'ShipKit-Api-Key': process.env.SHIPKIT_SECRET_KEY },
+  body: JSON.stringify({ shipment_id: shipmentId, rate_id: rateId }),
+});
+```
+
+For a card-secured, 3-D Secure purchase, drive the `/api/payment/*` flow from the
+browser widget instead — 3DS needs the cardholder present.
+
+### Copy-paste example files
+
+Full, commented versions of every snippet above live in the repo — copy the one
+you need:
+
+| Framework | File |
+|---|---|
+| Plain HTML | [`examples/plain.html`](../src/main/resources/public/examples/plain.html) |
+| Managed CDN | [`examples/cdn.html`](../src/main/resources/public/examples/cdn.html) |
+| React | [`examples/ShipWidget.jsx`](../src/main/resources/public/examples/ShipWidget.jsx) |
+| React + TypeScript | [`examples/ShipWidget.tsx`](../src/main/resources/public/examples/ShipWidget.tsx) |
+| Next.js (App Router) | [`examples/ShipWidget.next.jsx`](../src/main/resources/public/examples/ShipWidget.next.jsx) |
+| Vue 3 | [`examples/ShipWidget.vue`](../src/main/resources/public/examples/ShipWidget.vue) |
+| Svelte | [`examples/ShipWidget.svelte`](../src/main/resources/public/examples/ShipWidget.svelte) |
+| Node / Express (server-side) | [`examples/server-node.js`](../src/main/resources/public/examples/server-node.js) |
+| TypeScript definitions | [`examples/shipkit.d.ts`](../src/main/resources/public/examples/shipkit.d.ts) |
+
 ## How it maps to the API
 
 Under the hood the widget calls the [REST API](api.md) in order: `address/verify` →

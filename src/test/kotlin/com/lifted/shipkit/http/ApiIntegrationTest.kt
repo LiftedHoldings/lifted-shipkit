@@ -680,4 +680,97 @@ class ApiIntegrationTest {
         }
         verify(exactly = 0) { easyPost.buyLabel(any(), any(), any(), any()) }
     }
+
+    @Test
+    fun `saved-card charged once then a failed buy does NOT re-charge on retry`() {
+        val easyPost = mockk<EasyPostService>()
+        val payments = mockk<LiftedPaymentsClient>()
+        every { easyPost.priceRate(any(), any(), any()) } returns
+            PaymentPricing.Quote(amount = "8.74", baseRate = BigDecimal("7.36"), currency = "USD")
+        every { payments.chargeSavedCard(any(), any(), any()) } returns
+            GatewayResult(transactionId = "txn_s", status = "approved", approved = true)
+        // The buy fails the FIRST time (crash after a successful charge), then succeeds.
+        var buyCalls = 0
+        every { easyPost.buyLabel(any(), any(), any(), any()) } answers {
+            if (buyCalls++ == 0) throw RuntimeException("carrier blip") else boughtLabel()
+        }
+        val cfg = config().copy(tier = TierMode.MANAGED, frictionlessAllowed = true)
+        val w = wire(easyPost = easyPost, payments = payments, config = cfg)
+
+        val reqBody =
+            """{"vault_id":"cust_1:card_1","shipment_id":"shp_1","rate_id":"rate_1","idempotency_key":"k-retry"}"""
+        JavalinTest.test(w.app) { _, client ->
+            // First call: the card IS charged, but the label buy fails → 502.
+            post(client.origin, "/api/payment/charge-saved-card", w.key, reqBody).use {
+                assertEquals(502, it.code, "buy failed after a successful charge")
+            }
+            // Retry with the SAME idempotency key: the recorded `approved` session
+            // short-circuits the charge; only the buy is re-attempted → 200 + label.
+            post(client.origin, "/api/payment/charge-saved-card", w.key, reqBody).use {
+                assertEquals(200, it.code)
+                assertTrue(it.body!!.string().contains("https://label.example/1.png"))
+            }
+        }
+        // The money-safety invariant: charged EXACTLY once, bought twice.
+        verify(exactly = 1) { payments.chargeSavedCard(any(), any(), any()) }
+        verify(exactly = 2) { easyPost.buyLabel(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `a purchase whose first buy fails releases the claim and a retry completes the label`() {
+        val easyPost = mockk<EasyPostService>()
+        val payments = mockk<LiftedPaymentsClient>()
+        every { payments.verifyPayment(any()) } returns
+            PaymentVerification("approved", eci = "05", cavv = "crypto", liabilityShift = true)
+        var buyCalls = 0
+        every { easyPost.buyLabel(any(), any(), any(), any()) } answers {
+            if (buyCalls++ == 0) throw RuntimeException("carrier blip") else boughtLabel()
+        }
+        val store = InMemoryLabelStore().apply { savePaymentSession(session()) }
+        val w = wire(easyPost = easyPost, payments = payments, store = store)
+
+        JavalinTest.test(w.app) { _, client ->
+            post(client.origin, "/api/payment/purchase-label/s1", w.key).use {
+                assertEquals(502, it.code, "the first buy failed")
+            }
+            // The claim was released on failure, so a legitimate retry proceeds.
+            post(client.origin, "/api/payment/purchase-label/s1", w.key).use {
+                assertEquals(200, it.code, "the retry completes the paid-for label")
+                assertTrue(it.body!!.string().contains("https://label.example/1.png"))
+            }
+        }
+        verify(exactly = 2) { easyPost.buyLabel(any(), any(), any(), any()) }
+    }
+
+    // ---- Rate limiting (denial-of-wallet on publishable keys) ----------------
+
+    @Test
+    fun `a publishable key is throttled on the paid paths while a secret key is not`() {
+        // A tiny per-minute budget trips deterministically. Features are unconfigured,
+        // so an admitted request returns 503 and a throttled one returns 429.
+        val w = wire(config = config().copy(rateLimitPerMinute = 3))
+        val pub =
+            KeyGenerator.mint("widget", KeyGenerator.Mode.TEST, KeyGenerator.Scope.PUBLISHABLE)
+        w.keys.add(pub.record)
+
+        JavalinTest.test(w.app) { _, client ->
+            val pubCodes =
+                (1..5).map {
+                    post(client.origin, "/api/shipment/create", pub.plaintext).use { it.code }
+                }
+            // First 3 pass the gate (503, unconfigured); the rest are throttled (429).
+            assertEquals(
+                listOf(503, 503, 503, 429, 429),
+                pubCodes,
+                "throttled after the budget: $pubCodes",
+            )
+
+            // A SECRET key on the same path is never rate-limited (server-side/trusted).
+            val secretCodes =
+                (1..5).map {
+                    post(client.origin, "/api/shipment/create", w.key).use { it.code }
+                }
+            assertTrue(secretCodes.all { it == 503 }, "secret key not throttled: $secretCodes")
+        }
+    }
 }

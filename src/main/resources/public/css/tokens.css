@@ -67,7 +67,7 @@
   /* Text */
   --text-strong: var(--mist-100);
   --text-body:   var(--mist-300);
-  --text-muted:  var(--slate-400);
+  --text-muted:  #8A97B4;         /* raised from --slate-400 (#6B7C9C, ~4:1) to clear WCAG AA on cards in dark */
   --text-faint:  var(--slate-500);
   --text-on-brand: var(--white);
 

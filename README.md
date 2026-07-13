@@ -9,8 +9,8 @@ Add multi-carrier shipping-label buying to any store, with card payment locked d
 [![ShipKit drop-in widget — live multi-carrier rate compare and a 3-D Secure card payment step](docs/images/demo-selfcontained.png)](https://liftedholdings.com/shippingtool)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-2E6BFF.svg)](LICENSE)
-[![Build](https://img.shields.io/badge/build-passing-00E18C.svg)](.github/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-Kover-2E6BFF.svg)](.github/workflows/ci.yml)
+[![CI](https://github.com/Lifted-Holdings/shipkit/actions/workflows/ci.yml/badge.svg)](https://github.com/Lifted-Holdings/shipkit/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/Lifted-Holdings/shipkit/branch/main/graph/badge.svg)](https://codecov.io/gh/Lifted-Holdings/shipkit)
 [![Version](https://img.shields.io/badge/version-1.0.0-2E6BFF.svg)](CHANGELOG.md)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-00E18C.svg)](CONTRIBUTING.md)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-2E6BFF.svg)](build.gradle.kts)
@@ -25,6 +25,12 @@ Add multi-carrier shipping-label buying to any store, with card payment locked d
 
 ---
 
+**Contents:** [Why ShipKit](#why-shipkit) · [How ShipKit compares](#how-shipkit-compares) · [Choose your tier](#choose-your-tier) · [Quickstart](#60-second-quickstart) · [Drop into your checkout](#drop-shipkit-into-your-own-checkout) · [Features](#features) · [Architecture](#architecture-snapshot) · [Payments & 3-D Secure](#payments--secured-by-lifted-payments--3-d-secure) · [Documentation](#documentation) · [Postman](#import-into-postman) · [Contributing](#contributing)
+
+> **No account needed to try it:** open [`demo/index.html`](demo/index.html) — a single self-contained file (no backend, no keys) with the full widget flow, including the 3-D Secure moment. **[Add shipping to your own checkout in 3 lines →](#drop-shipkit-into-your-own-checkout)**
+
+---
+
 ## Why ShipKit
 
 Buying a shipping label should be a few lines of code, not a project. ShipKit gives you a real multi-carrier backend (EasyPost) and a drop-in payment step, so a customer can compare rates, pay, and get a label without you stitching together three vendors and a PCI audit.
@@ -33,6 +39,24 @@ Buying a shipping label should be a few lines of code, not a project. ShipKit gi
 - **Built for shipping's fraud problem.** Labels bought with stolen cards are a top chargeback category — real goods, shipped fast, disputed weeks later. ShipKit forces **Lifted Payments 3-D Secure** on every card charge, so the issuer authenticates the buyer before the label prints and fraud-and-chargeback liability shifts off you.
 - **Three ways to run it.** Self-host it all, put your checkout on our 3-D Secure merchant account, or drop in one managed `<script>` tag. Same widget, same API.
 - **No lock-in.** MIT licensed, dependency-free frontend, clean modular backend. Read it, fork it, ship it.
+
+---
+
+## How ShipKit compares
+
+Most teams stitch a rating API to a payment processor and then own the PCI scope and stolen-card chargebacks themselves. ShipKit is that stack, already assembled and hardened — **the only open-source, self-hostable multi-carrier shipping kit with forced 3-D Secure and a drop-in checkout widget.**
+
+| | **ShipKit** | Raw EasyPost | Shippo / ShipEngine | EasyPost + Stripe (DIY) |
+|---|---|---|---|---|
+| Multi-carrier rates & labels | ✅ | ✅ | ✅ | ✅ |
+| Card payment built in | ✅ | ❌ | ❌ | You wire it |
+| **Forced 3-D Secure / liability shift** | ✅ **always on** | ❌ | ❌ | Only if you build it |
+| Drop-in widget (no build step) | ✅ `window.ShipKit` | ❌ | ❌ | ❌ |
+| Open-source & self-hostable | ✅ MIT | ❌ SaaS | ❌ SaaS | Partly |
+| Per-label / SaaS fee | **None** (self-host) | Per-label | Per-label | Two vendors' fees |
+| PCI scope for card data | Out of scope (hosted fields) | n/a | n/a | **Yours** |
+
+Shipping coverage comes from EasyPost (ShipKit's carrier backend) — same USPS/UPS/FedEx rates, with the payment + 3DS + widget layer added on top. Full side-by-side, including "vs. rolling your own": **[docs/comparison.md](docs/comparison.md)**.
 
 ---
 
@@ -55,6 +79,8 @@ ShipKit comes in three tiers — pick how much you want to run yourself. All thr
 ² **Managed** needs **no merchant-account application** — you just create a free account (name, email, company) and instantly get your plug-and-play JS snippet and managed key. It runs on our 3DS account and our EasyPost with free hosting; we make our margin on a **configurable markup over the carrier's shipping rate** (set via `POST /api/config/markup`), shown at checkout before the buyer pays. Carrier rates, the code, the widget, and self-hosting stay free.
 
 Full side-by-side breakdown with the exact numbers: **[docs/tiers.md](docs/tiers.md)**.
+
+> Two Lifted links, two jobs: **[liftedholdings.com/shippingtool](https://liftedholdings.com/shippingtool)** is the working live demo you can play with; **[liftedholdings.com/shipkit](https://liftedholdings.com/shipkit)** is where you create a free managed account and get your snippet.
 
 ### Need something custom?
 
@@ -133,7 +159,7 @@ The headline use case: keep your app and your checkout, and add ShipKit for the 
 </script>
 ```
 
-- **React, Vue, or plain HTML** — copy-paste components in the [integration guide](docs/integration.md#framework-snippets).
+- **React, Next.js, Vue, Svelte, TypeScript, or plain HTML** — copy-paste components in [`examples/`](src/main/resources/public/examples/) and the [integration guide](docs/integration.md#framework-snippets). Types ship in [`shipkit.d.ts`](src/main/resources/public/examples/shipkit.d.ts); a server-side Node example is in [`server-node.js`](src/main/resources/public/examples/server-node.js).
 - **Full `init` config, callbacks, theming** — the complete reference: [docs/integration.md](docs/integration.md).
 - **Match your brand** — restyle every surface with the `--sk-*` CSS variables; no `!important`, no build.
 - **No backend to run?** Swap `endpoint` + `apiKey` for a single `managedKey` — [Managed](docs/managed.md).
@@ -222,6 +248,7 @@ Read the full explainer: [docs/3d-secure.md](docs/3d-secure.md).
 
 | Doc | What's in it |
 |---|---|
+| [Comparison](docs/comparison.md) | ShipKit vs EasyPost, Shippo, ShipEngine, and rolling your own |
 | [Tiers & pricing](docs/tiers.md) | The three tiers side by side, with exact pricing and the surcharge toggle |
 | [Quickstart](docs/quickstart.md) | Run self-host or embed managed in 60 seconds |
 | [Integration](docs/integration.md) | Script-tag setup, config table, callbacks, React/Vue snippets |
@@ -258,7 +285,7 @@ Pull requests are welcome. Small, focused changes with a linked issue and green 
 - Found a vulnerability? Do not open a public issue — see [SECURITY.md](SECURITY.md).
 - Questions or help getting started? See [SUPPORT.md](SUPPORT.md) or open a Discussion.
 
-Look for **good first issue** and **help wanted** labels to get started.
+New contributor? Start with a curated, scoped task from **[docs/good-first-issues.md](docs/good-first-issues.md)**, or look for the **good first issue** and **help wanted** labels.
 
 ---
 

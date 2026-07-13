@@ -968,15 +968,38 @@ class LiftedPaymentsClient(
             null
         }
 
-    /** Serialize an amount to the gateway's 2-decimal string, ROUND_HALF_UP. */
-    private fun amount2dp(amount: BigDecimal): String =
-        amount.setScale(2, RoundingMode.HALF_UP).toPlainString()
+    /**
+     * Serialize an amount to the gateway's 2-decimal string, ROUND_HALF_UP, after
+     * enforcing the same bounds the verified gateway does: strictly **positive** and
+     * no greater than [MAX_AMOUNT]. A zero/negative charge (e.g. a `0.00` test/free
+     * carrier rate or a malformed markup) or an absurd amount is rejected **locally**
+     * with an [IOException] before any money call leaves the process, rather than
+     * drawing an opaque gateway `422` after the request is sent.
+     */
+    @Throws(IOException::class)
+    private fun amount2dp(amount: BigDecimal): String {
+        val scaled = amount.setScale(2, RoundingMode.HALF_UP)
+        if (scaled.signum() <= 0) {
+            throw IOException("charge amount must be greater than zero")
+        }
+        if (scaled > MAX_AMOUNT) {
+            throw IOException("charge amount exceeds the maximum of $MAX_AMOUNT")
+        }
+        return scaled.toPlainString()
+    }
 
     private fun requireTxnId(transactionId: String): String =
         transactionId.trim().takeIf { it.isNotEmpty() }
             ?: throw IOException("transaction id required")
 
     companion object {
+        /**
+         * Upper bound on a single charge, mirroring the verified gateway's
+         * `_MAX_AMOUNT`. A larger amount is refused locally (see [amount2dp]) rather
+         * than sent and bounced as an opaque `422`.
+         */
+        private val MAX_AMOUNT = BigDecimal("1000000.00")
+
         /**
          * Gateway statuses that count as a successful authorization/capture.
          * Maverick uses several synonyms across sale/capture/refund replies.

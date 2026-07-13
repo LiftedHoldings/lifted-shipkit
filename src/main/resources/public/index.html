@@ -35,9 +35,12 @@
           <span class="pm-orb" aria-hidden="true"></span> Open in Postman
         </a>
         <a class="nav__cta" href="https://liftedholdings.com/shipkit" rel="noopener">Create free account</a>
-        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle color theme" title="Toggle theme">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to light theme" aria-pressed="false" title="Toggle theme">
+          <svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+          </svg>
+          <svg class="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4.2" /><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8l1.8-1.8M18 6l1.8-1.8" />
           </svg>
         </button>
       </nav>
@@ -290,9 +293,9 @@
         <div class="import-grid">
           <div>
             <div class="fw-tabs" role="tablist" aria-label="Choose a framework">
-              <button type="button" class="fw-tab on" data-fw="react" role="tab" aria-selected="true"><span class="fd"></span> React</button>
-              <button type="button" class="fw-tab" data-fw="vue" role="tab" aria-selected="false"><span class="fd"></span> Vue</button>
-              <button type="button" class="fw-tab" data-fw="html" role="tab" aria-selected="false"><span class="fd"></span> Plain HTML</button>
+              <button type="button" class="fw-tab on" id="tab-react" data-fw="react" role="tab" aria-selected="true" aria-controls="fw-react"><span class="fd"></span> React</button>
+              <button type="button" class="fw-tab" id="tab-vue" data-fw="vue" role="tab" aria-selected="false" aria-controls="fw-vue" tabindex="-1"><span class="fd"></span> Vue</button>
+              <button type="button" class="fw-tab" id="tab-html" data-fw="html" role="tab" aria-selected="false" aria-controls="fw-html" tabindex="-1"><span class="fd"></span> Plain HTML</button>
             </div>
             <div class="import-steps">
               <div class="import-step"><span class="n">1</span><div><h3>Add a mount point</h3><p>Any element — <code>&lt;div id="ship"&gt;</code>. ShipKit owns its own subtree inside it and inherits your layout.</p></div></div>
@@ -310,7 +313,7 @@
               <span class="codewin__dot"></span><span class="codewin__dot"></span><span class="codewin__dot"></span>
               <span class="codewin__file" id="import-fname">Checkout.jsx</span>
             </div>
-<pre class="fw-src" id="fw-react"><code><span class="tok-com">// Drop the widget straight into your checkout route.</span>
+<pre class="fw-src" id="fw-react" role="tabpanel" aria-labelledby="tab-react" tabindex="0"><code><span class="tok-com">// Drop the widget straight into your checkout route.</span>
 <span class="tok-fn">import</span> ShipWidget <span class="tok-fn">from</span> <span class="tok-str">'./ShipWidget'</span>;
 
 <span class="tok-fn">export default function</span> <span class="tok-fn">Checkout</span>() {
@@ -324,7 +327,7 @@
     <span class="tok-tag">/&gt;</span>
   );
 }</code></pre>
-<pre class="fw-src" id="fw-vue" hidden><code><span class="tok-tag">&lt;script setup&gt;</span>
+<pre class="fw-src" id="fw-vue" role="tabpanel" aria-labelledby="tab-vue" tabindex="0" hidden><code><span class="tok-tag">&lt;script setup&gt;</span>
 <span class="tok-fn">import</span> ShipWidget <span class="tok-fn">from</span> <span class="tok-str">'./ShipWidget.vue'</span>;
 <span class="tok-tag">&lt;/script&gt;</span>
 
@@ -337,7 +340,7 @@
     <span class="tok-attr">@error</span>=<span class="tok-str">"(err) =&gt; notify(err.message)"</span>
   <span class="tok-tag">/&gt;</span>
 <span class="tok-tag">&lt;/template&gt;</span></code></pre>
-<pre class="fw-src" id="fw-html" hidden><code><span class="tok-com">&lt;!-- One mount point --&gt;</span>
+<pre class="fw-src" id="fw-html" role="tabpanel" aria-labelledby="tab-html" tabindex="0" hidden><code><span class="tok-com">&lt;!-- One mount point --&gt;</span>
 <span class="tok-tag">&lt;div</span> <span class="tok-attr">id</span>=<span class="tok-str">"ship"</span><span class="tok-tag">&gt;&lt;/div&gt;</span>
 
 <span class="tok-tag">&lt;script</span> <span class="tok-attr">src</span>=<span class="tok-str">"/js/shipkit.js"</span><span class="tok-tag">&gt;&lt;/script&gt;</span>
@@ -523,6 +526,11 @@
       if (!canvas || !canvas.getContext) return;
       var ctx = canvas.getContext('2d');
       var W = 0, H = 0, DPR = 1;
+      var alpha = 0.42; // theme-aware blob opacity (softer in light mode)
+      function readAlpha() {
+        var v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--aurora-blob'));
+        if (!isNaN(v)) alpha = v;
+      }
       var palette = [[46,107,255],[25,199,245],[124,92,255],[46,107,255],[25,199,245]];
       var blobs = [];
       function build() {
@@ -540,6 +548,7 @@
         }
       }
       function resize() {
+        readAlpha();
         DPR = Math.min(window.devicePixelRatio || 1, 1.5);
         W = canvas.clientWidth; H = canvas.clientHeight;
         if (W === 0 || H === 0) return;
@@ -558,19 +567,29 @@
           var rad = b.r * span * 0.9;
           var g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
           var c = b.col;
-          g.addColorStop(0, 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',0.42)');
-          g.addColorStop(0.55, 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',0.12)');
+          g.addColorStop(0, 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + alpha.toFixed(3) + ')');
+          g.addColorStop(0.55, 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + (alpha * 0.285).toFixed(3) + ')');
           g.addColorStop(1, 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',0)');
           ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2); ctx.fill();
         }
         ctx.globalCompositeOperation = 'source-over';
       }
       build(); resize();
-      var raf = null, last = 0;
+      var raf = null, last = 0, running = false, onScreen = true;
       function loop(now) { raf = window.requestAnimationFrame(loop); if (now - last < 33) return; last = now; frame(now); }
+      function start() { if (running || reduce) return; running = true; last = 0; raf = window.requestAnimationFrame(loop); }
+      function stop() { running = false; if (raf) { window.cancelAnimationFrame(raf); raf = null; } }
       var resizeT;
-      window.addEventListener('resize', function () { clearTimeout(resizeT); resizeT = setTimeout(function () { resize(); if (reduce) frame(3000); }, 150); });
-      if (reduce) { frame(3000); } else { raf = window.requestAnimationFrame(loop); }
+      window.addEventListener('resize', function () { clearTimeout(resizeT); resizeT = setTimeout(function () { resize(); if (reduce || !running) frame(3000); }, 150); });
+      var hero = document.querySelector('.hero');
+      if (hero && 'IntersectionObserver' in window) {
+        new IntersectionObserver(function (entries) {
+          onScreen = entries[0].isIntersecting;
+          if (onScreen && !document.hidden) start(); else stop();
+        }, { threshold: 0 }).observe(hero);
+      }
+      document.addEventListener('visibilitychange', function () { if (document.hidden) stop(); else if (onScreen) start(); });
+      if (reduce) { frame(3000); } else { start(); }
     })();
 
     /* ---- Live-feed latency shimmer (cosmetic) ---- */
@@ -585,13 +604,64 @@
       var srcs = { react: document.getElementById('fw-react'), vue: document.getElementById('fw-vue'), html: document.getElementById('fw-html') };
       var fname = document.getElementById('import-fname');
       var FN = { react: 'Checkout.jsx', vue: 'Checkout.vue', html: 'index.html' };
-      function select(fw) {
+      function select(fw, focusTab) {
         if (!srcs[fw]) return;
-        tabs.forEach(function (t) { var on = t.getAttribute('data-fw') === fw; t.classList.toggle('on', on); t.setAttribute('aria-selected', on ? 'true' : 'false'); });
+        tabs.forEach(function (t) { var on = t.getAttribute('data-fw') === fw; t.classList.toggle('on', on); t.setAttribute('aria-selected', on ? 'true' : 'false'); t.setAttribute('tabindex', on ? '0' : '-1'); });
         Object.keys(srcs).forEach(function (k) { if (srcs[k]) srcs[k].hidden = (k !== fw); });
         if (fname) fname.textContent = FN[fw];
+        if (focusTab) { var active = tabs.filter(function (t) { return t.getAttribute('data-fw') === fw; })[0]; if (active) active.focus(); }
       }
-      tabs.forEach(function (t) { t.addEventListener('click', function () { select(t.getAttribute('data-fw')); }); });
+      tabs.forEach(function (t) {
+        t.addEventListener('click', function () { select(t.getAttribute('data-fw')); });
+        t.addEventListener('keydown', function (e) {
+          var idx = tabs.indexOf(t), nx = -1;
+          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nx = (idx + 1) % tabs.length;
+          else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') nx = (idx - 1 + tabs.length) % tabs.length;
+          else if (e.key === 'Home') nx = 0;
+          else if (e.key === 'End') nx = tabs.length - 1;
+          if (nx >= 0) { e.preventDefault(); select(tabs[nx].getAttribute('data-fw'), true); }
+        });
+      });
+    })();
+
+    /* ---- Nav scrollspy — highlight the section in view ---- */
+    (function () {
+      var links = Array.prototype.slice.call(document.querySelectorAll('.nav__links a[href^="#"]'));
+      if (!links.length || !('IntersectionObserver' in window)) return;
+      var map = {};
+      links.forEach(function (a) {
+        var id = (a.getAttribute('href') || '').slice(1);
+        var sec = id && document.getElementById(id);
+        if (sec) map[id] = a;
+      });
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting) {
+            links.forEach(function (l) { l.classList.remove('active'); });
+            if (map[e.target.id]) map[e.target.id].classList.add('active');
+          }
+        });
+      }, { rootMargin: '-45% 0px -50% 0px', threshold: 0 });
+      Object.keys(map).forEach(function (id) { io.observe(document.getElementById(id)); });
+    })();
+
+    /* ---- Theme-toggle state (kept in sync with app.js's data-theme flip) ---- */
+    (function () {
+      var btn = document.getElementById('themeToggle');
+      var root = document.documentElement;
+      if (!btn) return;
+      function isLight() {
+        var t = root.getAttribute('data-theme');
+        if (t) return t === 'light';
+        return window.matchMedia('(prefers-color-scheme: light)').matches;
+      }
+      function sync() {
+        var light = isLight();
+        btn.setAttribute('aria-pressed', light ? 'true' : 'false');
+        btn.setAttribute('aria-label', light ? 'Switch to dark theme' : 'Switch to light theme');
+      }
+      sync();
+      new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
     })();
   })();
   </script>

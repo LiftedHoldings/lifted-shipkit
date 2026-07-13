@@ -89,8 +89,9 @@ java -cp build/libs/shipkit-1.0.0-all.jar com.lifted.shipkit.KeygenKt --label=pr
 
 `POST /api/keys` mints a key at runtime. It requires **both** a valid API key (the `/api/*`
 gate) **and** a verified admin session — an SMS-verified session whose phone is in
-`SHIPKIT_ADMIN_PHONES` (see the [admin flow](api.md)). Provide the session id in the
-`X-Session-ID` header.
+`SHIPKIT_ADMIN_PHONES` (see the [admin session flow](api.md#admin-session-sms-verification)).
+Provide the session id in the `X-Session-ID` header — obtain it with the
+`verification/start` → `verification/check` handshake documented there.
 
 ```bash
 curl -X POST https://your-host/api/keys \

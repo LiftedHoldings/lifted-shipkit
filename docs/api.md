@@ -31,20 +31,28 @@ widget calls it under a configurable `endpoint` (default `/api`).
 | `POST` | `/api/payment/session` | Open a Lifted Payments 3-D Secure payment session. |
 | `GET` | `/api/payment/status/{sessionId}` | Poll the server-verified payment / 3-D Secure status. |
 | `POST` | `/api/payment/purchase-label/{sessionId}` | Buy the label for an approved session (idempotent). |
+| `POST` | `/api/payment/save-card` | Vault a card on file (frictionless / card-on-file — **account-gated**, secret key only). |
+| `POST` | `/api/payment/charge-saved-card` | One-tap purchase on a saved card (**account-gated**, secret key only, idempotent). |
 | `POST` | `/api/batch/create` | Create and buy a batch of shipments. |
 | `POST` | `/api/scanform/create` | Generate a SCAN form (manifest) for a batch. |
 | `POST` | `/api/customs/create` | Create customs info + items for international shipments. |
 | `POST` | `/api/webhook/easypost` | Receive EasyPost tracking / event webhooks (HMAC-verified). |
 | `GET` | `/api/endshipper/get` | Read the configured EndShipper identity. |
 | `POST` | `/api/endshipper/create` | Register / update the EndShipper identity. |
+| `GET` | `/api/config/tier` | Read the adoption tier + pricing model (self-host / merchant / managed). |
 | `GET` | `/api/config/markup` | Read the markup applied on top of carrier rates. |
 | `POST` | `/api/config/markup` | Update the markup (percentage + fixed fee). |
 | `GET` | `/api/label/{labelId}` | Fetch a stored label by id. |
 | `GET` | `/api/label/session/{sessionId}` | Fetch a stored label by payment session id. |
 | `DELETE` | `/api/label/session/{sessionId}/shred` | Remove a stored label from storage (does not void it with the carrier). |
+| `POST` | `/api/verification/start` | Start an SMS verification (opens an admin/history session). |
+| `POST` | `/api/verification/check` | Confirm the SMS code and verify the session. |
+| `GET` | `/api/history/labels` | Purchase history for a verified session. |
 | `POST` | `/api/keys` | Mint an API key (admin-gated; key shown once). |
 | `GET` | `/api/keys` | List API keys (metadata only). Admin-gated. |
 | `DELETE` | `/api/keys/{id}` | Revoke an API key. Admin-gated. |
+| `GET` | `/api/admin/labels` | List all stored labels (admin-gated). |
+| `POST` | `/api/admin/cleanup` | Purge expired sessions + labels. |
 | `GET` | `/api/health` | Liveness/readiness probe (no key required). |
 
 ---
@@ -328,6 +336,105 @@ Take live payments through your own 3-D Secure merchant account —
 
 ---
 
+## Saved cards & frictionless (account-gated)
+
+These two routes power the **tier-2/3 "card on file" / one-tap repeat checkout**
+described in [Tiers](tiers.md) and [3-D Secure](3d-secure.md#forced-3-d-secure-vs-frictionless-mode-account-gated).
+They are **account-gated and secret-key only**: available **only** when the
+deployment's tier has armed frictionless mode (a Lifted merchant/managed or
+enterprise custom-dev account). On **self-host / bring-your-own-payments they are
+refused with `403`** — forced 3-D Secure is the only self-host mode — and a
+publishable (`pk_…`) key can never reach them. Card data is a **hosted-fields
+token**, never a PAN.
+
+### `GET /api/config/tier`
+
+Reads the adoption tier and pricing model so a caller (or the widget) can tell
+which capabilities are enabled. Non-secret — a publishable (`pk_…`) key may read
+it.
+
+**Response `200`**
+
+```json
+{
+  "tier": "merchant",
+  "label": "Lifted 3-D Secure merchant account",
+  "surcharge": { "enabled": true, "amount": "0.00", "percentage": "3.75", "fixed_cents": 15, "monthly_fee_usd": 25 },
+  "shipping_markup": { "percentage_markup": 12.0, "fixed_fee_cents": 50 },
+  "payments": { "configured": true, "environment": "live", "card_entry": "hosted_fields" }
+}
+```
+
+`tier` is one of `self_host`, `merchant`, or `managed`. Frictionless / saved-card
+routes below are available only on `merchant`, `managed`, or an enterprise build.
+
+### `POST /api/payment/save-card`
+
+Vaults a card for one-tap repeat checkout (tokenized customer vault). The body
+carries a **hosted-fields card token**, never a card number. Returns a `vault_id`
+(`"{customerId}:{cardId}"`) to charge later.
+
+**Request**
+
+```json
+{
+  "card_token": "hf_card_tok_abc",
+  "billing": {
+    "first_name": "Ada", "last_name": "Lovelace",
+    "address1": "1 Analytical Way", "city": "London",
+    "state": "CA", "zip": "90210", "country": "US"
+  }
+}
+```
+
+**Response `200`**
+
+```json
+{ "success": true, "vault_id": "cust_1:card_1", "card_token": "vtok_1" }
+```
+
+**`403`** when frictionless / card-on-file is not enabled for the account
+(forced 3-D Secure); **`503`** when payments credentials are unset.
+
+### `POST /api/payment/charge-saved-card`
+
+Prices the rate **on the server** (a client-sent amount is ignored), charges the
+saved card **frictionlessly** (`3ds:false`), and buys the label — the one-tap
+repeat path. **Idempotent** on the required `idempotency_key`: the card is charged
+and the label bought at most once. The card is charged **before** the label, and
+a buy that fails *after* a successful charge is retried **without re-charging**.
+
+**Request**
+
+```json
+{
+  "vault_id": "cust_1:card_1",
+  "shipment_id": "shp_...",
+  "rate_id": "rate_...",
+  "idempotency_key": "order-8842"
+}
+```
+
+**Response `200`**
+
+```json
+{
+  "label_url": "https://easypost-files.s3.../label.png",
+  "qr_code_url": null,
+  "tracking_code": "9400100000000000000000",
+  "carrier": "USPS",
+  "service": "Priority",
+  "transaction_id": "txn_s",
+  "amount": "9.48"
+}
+```
+
+**`402`** when the charge is not approved; **`403`** when frictionless mode is not
+enabled; **`409`** when a purchase for the same `idempotency_key` is already in
+progress.
+
+---
+
 ## Bulk and international
 
 ### `POST /api/batch/create`
@@ -495,6 +602,72 @@ Removes a label from ShipKit's storage. **This only deletes the local record —
 void or refund the label with the carrier.**
 
 **Response `200`** on removal; **`404`** when there is nothing stored for that session.
+
+---
+
+## Admin session (SMS verification)
+
+Runtime key management (`/api/keys`), the admin label list (`/api/admin/labels`),
+and purchase history (`/api/history/labels`) require a **verified session** in
+addition to a valid API key. A session is minted by an **SMS one-time-code**
+handshake, and its id rides in the **`X-Session-ID`** header (never a query
+string). Admin actions additionally require the verified phone to be listed in
+`SHIPKIT_ADMIN_PHONES`.
+
+> These routes require the optional SMS module (`SHIPKIT_SMS_ENABLED=true` +
+> Twilio settings). With SMS disabled there is no runtime admin session — mint
+> keys with the [keygen CLI](authentication.md#minting-a-key) instead.
+
+### `POST /api/verification/start`
+
+Sends a one-time code to the phone and opens a pending session.
+
+**Request**
+
+```json
+{ "phone": "+14045551234", "admin": true }
+```
+
+`admin` is optional (default `false`). When `true`, the phone must be in
+`SHIPKIT_ADMIN_PHONES` or the call returns **`403`**.
+
+**Response `200`**
+
+```json
+{ "success": true, "sessionId": "vs_...", "message": "Verification code sent" }
+```
+
+**`400`** when `phone` is missing; **`502`** when the code could not be sent.
+
+### `POST /api/verification/check`
+
+Confirms the code and promotes the session to verified. The code is validated for
+`phone`, and the session is verified only if it was started for that same phone.
+
+**Request**
+
+```json
+{ "sessionId": "vs_...", "phone": "+14045551234", "code": "123456" }
+```
+
+**Response `200`**
+
+```json
+{ "success": true, "verified": true, "sessionId": "vs_..." }
+```
+
+**`400`** on a wrong/expired code (`{ "success": false, "verified": false, "error": "Invalid verification code" }`).
+
+Send the returned `sessionId` as **`X-Session-ID`** on the admin/history routes:
+
+```bash
+curl https://your-host/api/history/labels \
+  -H "ShipKit-Api-Key: pk_live_or_sk_live_key" \
+  -H "X-Session-ID: vs_..."
+```
+
+See [Authentication → Minting a key over HTTP](authentication.md#over-http-admin-gated)
+for the full key-management flow that depends on this session.
 
 ---
 

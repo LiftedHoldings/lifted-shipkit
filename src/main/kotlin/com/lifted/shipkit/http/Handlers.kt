@@ -8,6 +8,7 @@ import com.lifted.shipkit.model.PaymentSession
 import com.lifted.shipkit.payments.LiftedPaymentsClient
 import com.lifted.shipkit.security.ApiKeyStore
 import com.lifted.shipkit.security.KeyGenerator
+import com.lifted.shipkit.security.RateLimiter
 import com.lifted.shipkit.shipping.EasyPostService
 import com.lifted.shipkit.sms.SmsVerifier
 import com.lifted.shipkit.store.LabelStore
@@ -44,6 +45,13 @@ class Handlers(
     private val apiKeys: ApiKeyStore,
 ) {
     private val log = LoggerFactory.getLogger(Handlers::class.java)
+
+    /**
+     * Denial-of-wallet throttle for the browser-published (publishable-key) paid
+     * paths. Held on the (singleton) [Handlers] so its windows persist across
+     * requests. Disabled when [ShipKitConfig.rateLimitPerMinute] is not positive.
+     */
+    private val rateLimiter = RateLimiter(config.rateLimitPerMinute)
 
     // ---- API-key authentication ---------------------------------------------
 
@@ -102,7 +110,47 @@ class Handlers(
                     "(pk_…) may only rate shipments and run the 3-D Secure payment flow.",
             )
         }
+
+        // Denial-of-wallet throttle: a publishable key is embedded in page source by
+        // design, so a lifted key could otherwise loop the EasyPost-billed / gateway
+        // paid paths for free. Limit per (key id + client IP). Secret keys are
+        // server-side/trusted and are never limited here.
+        if (record.scope == KeyGenerator.Scope.PUBLISHABLE &&
+            rateLimiter.enabled &&
+            isRateLimitedPath(ctx.method(), path) &&
+            !rateLimiter.tryAcquire("${record.id}|${ctx.ip()}")
+        ) {
+            throw ApiKeyRejected(429, "Rate limit exceeded. Please slow down and retry shortly.")
+        }
     }
+
+    /**
+     * The subset of the publishable-key allowlist that costs money or upstream quota
+     * — EasyPost address verification / shipment rating, and the Lifted Payments
+     * session / status / label-purchase calls. These are throttled per publishable
+     * key + IP; the read-only tier/return endpoints are not.
+     */
+    private fun isRateLimitedPath(
+        method: io.javalin.http.HandlerType,
+        path: String,
+    ): Boolean =
+        when (method) {
+            io.javalin.http.HandlerType.POST -> {
+                path == "/api/address/verify" ||
+                    path == "/api/shipment/create" ||
+                    path == "/api/shipment/smartrates" ||
+                    path == "/api/payment/session" ||
+                    path.startsWith("/api/payment/purchase-label/")
+            }
+
+            io.javalin.http.HandlerType.GET -> {
+                path.startsWith("/api/payment/status/")
+            }
+
+            else -> {
+                false
+            }
+        }
 
     /**
      * The allowlist a publishable (`pk_…`) key may reach — exactly the widget's
@@ -455,7 +503,12 @@ class Handlers(
      * Report a payment's status by verifying it **server-side** against Lifted
      * Payments (never from return-URL params). A payment is only `approved` when
      * the gateway approved the charge AND 3-D Secure produced a liability shift.
-     * Emits `{status, three_ds:{eci, cavv, liability_shift}}`.
+     * Emits `{status, three_ds:{eci, liability_shift}}`.
+     *
+     * The 3-D Secure **CAVV** cryptogram is deliberately NOT returned to the client:
+     * it is cardholder-authentication data with no reason to leave the server. It is
+     * still persisted on the session (`threeDsCavv`) for reconciliation/audit; the
+     * widget only consumes `liability_shift`.
      */
     fun paymentStatus(ctx: Context) =
         withPayments(ctx) { client ->
@@ -483,10 +536,11 @@ class Handlers(
             ctx.json(
                 mapOf(
                     "status" to verification.status,
+                    // CAVV is intentionally omitted — it is auth-only cryptographic
+                    // data and never leaves the server (kept on the session for audit).
                     "three_ds" to
                         mapOf(
                             "eci" to verification.eci,
-                            "cavv" to verification.cavv,
                             "liability_shift" to verification.liabilityShift,
                         ),
                 ),
@@ -606,10 +660,14 @@ class Handlers(
                     // Release the claim so a legitimate retry can proceed.
                     store.releaseLabelPurchaseClaim(sessionId)
                     log.warn("Label purchase failed for {}: {}", sessionId, e.message)
+                    // Return a fixed, generic message — the upstream detail (which can
+                    // reveal the merchant's cost basis, e.g. "Rate increased since
+                    // payment (7.50 > 7.36)", or EasyPost account internals) is logged
+                    // above but never surfaced to the client.
                     return@withPayments fail(
                         ctx,
                         502,
-                        e.message ?: "Label purchase failed; please retry",
+                        "Label purchase failed; please retry",
                     )
                 }
 
@@ -835,10 +893,14 @@ class Handlers(
                     // complete the buy (the recorded session skips the re-charge).
                     store.releaseLabelPurchaseClaim(sessionId)
                     log.warn("Saved-card label buy failed for {}: {}", sessionId, e.message)
+                    // Return a fixed, generic message — the upstream detail (which can
+                    // reveal the merchant's cost basis, e.g. "Rate increased since
+                    // payment (7.50 > 7.36)", or EasyPost account internals) is logged
+                    // above but never surfaced to the client.
                     return@withPayments fail(
                         ctx,
                         502,
-                        e.message ?: "Label purchase failed; please retry",
+                        "Label purchase failed; please retry",
                     )
                 }
 
@@ -1182,7 +1244,7 @@ class Handlers(
 
     /**
      * Admin gate for the key-management surface. Reuses ShipKit's existing admin
-     * mechanism: a valid SMS-verified session (`X-Session-ID`/`?sessionId`) whose
+     * mechanism: a valid SMS-verified session (`X-Session-ID` header) whose
      * phone is in [ShipKitConfig.adminPhoneWhitelist]. When SMS verification is
      * disabled there is no runtime admin, so keys are managed with the
      * `shipkitKeygen` CLI instead. Writes the `401`/`403` response itself and
@@ -1200,7 +1262,11 @@ class Handlers(
     // ---- Helpers -------------------------------------------------------------
 
     private fun verifiedSession(ctx: Context): com.lifted.shipkit.model.VerificationSession? {
-        val sessionId = ctx.queryParam("sessionId") ?: ctx.header("X-Session-ID")
+        // The admin/history session id is read from the `X-Session-ID` HEADER only —
+        // never the query string. A session identifier in the URL leaks through
+        // access logs, proxy logs, browser history, and the Referer header (OWASP
+        // session-in-URL). The admin/widget caller can always send a header.
+        val sessionId = ctx.header("X-Session-ID")
         if (sessionId.isNullOrBlank()) {
             ctx.status(401).json(error("Verification session required"))
             return null

@@ -26,7 +26,10 @@
   --font: var(--font-sans);
   --mono: var(--font-mono);
   --shadow: var(--shadow-lg);
+  --aurora-blob: 0.42; /* canvas blob opacity — softened in light theme below */
 }
+:root[data-theme="light"] { --aurora-blob: 0.22; }
+@media (prefers-color-scheme: light) { :root:not([data-theme]) { --aurora-blob: 0.22; } }
 
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -55,6 +58,9 @@ p { margin: 0; max-width: 66ch; }
 a { color: var(--primary); text-decoration: none; }
 a:hover { color: var(--primary-hover); }
 
+/* Keyboard focus ring for the landing page (mirrors the demo). */
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 6px; }
+
 code, kbd, pre { font-family: var(--mono); }
 
 .wrap { width: 100%; max-width: var(--maxw); margin-inline: auto; padding-inline: clamp(20px, 5vw, 40px); }
@@ -74,6 +80,10 @@ code, kbd, pre { font-family: var(--mono); }
 .nav__links { display: flex; gap: 22px; margin-left: auto; align-items: center; }
 .nav__links a { color: var(--muted); font-size: 0.9rem; font-weight: 500; }
 .nav__links a:hover { color: var(--heading); }
+.nav__links a.active:not(.nav__cta):not(.nav__pm) { position: relative; color: var(--heading); }
+.nav__links a.active:not(.nav__cta):not(.nav__pm)::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 2px; border-radius: 2px; background: var(--primary);
+}
 .nav__cta {
   padding: 8px 15px; border-radius: var(--radius-sm);
   background: var(--primary); color: #fff !important; font-weight: 600;
@@ -86,7 +96,15 @@ code, kbd, pre { font-family: var(--mono); }
   background: transparent; border: 1px solid var(--border); border-radius: 9px;
 }
 .theme-toggle:hover { color: var(--heading); border-color: var(--primary); }
-@media (max-width: 760px) { .nav__links a:not(.nav__cta) { display: none; } }
+.theme-toggle .ic-sun { display: none; }
+:root[data-theme="light"] .theme-toggle .ic-moon { display: none; }
+:root[data-theme="light"] .theme-toggle .ic-sun { display: block; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) .theme-toggle .ic-moon { display: none; }
+  :root:not([data-theme]) .theme-toggle .ic-sun { display: block; }
+}
+/* Collapse the extra nav links before they overflow the bar (parity with the demo's 1000px breakpoint); keep the primary CTA + theme toggle. */
+@media (max-width: 1000px) { .nav__links a:not(.nav__cta) { display: none; } }
 
 /* ---------- Hero ---------- */
 .hero { position: relative; overflow: hidden; }
@@ -413,7 +431,9 @@ body::before {
 .card, .tier, .devres__card {
   border-color: var(--glass-border);
   background: var(--glass-fill);
-  backdrop-filter: blur(16px) saturate(1.3); -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  /* Light blur only — these sit below the fold; a large backdrop-blur here is
+     a costly paint over the animated aurora with no visible payoff. */
+  backdrop-filter: blur(6px) saturate(1.3); -webkit-backdrop-filter: blur(6px) saturate(1.3);
 }
 .tier--managed { box-shadow: var(--shadow), 0 0 0 1px color-mix(in srgb, var(--brand) 18%, transparent); overflow: hidden; }
 .tier--managed::after {
@@ -456,7 +476,7 @@ body::before {
 /* ---------- Frictionless vs forced-3DS comparison ---------- */
 .friction { position: relative; margin-top: 22px; border: 1px solid var(--glass-border); border-radius: var(--radius); overflow: hidden;
   background: radial-gradient(120% 150% at 100% 0%, var(--trust-tint), transparent 52%), var(--glass-fill);
-  backdrop-filter: blur(16px) saturate(1.3); -webkit-backdrop-filter: blur(16px) saturate(1.3); box-shadow: var(--shadow); }
+  backdrop-filter: blur(6px) saturate(1.3); -webkit-backdrop-filter: blur(6px) saturate(1.3); box-shadow: var(--shadow); }
 .friction-head { padding: 26px 28px 6px; }
 .friction-head .kicker { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase; color: var(--trust); }
 .friction-head h3 { font-size: 1.4rem; font-weight: 800; margin-top: 10px; letter-spacing: -0.02em; }

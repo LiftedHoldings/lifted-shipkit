@@ -94,9 +94,12 @@ class HandlersEndpointsTest {
         path: String,
         body: String = "{}",
         key: String? = this.key,
+        sessionId: String? = null,
     ): Response {
         val b = Request.Builder().url(origin + path).post(body.toRequestBody(jsonMedia))
         if (key != null) b.header("ShipKit-Api-Key", key)
+        // Admin/history session id travels in the header only — never the URL.
+        if (sessionId != null) b.header("X-Session-ID", sessionId)
         return ok.newCall(b.build()).execute()
     }
 
@@ -104,15 +107,18 @@ class HandlersEndpointsTest {
         origin: String,
         path: String,
         key: String? = this.key,
+        sessionId: String? = null,
     ): Response {
         val b = Request.Builder().url(origin + path).get()
         if (key != null) b.header("ShipKit-Api-Key", key)
+        if (sessionId != null) b.header("X-Session-ID", sessionId)
         return ok.newCall(b.build()).execute()
     }
 
     private fun delete(
         origin: String,
         path: String,
+        sessionId: String? = null,
     ): Response {
         val b =
             Request
@@ -120,6 +126,7 @@ class HandlersEndpointsTest {
                 .url(origin + path)
                 .delete()
                 .header("ShipKit-Api-Key", key)
+        if (sessionId != null) b.header("X-Session-ID", sessionId)
         return ok.newCall(b.build()).execute()
     }
 
@@ -364,13 +371,19 @@ class HandlersEndpointsTest {
                 "/api/verification/check",
                 """{"sessionId":"$userSession","phone":"5559990000","code":"123456"}""",
             ).use { assertEquals(200, it.code) }
-            // History is now reachable with that session.
+            // History is now reachable with that session (id in the header).
             get(
                 client.origin,
-                "/api/history/labels?sessionId=$userSession",
+                "/api/history/labels",
+                sessionId = userSession,
             ).use { assertEquals(200, it.code) }
             // A non-admin session cannot mint keys.
-            post(client.origin, "/api/keys?sessionId=$userSession", """{"label":"x"}""").use {
+            post(
+                client.origin,
+                "/api/keys",
+                """{"label":"x"}""",
+                sessionId = userSession,
+            ).use {
                 assertEquals(403, it.code)
             }
 
@@ -403,8 +416,9 @@ class HandlersEndpointsTest {
             val created =
                 post(
                     client.origin,
-                    "/api/keys?sessionId=$adminSession",
+                    "/api/keys",
                     """{"label":"prod","mode":"live"}""",
+                    sessionId = adminSession,
                 ).use {
                     assertEquals(201, it.code)
                     it.body!!.string()
@@ -413,17 +427,23 @@ class HandlersEndpointsTest {
             val newId = Regex(""""id":"([^"]+)"""").find(created)!!.groupValues[1]
             get(
                 client.origin,
-                "/api/admin/labels?sessionId=$adminSession",
+                "/api/admin/labels",
+                sessionId = adminSession,
             ).use { assertEquals(200, it.code) }
-            get(client.origin, "/api/keys?sessionId=$adminSession").use {
+            get(client.origin, "/api/keys", sessionId = adminSession).use {
                 assertEquals(200, it.code)
                 assertTrue(it.body!!.string().contains("prod"))
             }
             delete(
                 client.origin,
-                "/api/keys/$newId?sessionId=$adminSession",
+                "/api/keys/$newId",
+                sessionId = adminSession,
             ).use { assertEquals(200, it.code) }
-            delete(client.origin, "/api/keys/does-not-exist?sessionId=$adminSession").use {
+            delete(
+                client.origin,
+                "/api/keys/does-not-exist",
+                sessionId = adminSession,
+            ).use {
                 assertEquals(404, it.code)
             }
         }
@@ -434,6 +454,35 @@ class HandlersEndpointsTest {
         JavalinTest.test(app()) { _, client ->
             get(client.origin, "/api/keys").use { assertEquals(401, it.code) }
             get(client.origin, "/api/history/labels").use { assertEquals(401, it.code) }
+        }
+    }
+
+    @Test
+    fun `a session id in the URL query string is ignored — only the header is honored`() {
+        JavalinTest.test(app()) { _, client ->
+            // Mint a genuinely-verified admin session.
+            val adminStart =
+                post(
+                    client.origin,
+                    "/api/verification/start",
+                    """{"phone":"$adminPhone","admin":true}""",
+                ).use { it.body!!.string() }
+            val adminSession = Regex(""""sessionId":"([^"]+)"""").find(adminStart)!!.groupValues[1]
+            post(
+                client.origin,
+                "/api/verification/check",
+                """{"sessionId":"$adminSession","phone":"$adminPhone","code":"123456"}""",
+            ).use { assertEquals(200, it.code) }
+
+            // The valid session id in the QUERY STRING is NOT accepted (it would leak
+            // through access/proxy logs, browser history, and the Referer header).
+            get(client.origin, "/api/admin/labels?sessionId=$adminSession").use {
+                assertEquals(401, it.code, "session id in the URL is ignored")
+            }
+            // The SAME session id in the X-Session-ID header IS accepted.
+            get(client.origin, "/api/admin/labels", sessionId = adminSession).use {
+                assertEquals(200, it.code, "session id in the header is honored")
+            }
         }
     }
 
@@ -459,7 +508,7 @@ class HandlersEndpointsTest {
             ).use { assertEquals(400, it.code, "cross-phone verify is refused") }
 
             // 3) The admin session is therefore NOT valid → admin surface stays closed.
-            get(client.origin, "/api/admin/labels?sessionId=$adminSession").use {
+            get(client.origin, "/api/admin/labels", sessionId = adminSession).use {
                 assertEquals(401, it.code, "the session was never verified")
             }
         }

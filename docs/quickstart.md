@@ -2,6 +2,28 @@
 
 Get ShipKit running in about a minute. This guide covers the two integration paths — **self-host** for full control and **managed** for a one-tag drop-in. For the full commercial picture (self-host, the Lifted 3-D Secure merchant-account tier, and fully managed, with exact pricing), see **[docs/tiers.md](tiers.md)**.
 
+## Try it now — no keys, no account
+
+Want to see the whole flow before you configure anything? Open the
+**self-contained demo** — it's a single file with no backend, no build step, and
+no external calls. Clone (or download) the repo and open it in a browser:
+
+```bash
+git clone https://github.com/Lifted-Holdings/shipkit.git
+# then just open demo/index.html — double-click it, or:
+#   macOS:   open   demo/index.html
+#   Linux:   xdg-open demo/index.html
+#   Windows: start  demo/index.html
+```
+
+You'll get the full drop-in widget — address entry, live rate compare, the
+cyan **3-D Secure** challenge moment, and the label + QR result — running
+entirely in the page. Nothing to sign up for. When you're ready to buy real
+labels, pick a path below.
+
+---
+
+- [Try it now — no keys](#try-it-now--no-keys-no-account)
 - [Self-host (free, MIT)](#self-host-free-mit)
 - [Managed (plug-and-play)](#managed-plug-and-play)
 - [Verify it works](#verify-it-works)

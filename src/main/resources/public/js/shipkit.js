@@ -806,9 +806,10 @@
     ];
 
     var result = el('div', { class: 'sk__result' });
-    if (label.qrCodeUrl) {
+    var qrSrc = safeUrl(label.qrCodeUrl);
+    if (qrSrc) {
       result.appendChild(el('img', {
-        class: 'sk__qr', src: label.qrCodeUrl, alt: 'QR code — scan to present this label at drop-off',
+        class: 'sk__qr', src: qrSrc, alt: 'QR code — scan to present this label at drop-off',
         loading: 'lazy'
       }));
     }
@@ -821,14 +822,16 @@
     kids.push(result);
 
     var actions = el('div', { class: 'sk__actions' }, []);
-    if (label.labelUrl) {
+    var labelHref = safeUrl(label.labelUrl);
+    if (labelHref) {
       actions.appendChild(el('a', {
-        class: 'sk__btn', href: label.labelUrl, target: '_blank', rel: 'noopener', download: ''
+        class: 'sk__btn', href: labelHref, target: '_blank', rel: 'noopener', download: ''
       }, ['Download label']));
     }
-    if (label.trackingUrl) {
+    var trackHref = safeUrl(label.trackingUrl);
+    if (trackHref) {
       actions.appendChild(el('a', {
-        class: 'sk__btn sk__btn--ghost', href: label.trackingUrl, target: '_blank', rel: 'noopener'
+        class: 'sk__btn sk__btn--ghost', href: trackHref, target: '_blank', rel: 'noopener'
       }, ['Track shipment']));
     }
     var again = el('button', { type: 'button', class: 'sk__btn sk__btn--ghost' }, ['Ship another']);
@@ -892,6 +895,24 @@
     if (proto !== 'https:' && proto !== 'http:') return false;
     // Same-origin http(s) content would neutralize the sandbox — reject it.
     return typeof window === 'undefined' || u.origin !== window.location.origin;
+  }
+
+  // Guard a SERVER-supplied label/tracking/QR URL before it is placed in an
+  // href/src. The widget runs against an operator-supplied `endpoint`, so the
+  // response origin is not always trusted: a `javascript:` (or `data:text/html`)
+  // value would otherwise become a clickable script execution or an XSS in the
+  // host page. Allows http(s) and image `data:` URIs only (the self-contained
+  // demo renders its SVG label/QR as `data:image/...`); returns the URL when
+  // safe, else null so the caller skips the element. See finding #3.
+  function safeUrl(u) {
+    if (!u) return null;
+    var s = String(u);
+    try {
+      var proto = new URL(s, (typeof window !== 'undefined' ? window.location.href : undefined)).protocol;
+      if (proto === 'https:' || proto === 'http:') return s;
+      if (proto === 'data:' && /^data:image\//i.test(s)) return s;
+      return null;
+    } catch (e) { return null; }
   }
 
   function friendly(err, fallback) {

@@ -298,6 +298,32 @@ class EasyPostService internal constructor(
         maxBaseRate: BigDecimal? = null,
     ): BoughtLabel {
         val original = client.shipment.retrieve(shipmentId)
+
+        // Idempotency: if this shipment is ALREADY purchased, return the existing
+        // label instead of attempting a second buy. EasyPost buys once — a second
+        // `buy` on a purchased shipment errors, which (on a crash/retry between the
+        // carrier buy and our persistence) would 502 the caller and orphan a
+        // paid-for label. A present postage label is the definitive "bought" signal.
+        original.postageLabel?.labelUrl?.let { existingLabel ->
+            log.info("Shipment {} is already purchased; returning the existing label", shipmentId)
+            return BoughtLabel(
+                shipmentId = original.id,
+                trackingCode = original.trackingCode,
+                labelUrl = existingLabel,
+                qrCodeUrl = generateQrCode(original.id, original.selectedRate?.carrier),
+                status = original.status,
+                carrier = original.selectedRate?.carrier,
+                service = original.selectedRate?.service,
+                baseRate =
+                    original.selectedRate?.rate?.let {
+                        BigDecimal(
+                            it.toString(),
+                        ).toDouble()
+                    },
+                senderPhone = original.fromAddress?.phone,
+            )
+        }
+
         val refreshed = client.shipment.newRates(shipmentId)
         val originalRate = originalRateId?.let { id -> original.rates?.find { it.id == id } }
         val rate =
