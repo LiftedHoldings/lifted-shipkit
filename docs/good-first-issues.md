@@ -1,6 +1,6 @@
 # Good first issues
 
-New to ShipKit? These are scoped, self-contained starter tasks — each touches a
+New to Lifted ShipKit? These are scoped, self-contained starter tasks — each touches a
 small, well-understood surface and has a clear "done." Pick one, open an issue
 that references it (or comment on the tracking issue), and read
 [CONTRIBUTING.md](../CONTRIBUTING.md) for the branch/PR flow.

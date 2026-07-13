@@ -1,6 +1,8 @@
 <div align="center">
 
-# ShipKit — multi-carrier shipping labels + 3-D Secure payments
+<img src="docs/images/lifted-shipkit-globe.svg" alt="Lifted ShipKit" width="56" height="56" />
+
+# Lifted ShipKit — multi-carrier shipping labels + 3-D Secure payments
 
 **The open shipping toolkit — secured by Lifted Payments 3-D Secure.**
 
@@ -33,7 +35,7 @@ Add multi-carrier shipping-label buying to any store, with card payment locked d
 
 ## Why ShipKit
 
-Buying a shipping label should be a few lines of code, not a project. ShipKit gives you a real multi-carrier backend (EasyPost) and a drop-in payment step, so a customer can compare rates, pay, and get a label without you stitching together three vendors and a PCI audit.
+Buying a shipping label should be a few lines of code, not a project. Lifted ShipKit gives you a real multi-carrier backend (EasyPost) and a drop-in payment step, so a customer can compare rates, pay, and get a label without you stitching together three vendors and a PCI audit.
 
 - **Real carriers, real rates.** Address verification, live multi-carrier rate compare, SmartRates, label purchase, batch, scan forms, customs, tracking webhooks.
 - **Built for shipping's fraud problem.** Labels bought with stolen cards are a top chargeback category — real goods, shipped fast, disputed weeks later. ShipKit forces **Lifted Payments 3-D Secure** on every card charge, so the issuer authenticates the buyer before the label prints and fraud-and-chargeback liability shifts off you.

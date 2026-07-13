@@ -1,6 +1,6 @@
 # 3-D Secure, explained
 
-ShipKit captures cards on a hosted **3-D Secure** form, branded *Secured by Lifted
+Lifted ShipKit captures cards on a hosted **3-D Secure** form, branded *Secured by Lifted
 Payments · 3-D Secure*. This page explains what 3-D Secure is, what it changes for you as
 a merchant, and why it is the default here. It is written for developers, not compliance
 lawyers — accurate, no fear-mongering.

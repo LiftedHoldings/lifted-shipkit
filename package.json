@@ -1,7 +1,7 @@
 {
   "name": "shipkit-web-tests",
   "version": "1.0.0",
-  "description": "Dev-only Playwright end-to-end + accessibility tests for the ShipKit widget. Not part of the ShipKit runtime, which stays dependency-free.",
+  "description": "Dev-only Playwright end-to-end + accessibility tests for the Lifted ShipKit widget. Not part of the ShipKit runtime, which stays dependency-free.",
   "private": true,
   "author": "Daniel Wilson Kemp",
   "license": "MIT",

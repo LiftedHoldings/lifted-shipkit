@@ -1,6 +1,6 @@
 # Architecture
 
-ShipKit is a small, focused backend that fronts two external systems — **EasyPost**
+Lifted ShipKit is a small, focused backend that fronts two external systems — **EasyPost**
 (multi-carrier rating and label purchase) and **Lifted Payments 3-D Secure** (card
 payment via a hosted, authenticated form) — behind one clean REST API. A dependency-free
 JavaScript widget consumes that API in the browser.

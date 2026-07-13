@@ -1,6 +1,6 @@
 # Quickstart — multi-carrier shipping labels in 60 seconds
 
-Get ShipKit running in about a minute. This guide covers the two integration paths — **self-host** for full control and **managed** for a one-tag drop-in. For the full commercial picture (self-host, the Lifted 3-D Secure merchant-account tier, and fully managed, with exact pricing), see **[docs/tiers.md](tiers.md)**.
+Get Lifted ShipKit running in about a minute. This guide covers the two integration paths — **self-host** for full control and **managed** for a one-tag drop-in. For the full commercial picture (self-host, the Lifted 3-D Secure merchant-account tier, and fully managed, with exact pricing), see **[docs/tiers.md](tiers.md)**.
 
 ## Try it now — no keys, no account
 

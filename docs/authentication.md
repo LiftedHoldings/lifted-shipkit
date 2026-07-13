@@ -1,6 +1,6 @@
 # Authentication
 
-Every ShipKit API call is authenticated with a **ShipKit API key**. Keys are the single
+Every Lifted ShipKit API call is authenticated with a **ShipKit API key**. Keys are the single
 front door to the `/api/*` surface — the widget sends one, and so must any direct caller.
 
 ## The `ShipKit-Api-Key` header

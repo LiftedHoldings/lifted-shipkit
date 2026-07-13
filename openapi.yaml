@@ -1,10 +1,10 @@
 openapi: 3.1.0
 info:
-  title: ShipKit API
+  title: Lifted ShipKit API
   version: 1.0.0
   summary: The open shipping toolkit — secured by Lifted Payments 3-D Secure.
   description: |
-    ShipKit buys multi-carrier shipping labels (USPS, UPS, FedEx and more via
+    Lifted ShipKit buys multi-carrier shipping labels (USPS, UPS, FedEx and more via
     EasyPost) and takes card payment authenticated by **Lifted Payments 3-D
     Secure**, so fraud-chargeback liability shifts to the issuer.
 

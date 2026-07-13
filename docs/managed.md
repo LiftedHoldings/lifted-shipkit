@@ -1,6 +1,6 @@
-# ShipKit Managed — hosted shipping widget, no PCI scope
+# Lifted ShipKit Managed — hosted shipping widget, no PCI scope
 
-ShipKit ships in [three tiers](tiers.md). This page is about the third — **fully managed**.
+Lifted ShipKit ships in [three tiers](tiers.md). This page is about the third — **fully managed**.
 
 - **Tier 1 · Self-host (DIY, free)** — run the backend yourself, bring your own EasyPost
   account and your own 3-D Secure merchant account. Full control, your infrastructure. See

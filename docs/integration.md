@@ -1,6 +1,6 @@
 # Drop-in JavaScript shipping widget — integration guide
 
-**Import ShipKit shipping into your own app or checkout.** `shipkit.js` is a dependency-free
+**Import Lifted ShipKit shipping into your own app or checkout.** `shipkit.js` is a dependency-free
 drop-in widget: address entry, live multi-carrier rate compare, a 3-D Secure card step, and a
 label/QR result — one script, no build step. It loads as a UMD global (`window.ShipKit`) via a
 plain `<script>` tag — no bundler and no ES `import` required. Keep your app, your checkout, and

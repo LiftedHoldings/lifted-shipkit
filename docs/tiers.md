@@ -1,6 +1,6 @@
 # Tiers & pricing
 
-ShipKit ships in **three tiers**. They differ only in how much you run yourself and where
+Lifted ShipKit ships in **three tiers**. They differ only in how much you run yourself and where
 the money flows — the widget, the API, and the forced 3-D Secure card step are identical in
 all three. Pick the one that fits, and switch later without changing your integration.
 

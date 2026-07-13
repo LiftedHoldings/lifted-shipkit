@@ -1,4 +1,4 @@
-# How ShipKit compares
+# How Lifted ShipKit compares
 
 Most teams that need shipping labels end up wiring two vendors together: a
 multi-carrier rating API for the labels, and a payment processor for the card

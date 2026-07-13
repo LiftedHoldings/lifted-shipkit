@@ -1,6 +1,6 @@
 # Shipping REST API reference (EasyPost + 3-D Secure)
 
-The ShipKit backend exposes one JSON REST API. The widget uses it, and you can call it
+The Lifted ShipKit backend exposes one JSON REST API. The widget uses it, and you can call it
 directly from any language. All request and response bodies are `application/json` unless
 noted. Base path is the host you deploy to (for example `http://localhost:8080`); the
 widget calls it under a configurable `endpoint` (default `/api`).
