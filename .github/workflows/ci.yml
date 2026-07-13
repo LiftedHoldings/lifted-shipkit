@@ -1,0 +1,99 @@
+name: CI
+
+# Build, test and end-to-end on every push and pull request. No secrets are
+# used or required — ShipKit compiles, tests and runs its browser E2E without
+# any credentials.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & test (JDK 17)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # `build` runs the full JUnit/MockK/JavalinTest suite (Testcontainers steps
+      # skip gracefully when Docker is absent) and, via kover onCheck, the
+      # coverage verification. `koverXmlReport` emits the JaCoCo-format XML.
+      - name: Build, test and coverage
+        run: ./gradlew --no-daemon build test koverXmlReport
+
+      - name: Upload build reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-reports
+          path: build/reports/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload coverage (Kover XML)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-kover
+          path: build/reports/kover/report.xml
+          if-no-files-found: ignore
+          retention-days: 7
+
+  e2e:
+    name: Widget E2E + a11y (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # No lockfile is committed (dev-only tooling, no runtime deps), so install
+      # from package.json rather than `npm ci`.
+      - name: Install test tooling
+        run: npm install --no-audit --no-fund
+
+      - name: Install Playwright browser (Chromium)
+        run: npx playwright install --with-deps chromium
+
+      - name: Run widget E2E + accessibility
+        run: npm run test:e2e
+
+      - name: Upload E2E screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7

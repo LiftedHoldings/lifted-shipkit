@@ -1,0 +1,868 @@
+openapi: 3.1.0
+info:
+  title: ShipKit API
+  version: 1.0.0
+  summary: The open shipping toolkit — secured by Lifted Payments 3-D Secure.
+  description: |
+    ShipKit buys multi-carrier shipping labels (USPS, UPS, FedEx and more via
+    EasyPost) and takes card payment authenticated by **Lifted Payments 3-D
+    Secure**, so fraud-chargeback liability shifts to the issuer.
+
+    ## Authentication
+    Every `/api/*` route **except** `GET /api/health` and the HMAC-verified
+    `POST /api/webhook/easypost` requires an API key in the `ShipKit-Api-Key`
+    header:
+
+    ```
+    ShipKit-Api-Key: sk_live_your_secret_key_here
+    ```
+
+    Keys carry a **scope**: **secret** keys (`sk_live_…`/`sk_test_…`) reach every
+    route and are server/admin-only, while **publishable** keys (`pk_live_…`/`pk_test_…`)
+    are browser-safe and the backend confines them to the customer flow (address
+    verify, rate, payment session/status, purchase-label) — any secret-only action
+    returns `403`. The mode token is `_live_` (production) or `_test_`. Mint keys with
+    the `shipkitKeygen` Gradle task / `com.lifted.shipkit.KeygenKt` CLI (`--publishable`
+    for a `pk_…` key), or via the admin-gated `/api/keys` endpoints (`"scope"`:
+    `"secret"` default or `"publishable"`). Only a SHA-256 hash of each key is stored;
+    the full key is shown once at creation and can never be retrieved again.
+
+    ## Money
+    All amounts — carrier rates and charges — are **strings** (e.g. `"8.42"`).
+    Parse them as decimals; never float- or string-compare.
+
+    ## Errors
+    Failures return a non-2xx status with `{ "error": "<message>" }`. A feature
+    whose credentials are not configured returns `503`.
+  contact:
+    name: Lifted Holdings
+    url: https://liftedholdings.com/payments
+    email: support@liftedholdings.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+externalDocs:
+  description: Take live payments through a 3-D Secure merchant account.
+  url: https://liftedholdings.com/payments
+servers:
+  - url: http://localhost:8080
+    description: Local self-host default
+  - url: https://api.liftedholdings.com/shipkit/v1
+    description: ShipKit Managed edge
+
+security:
+  - ShipKitApiKey: []
+
+tags:
+  - name: Health
+  - name: Addresses
+  - name: Shipments
+  - name: Payment
+  - name: Bulk & international
+  - name: EndShipper
+  - name: Configuration
+  - name: Labels
+  - name: Webhooks
+  - name: API keys
+
+paths:
+  /api/health:
+    get:
+      tags: [Health]
+      summary: Liveness / readiness probe (no API key required).
+      operationId: getHealth
+      security: []
+      responses:
+        "200":
+          description: Service is up; reports which features are configured.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, examples: ["ok"] }
+                  shipping: { type: boolean }
+                  payments: { type: boolean }
+              example: { status: "ok", shipping: true, payments: true }
+
+  /api/address/verify:
+    post:
+      tags: [Addresses]
+      summary: Verify and normalize a delivery address.
+      operationId: verifyAddress
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Address" }
+            example:
+              name: "Ada Lovelace"
+              street1: "1600 Pennsylvania Ave NW"
+              city: "Washington"
+              state: "DC"
+              zip: "20500"
+              country: "US"
+      responses:
+        "200":
+          description: Normalized address plus any correction messages.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/VerifyResponse" }
+              example:
+                verified: true
+                address:
+                  name: "Ada Lovelace"
+                  company: ""
+                  street1: "1600 PENNSYLVANIA AVE NW"
+                  street2: ""
+                  city: "WASHINGTON"
+                  state: "DC"
+                  zip: "20500-0003"
+                  country: "US"
+                  phone: ""
+                residential: false
+                errors: []
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503": { $ref: "#/components/responses/FeatureUnconfigured" }
+
+  /api/shipment/create:
+    post:
+      tags: [Shipments]
+      summary: Create a shipment and return carrier rates.
+      operationId: createShipment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShipmentRequest" }
+            example:
+              from:
+                name: "Analytical Engines"
+                street1: "1 Foundry St"
+                city: "Atlanta"
+                state: "GA"
+                zip: "30301"
+                country: "US"
+                phone: "4045551234"
+              to:
+                name: "Ada Lovelace"
+                street1: "1600 Pennsylvania Ave NW"
+                city: "Washington"
+                state: "DC"
+                zip: "20500"
+                country: "US"
+              parcel:
+                weight_oz: 32
+                length_in: 10
+                width_in: 8
+                height_in: 4
+      responses:
+        "200":
+          description: |
+            The shipment id and its rates. An **empty `rates` with a populated
+            `messages`** is a carrier error — surface `messages[].message`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShipmentResponse" }
+              example:
+                id: "shp_1a2b3c"
+                rates:
+                  - { id: "rate_aaa", carrier: "USPS", service: "Priority", rate: "8.42", currency: "USD", delivery_days: 2 }
+                  - { id: "rate_bbb", carrier: "UPS", service: "Ground", rate: "11.07", currency: "USD", delivery_days: 3 }
+                messages: []
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503": { $ref: "#/components/responses/FeatureUnconfigured" }
+
+  /api/shipment/smartrates:
+    post:
+      tags: [Shipments]
+      summary: Delivery-date-accurate SmartRates for a shipment.
+      operationId: smartRates
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [shipment_id]
+              properties:
+                shipment_id: { type: string, examples: ["shp_1a2b3c"] }
+      responses:
+        "200":
+          description: SmartRates with delivery-date percentiles.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  shipment_id: { type: string }
+                  rates: { type: array, items: { type: object, additionalProperties: true } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503": { $ref: "#/components/responses/FeatureUnconfigured" }
+
+  /api/shipment/buy:
+    post:
+      tags: [Shipments]
+      summary: Buy a label directly for a chosen rate (payment handled out of band).
+      operationId: buyLabelDirect
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [shipment_id]
+              properties:
+                shipment_id: { type: string, examples: ["shp_1a2b3c"] }
+                rate_id: { type: string, examples: ["rate_aaa"] }
+                end_shipper_id: { type: string, examples: ["es_123"] }
+      responses:
+        "200":
+          description: The purchased label.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BoughtLabel" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503": { $ref: "#/components/responses/FeatureUnconfigured" }
+
+  /api/payment/session:
+    post:
+      tags: [Payment]
+      summary: Open a Lifted Payments 3-D Secure payment session for a rate.
+      description: |
+        The charge **amount is computed on the server** from the rate plus the
+        configured markup — any client-sent amount is ignored. The canonical
+        hosted-form key is `form_url`.
+      operationId: createPaymentSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PaymentSessionRequest" }
+            example: { shipment_id: "shp_1a2b3c", rate_id: "rate_aaa" }
+      responses:
+        "200":
+          description: The session and the hosted 3-D Secure form URL.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaymentSessionResponse" }
+              example:
+                session_id: "sess_9f8e7d"
+                form_url: "https://dashboard.maverickpayments.com/hosted-fields/sess_9f8e7d"
+                amount: "9.48"
+                currency: "USD"
+                expires_at: "2026-07-12T18:05:00Z"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "502": { $ref: "#/components/responses/GatewayError" }
+        "503": { $ref: "#/components/responses/FeatureUnconfigured" }
+
+  /api/payment/status/{session_id}:
+    get:
+      tags: [Payment]
+      summary: Poll the server-verified payment / 3-D Secure status.
+      description: |
+        Status is confirmed against Lifted Payments — never from return-URL
+        params. A label may be bought **only** when `status == "approved"` **and**
+        `three_ds.liability_shift == true`.
+      operationId: getPaymentStatus
+      parameters:
+        - { $ref: "#/components/parameters/SessionId" }
+      responses:
+        "200":
+          description: The verified status and 3-D Secure result.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaymentStatusResponse" }
+              example:
+                status: "approved"
+                three_ds: { eci: "05", cavv: "AAABBABZUAAAAAAAxxxxxxxx=", liability_shift: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "502": { $ref: "#/components/responses/GatewayError" }
+        "503": { $ref: "#/components/responses/FeatureUnconfigured" }
+
+  /api/payment/purchase-label/{session_id}:
+    post:
+      tags: [Payment]
+      summary: Buy the label for an approved session (idempotent).
+      description: |
+        Re-verifies the charge server-side, then buys the label. **Idempotent** —
+        a second call returns the same label. Refuses unless approved with a
+        3-D Secure liability shift.
+      operationId: purchaseLabel
+      parameters:
+        - { $ref: "#/components/parameters/SessionId" }
+      responses:
+        "200":
+          description: The purchased label.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LabelResponse" }
+              example:
+                label_url: "https://easypost-files.s3.amazonaws.com/files/postage_label/label.png"
+                qr_code_url: "https://easypost-files.s3.amazonaws.com/files/postage_label/qr.png"
+                tracking_code: "9400100000000000000000"
+                carrier: "USPS"
+                service: "Priority"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "402":
+          description: Payment not approved with a 3-D Secure liability shift.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: A label purchase is already in progress for this session.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "502": { $ref: "#/components/responses/GatewayError" }
+        "503": { $ref: "#/components/responses/FeatureUnconfigured" }
+
+  /api/batch/create:
+    post:
+      tags: [Bulk & international]
+      summary: Create and buy a batch of shipments.
+      operationId: createBatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [shipment_ids]
+              properties:
+                shipment_ids: { type: array, items: { type: string }, examples: [["shp_a", "shp_b"]] }
+      responses:
+        "200":
+          description: The created batch.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+              example: { id: "batch_1", state: "created", num_shipments: 2 }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503": { $ref: "#/components/responses/FeatureUnconfigured" }
+
+  /api/scanform/create:
+    post:
+      tags: [Bulk & international]
+      summary: Generate a SCAN form (manifest) for a batch.
+      operationId: createScanForm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [batch_id]
+              properties:
+                batch_id: { type: string, examples: ["batch_1"] }
+      responses:
+        "200":
+          description: The SCAN form.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+              example: { id: "sf_1", form_url: "https://easypost-files.s3.amazonaws.com/scanform.pdf", status: "created" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503": { $ref: "#/components/responses/FeatureUnconfigured" }
+
+  /api/customs/create:
+    post:
+      tags: [Bulk & international]
+      summary: Create customs info + items for an international shipment.
+      operationId: createCustoms
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+            example:
+              customs_signer: "Ada Lovelace"
+              contents_type: "merchandise"
+              eel_pfc: "NOEEI 30.37(a)"
+              items:
+                - { description: "Cotton t-shirt", quantity: 2, value: 20.0, weight: 8.0, hs_tariff_number: "610910", origin_country: "US" }
+      responses:
+        "200":
+          description: The created customs info.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503": { $ref: "#/components/responses/FeatureUnconfigured" }
+
+  /api/endshipper/get:
+    get:
+      tags: [EndShipper]
+      summary: Read the configured EndShipper identity.
+      operationId: getEndShipper
+      responses:
+        "200":
+          description: The EndShipper id (if configured).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  end_shipper_id: { type: [string, "null"] }
+                  configured: { type: boolean }
+              example: { success: true, end_shipper_id: "es_123", configured: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/endshipper/create:
+    post:
+      tags: [EndShipper]
+      summary: Register / update the EndShipper identity.
+      operationId: createEndShipper
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Address" }
+            example:
+              name: "Analytical Engines"
+              company: "Analytical Engines LLC"
+              phone: "4045551234"
+              street1: "1 Foundry St"
+              city: "Atlanta"
+              state: "GA"
+              zip: "30301"
+              country: "US"
+      responses:
+        "200":
+          description: The registered EndShipper.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  end_shipper_id: { type: string }
+                  name: { type: [string, "null"] }
+                  company: { type: [string, "null"] }
+              example: { success: true, end_shipper_id: "es_123" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503": { $ref: "#/components/responses/FeatureUnconfigured" }
+
+  /api/config/markup:
+    get:
+      tags: [Configuration]
+      summary: Read the merchant markup applied on top of carrier rates.
+      operationId: getMarkup
+      responses:
+        "200":
+          description: The current markup.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Markup" }
+              example: { percentage_markup: 12.0, fixed_fee_cents: 50, fixed_fee_dollars: 0.5 }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Configuration]
+      summary: Update the merchant markup.
+      operationId: updateMarkup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [percentage_markup, fixed_fee_cents]
+              properties:
+                percentage_markup: { type: number, examples: [12.0] }
+                fixed_fee_cents: { type: integer, examples: [50] }
+      responses:
+        "200":
+          description: The updated markup.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+              example: { success: true, percentage_markup: 12.0, fixed_fee_cents: 50 }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/label/{labelId}:
+    get:
+      tags: [Labels]
+      summary: Fetch a stored label by id.
+      operationId: getLabel
+      parameters:
+        - name: labelId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: The stored label.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/label/session/{sessionId}:
+    get:
+      tags: [Labels]
+      summary: Fetch a stored label by payment session id.
+      operationId: getLabelBySession
+      parameters:
+        - { $ref: "#/components/parameters/SessionIdCamel" }
+      responses:
+        "200":
+          description: The stored label.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/label/session/{sessionId}/shred:
+    delete:
+      tags: [Labels]
+      summary: Remove a label from storage (does not void it with the carrier).
+      operationId: shredLabel
+      parameters:
+        - { $ref: "#/components/parameters/SessionIdCamel" }
+      responses:
+        "200":
+          description: The label was removed from storage.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/webhook/easypost:
+    post:
+      tags: [Webhooks]
+      summary: Receive EasyPost tracking / event webhooks (HMAC-verified).
+      description: |
+        Authenticated by EasyPost's HMAC-SHA256 signature — **not** an API key —
+        so it is exempt from the `ShipKit-Api-Key` requirement. ShipKit verifies
+        `X-Hmac-Signature` (`hmac-sha256-hex=` + hex HMAC over the raw body,
+        keyed by the NFKD-normalized secret, constant-time) before processing.
+      operationId: easyPostWebhook
+      security: []
+      parameters:
+        - name: X-Hmac-Signature
+          in: header
+          required: true
+          schema: { type: string }
+          description: "`hmac-sha256-hex=` + hex HMAC-SHA256 of the raw body."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+            example:
+              id: "evt_123"
+              description: "tracker.updated"
+              result: { tracking_code: "9400100000000000000000", status: "in_transit", carrier: "USPS" }
+      responses:
+        "200": { description: Event verified and accepted. }
+        "401":
+          description: Missing or invalid signature.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "503": { $ref: "#/components/responses/FeatureUnconfigured" }
+
+  /api/keys:
+    post:
+      tags: [API keys]
+      summary: Mint a new API key (admin-gated). The full key is shown once.
+      description: |
+        Requires a valid API key (the `/api/*` gate) **and** a verified admin
+        session. The returned `api_key` is the only time the full secret is
+        exposed — store it immediately.
+      operationId: createApiKey
+      parameters:
+        - { $ref: "#/components/parameters/AdminSession" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [label]
+              properties:
+                label: { type: string, examples: ["prod-checkout"] }
+                mode: { type: string, enum: [live, test], default: live }
+      responses:
+        "201":
+          description: The minted key (with the one-time `api_key`).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiKeyCreated" }
+              example:
+                id: "b2f1c0de-1111-2222-3333-444455556666"
+                label: "prod-checkout"
+                prefix: "sk_live_Ab12Cd"
+                created_at: "2026-07-12T17:00:00Z"
+                last_used_at: null
+                revoked: false
+                mode: "live"
+                api_key: "sk_live_your_secret_key_here"
+                message: "Store this key now — it is shown only once and cannot be retrieved again."
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    get:
+      tags: [API keys]
+      summary: List API keys (metadata only; never the key or its hash). Admin-gated.
+      operationId: listApiKeys
+      parameters:
+        - { $ref: "#/components/parameters/AdminSession" }
+      responses:
+        "200":
+          description: All keys, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count: { type: integer }
+                  keys: { type: array, items: { $ref: "#/components/schemas/ApiKey" } }
+              example:
+                count: 1
+                keys:
+                  - { id: "b2f1c0de-1111-2222-3333-444455556666", label: "prod-checkout", prefix: "sk_live_Ab12Cd", created_at: "2026-07-12T17:00:00Z", last_used_at: "2026-07-12T17:05:00Z", revoked: false }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/keys/{id}:
+    delete:
+      tags: [API keys]
+      summary: Revoke an API key by id (idempotent). Admin-gated.
+      operationId: revokeApiKey
+      parameters:
+        - { $ref: "#/components/parameters/AdminSession" }
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: The key is revoked.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+              example: { success: true, id: "b2f1c0de-1111-2222-3333-444455556666", revoked: true, already_revoked: false }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+components:
+  securitySchemes:
+    ShipKitApiKey:
+      type: apiKey
+      in: header
+      name: ShipKit-Api-Key
+      description: |
+        A ShipKit API key (`sk_live_…` or `sk_test_…`). Required on every `/api/*`
+        route except `GET /api/health` and the HMAC-verified EasyPost webhook.
+
+  parameters:
+    SessionId:
+      name: session_id
+      in: path
+      required: true
+      schema: { type: string }
+      description: Payment session id from `POST /api/payment/session`.
+    SessionIdCamel:
+      name: sessionId
+      in: path
+      required: true
+      schema: { type: string }
+      description: Payment session id.
+    AdminSession:
+      name: X-Session-ID
+      in: header
+      required: false
+      schema: { type: string }
+      description: |
+        A verified admin SMS session id (an admin-whitelisted phone). Required for
+        the `/api/keys` management endpoints.
+
+  responses:
+    BadRequest:
+      description: Invalid request or carrier/validation error.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: Missing, invalid, or revoked API key.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example: { success: false, error: "Missing API key. Send it in the 'ShipKit-Api-Key' header." }
+    Forbidden:
+      description: Authenticated but not authorized for this admin action.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Unknown or expired resource.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    GatewayError:
+      description: Upstream gateway error; retry.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    FeatureUnconfigured:
+      description: The feature's credentials are not configured.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example: { success: false, error: "Shipping is not configured (set EASYPOST_API_KEY)" }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        success: { type: boolean, examples: [false] }
+        error: { type: string, examples: ["Payment session not found"] }
+      required: [error]
+    Address:
+      type: object
+      properties:
+        name: { type: string }
+        company: { type: string }
+        street1: { type: string }
+        street2: { type: string }
+        city: { type: string }
+        state: { type: string, description: Two-letter US/CA state. }
+        zip: { type: string }
+        country: { type: string, default: "US", description: ISO alpha-2. }
+        phone: { type: string }
+      required: [street1, city, state, zip]
+    VerifyResponse:
+      type: object
+      properties:
+        verified: { type: boolean }
+        address: { $ref: "#/components/schemas/Address" }
+        residential: { type: boolean }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code: { type: string }
+              message: { type: string }
+    Parcel:
+      type: object
+      properties:
+        weight_oz: { type: number, description: "Weight in OUNCES (required, > 0)." }
+        length_in: { type: number }
+        width_in: { type: number }
+        height_in: { type: number }
+      required: [weight_oz]
+    ShipmentRequest:
+      type: object
+      properties:
+        from: { $ref: "#/components/schemas/Address" }
+        to: { $ref: "#/components/schemas/Address" }
+        parcel: { $ref: "#/components/schemas/Parcel" }
+      required: [to, parcel]
+    Rate:
+      type: object
+      properties:
+        id: { type: string, examples: ["rate_aaa"] }
+        carrier: { type: string, examples: ["USPS"] }
+        service: { type: string, examples: ["Priority"] }
+        rate: { type: string, description: "Money as a STRING.", examples: ["8.42"] }
+        currency: { type: string, examples: ["USD"] }
+        delivery_days: { type: [integer, "null"] }
+    Message:
+      type: object
+      properties:
+        carrier: { type: string }
+        type: { type: string }
+        message: { type: string }
+    ShipmentResponse:
+      type: object
+      properties:
+        id: { type: string }
+        rates: { type: array, items: { $ref: "#/components/schemas/Rate" } }
+        messages: { type: array, items: { $ref: "#/components/schemas/Message" } }
+    BoughtLabel:
+      type: object
+      properties:
+        id: { type: string }
+        tracking_code: { type: string }
+        label_url: { type: string }
+        qr_code_url: { type: [string, "null"] }
+        carrier: { type: [string, "null"] }
+        service: { type: [string, "null"] }
+        status: { type: string }
+    PaymentSessionRequest:
+      type: object
+      properties:
+        shipment_id: { type: string }
+        rate_id: { type: string }
+        end_shipper_id: { type: string }
+        description: { type: string }
+      required: [shipment_id, rate_id]
+    PaymentSessionResponse:
+      type: object
+      properties:
+        session_id: { type: string }
+        form_url: { type: string, description: "Canonical hosted 3-D Secure form URL." }
+        amount: { type: string, description: "Server-computed; money as a STRING." }
+        currency: { type: string }
+        expires_at: { type: string, format: date-time }
+    ThreeDs:
+      type: [object, "null"]
+      properties:
+        eci: { type: [string, "null"], description: "Scheme-specific (Visa 05 / MC 02 = fully authenticated)." }
+        cavv: { type: [string, "null"] }
+        liability_shift: { type: boolean }
+    PaymentStatusResponse:
+      type: object
+      properties:
+        status: { type: string, enum: [pending, authenticated, approved, declined, failed] }
+        three_ds: { $ref: "#/components/schemas/ThreeDs" }
+    LabelResponse:
+      type: object
+      properties:
+        label_url: { type: [string, "null"] }
+        qr_code_url: { type: [string, "null"] }
+        tracking_code: { type: [string, "null"] }
+        carrier: { type: [string, "null"] }
+        service: { type: [string, "null"] }
+    Markup:
+      type: object
+      properties:
+        percentage_markup: { type: number }
+        fixed_fee_cents: { type: integer }
+        fixed_fee_dollars: { type: number }
+    ApiKey:
+      type: object
+      description: An API key's non-secret metadata (never the key or its hash).
+      properties:
+        id: { type: string }
+        label: { type: string }
+        prefix: { type: string, description: "Short display prefix, e.g. sk_live_Ab12Cd." }
+        created_at: { type: string, format: date-time }
+        last_used_at: { type: [string, "null"], format: date-time }
+        revoked: { type: boolean }
+    ApiKeyCreated:
+      allOf:
+        - { $ref: "#/components/schemas/ApiKey" }
+        - type: object
+          properties:
+            mode: { type: string, enum: [live, test] }
+            api_key: { type: string, description: "The full secret — shown ONCE." }
+            message: { type: string }

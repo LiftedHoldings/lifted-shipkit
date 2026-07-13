@@ -1,0 +1,97 @@
+name: Bug report
+description: Report a defect in ShipKit so we can fix it.
+title: "fix: <short description>"
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. Clear, reproducible reports
+        get fixed fastest.
+
+        **Do not include secrets.** Never paste API keys, tokens, merchant IDs,
+        database credentials, or `.env` contents. For security vulnerabilities,
+        do not open an issue — follow our
+        [Security Policy](https://github.com/Lifted-Holdings/shipkit/blob/main/SECURITY.md).
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight checklist
+      options:
+        - label: I searched existing issues and Discussions and found no duplicate.
+          required: true
+        - label: This is not a security vulnerability (those go to SECURITY.md, privately).
+          required: true
+        - label: I have removed all secrets from anything I paste below.
+          required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and its impact.
+      placeholder: When I request rates for an international address, the label buy fails with...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal, ordered steps. Include a snippet or curl if possible (no secrets).
+      placeholder: |
+        1. Init the widget with `ShipKit.init({ mount:'#ship', endpoint:'/api' })`
+        2. Enter address ...
+        3. Click Buy label
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: The label should purchase and return a tracking number.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Deployment mode
+      options:
+        - Self-host (own backend)
+        - ShipKit Managed (hosted widget)
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: ShipKit version / commit
+      placeholder: "1.0.0 or commit sha"
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, JDK version, browser (if widget-related).
+      placeholder: |
+        - OS: Ubuntu 24.04
+        - JDK: Temurin 17
+        - Browser: Chrome 121
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste logs with ALL secrets removed. This is automatically formatted as code.
+      render: shell
+    validations:
+      required: false

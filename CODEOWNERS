@@ -1,0 +1,29 @@
+# CODEOWNERS — default reviewers for ShipKit
+# Docs: https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Order matters: the last matching pattern takes precedence.
+# Listed owners are requested for review automatically on matching changes.
+
+# Default owner for everything in the repo.
+*                           @Lifted-Holdings/maintainers
+
+# Build, CI, and tooling.
+/.github/                   @Lifted-Holdings/maintainers
+/build.gradle.kts           @Lifted-Holdings/maintainers
+/settings.gradle.kts        @Lifted-Holdings/maintainers
+/Dockerfile                 @Lifted-Holdings/maintainers
+/docker-compose.yml         @Lifted-Holdings/maintainers
+
+# Backend service.
+/src/main/kotlin/           @Lifted-Holdings/maintainers
+
+# Payments layer — reviewed by the payments team.
+/src/main/kotlin/com/lifted/shipkit/payments/   @Lifted-Holdings/payments
+
+# Frontend widget and demo.
+/src/main/resources/public/ @Lifted-Holdings/maintainers
+/demo/                      @Lifted-Holdings/maintainers
+
+# Documentation.
+/docs/                      @Lifted-Holdings/maintainers
+*.md                        @Lifted-Holdings/maintainers

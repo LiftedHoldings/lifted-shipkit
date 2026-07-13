@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShipKit — plain HTML example</title>
+</head>
+<body>
+  <!--
+    ShipKit · plain HTML integration
+    ================================
+    Two ways to run it. Pick ONE.
+
+    A) MANAGED (no backend, no keys). Auto-inits from the script tag when
+       data-mount is present. The integrity hash is published with each release
+       — replace the placeholder below with the real sha384 value.
+
+         <div id="ship"></div>
+         <script
+           src="https://cdn.liftedholdings.com/shipkit.js"
+           integrity="sha384-REPLACE_WITH_REAL_HASH_FROM_RELEASE_ASSET"
+           crossorigin="anonymous"
+           data-managed-key="pk_live_your_publishable_key"
+           data-mount="#ship"></script>
+
+    B) SELF-HOST (talks to your own backend). Shown live below. Pass your own
+       ShipKit *publishable* key as `apiKey` — it runs in the browser, so use a
+       pk_ key (mint one with `KeygenKt --label=web-widget --publishable`), NOT a
+       secret sk_ key. It is sent as the `ShipKit-Api-Key` header on every /api/* call.
+  -->
+
+  <div id="ship"></div>
+
+  <!-- Optional: link the theme file, then override --sk-* variables to rebrand. -->
+  <link rel="stylesheet" href="/css/shipkit.css" />
+  <style>
+    /* Rebrand the widget with CSS custom properties. */
+    .sk { --sk-primary: #2e6bff; --sk-radius: 12px; }
+  </style>
+
+  <!-- Self-host: served by your ShipKit backend at /js/shipkit.js -->
+  <script src="/js/shipkit.js"></script>
+  <script>
+    ShipKit.init({
+      mount: '#ship',
+      endpoint: '/api',          // your backend
+      apiKey: 'pk_live_…',       // your publishable widget key → sent as the ShipKit-Api-Key header
+      theme: 'dark',             // 'dark' | 'light' | omit to inherit page
+      from: {                    // optional: pre-filled ship-from
+        name: 'Your Store',
+        street1: '410 Terry Ave N',
+        city: 'Seattle', state: 'WA', zip: '98109', country: 'US'
+      },
+      parcel: { length: 9, width: 6, height: 2, weight: 16 }, // in, in, in, oz
+      onQuote: function (q) { console.log('rates', q.rates); },
+      onPurchase: function (label) { window.location = label.labelUrl; },
+      onError: function (err) { console.error(err.stage, err.message); }
+    });
+  </script>
+</body>
+</html>

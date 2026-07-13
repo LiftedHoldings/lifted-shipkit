@@ -1,0 +1,160 @@
+/*!
+ * ShipKit design tokens — Lifted Design System, BLUE ("lift blue") brand scope.
+ * License: MIT © 2026 Daniel Wilson Kemp / Lifted Holdings.
+ *
+ * The shared Lifted ink-spine neutrals carry the interface; the blue brand ramp
+ * (#2E6BFF) is ShipKit's accent, with cyan (#19C7F5) reserved for the 3-D Secure
+ * "trust / secured" highlights. Author UIs against the SEMANTIC aliases
+ * (--brand, --surface-card, --text-strong…), never the raw ramp values.
+ *
+ * Dark is the primary theme; set data-theme="light" on <html> (or any subtree)
+ * to flip the neutral spine. Fonts: Sora (display), Inter (body), JetBrains Mono
+ * (data/IDs) — imported here for the hosted frontend. The self-contained demo
+ * inlines equivalents and relies on system fallbacks (no CDN).
+ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  /* ---- Neutrals: the Lifted ink spine (shared by every product) --------- */
+  --void:      #05080E;
+  --ink-900:   #0B1020;  /* page base (dark) */
+  --ink-800:   #141D31;  /* raised card surface */
+  --ink-700:   #202C46;  /* hairline borders, inputs, hover fills */
+  --slate-600: #2D3B5A;
+  --slate-500: #4A5A78;
+  --slate-400: #6B7C9C;
+  --mist-300:  #AEB8D0;
+  --mist-200:  #CDD5E4;
+  --mist-100:  #EFF3F9;
+  --white:     #FFFFFF;
+
+  /* ---- Brand: lift blue ramp (ShipKit accent) -------------------------- */
+  --blue-bright: #5AA6FF;
+  --blue:        #2E6BFF;
+  --blue-deep:   #1E4FD6;
+  --blue-darker: #143CA8;
+
+  /* ---- Functional ------------------------------------------------------ */
+  --cyan:      #19C7F5;  /* 3-D Secure / trust / info highlight */
+  --success:   #00E18C;
+  --warning:   #FFB920;
+  --error:     #FF4D6A;
+
+  /* ============================================================
+     SEMANTIC ALIASES — author against these.
+     ============================================================ */
+  --brand:          var(--blue);
+  --brand-bright:   var(--blue-bright);
+  --brand-deep:     var(--blue-deep);
+  --brand-darker:   var(--blue-darker);
+  --brand-contrast: var(--white);       /* text/icon on a solid brand fill */
+  --brand-tint:        rgba(46,107,255,0.14);
+  --brand-tint-strong: rgba(46,107,255,0.26);
+  --brand-grad-to:  var(--cyan);
+  --grad-brand:     linear-gradient(120deg, var(--brand), var(--brand-grad-to));
+
+  /* Trust — the 3-D Secure "secured" accent (cyan, blue-adjacent) */
+  --trust:      var(--cyan);
+  --trust-tint: rgba(25,199,245,0.14);
+
+  /* Surfaces (dark theme = primary) */
+  --bg-base:        var(--void);
+  --bg-page:        var(--ink-900);
+  --surface-card:   var(--ink-800);
+  --surface-raised: var(--ink-700);
+  --surface-sunken: var(--void);
+  --surface-hover:  var(--ink-700);
+
+  /* Text */
+  --text-strong: var(--mist-100);
+  --text-body:   var(--mist-300);
+  --text-muted:  var(--slate-400);
+  --text-faint:  var(--slate-500);
+  --text-on-brand: var(--white);
+
+  /* Borders */
+  --border-subtle:  rgba(174,184,208,0.10);
+  --border-default: rgba(174,184,208,0.16);
+  --border-strong:  rgba(174,184,208,0.28);
+  --border-brand:   var(--brand);
+
+  /* Glass surface (frosted panel) */
+  --glass-surface: color-mix(in srgb, var(--ink-800) 68%, transparent);
+  --glass-border:  rgba(207,232,247,0.20);
+  --glass-hi:      rgba(255,255,255,0.10);
+  --glass-fill:    linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.018) 34%, transparent 60%), var(--glass-surface);
+  --glass-blur:    26px;
+
+  /* Focus ring */
+  --ring: rgba(46,107,255,0.60);
+
+  /* ---- Type (Lifted) --------------------------------------------------- */
+  --font-sans:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif;
+  --font-display: 'Sora', 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600; --fw-bold: 700; --fw-black: 800;
+
+  /* ---- Spacing / radius / elevation / motion --------------------------- */
+  --radius-xs: 4px; --radius-sm: 6px; --radius-md: 10px;
+  --radius-lg: 14px; --radius-xl: 20px; --radius-2xl: 28px; --radius-full: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.40);
+  --shadow-md: 0 6px 18px rgba(0,0,0,0.45);
+  --shadow-lg: 0 18px 48px rgba(0,0,0,0.55);
+  --shadow-xl: 0 32px 80px rgba(0,0,0,0.60);
+
+  --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 120ms; --dur-base: 200ms; --dur-slow: 320ms;
+
+  --container: 1200px;
+
+  color-scheme: dark;
+}
+
+/* ============================================================
+   LIGHT THEME — flips the neutral spine only.
+   ============================================================ */
+:root[data-theme="light"] {
+  --bg-base:        var(--mist-100);
+  --bg-page:        var(--white);
+  --surface-card:   var(--white);
+  --surface-raised: var(--mist-100);
+  --surface-sunken: var(--mist-100);
+  --surface-hover:  var(--mist-100);
+  --text-strong:    var(--ink-900);
+  --text-body:      var(--ink-700);
+  --text-muted:     var(--slate-500);
+  --text-faint:     var(--slate-400);
+  --border-subtle:  rgba(11,16,32,0.08);
+  --border-default: rgba(11,16,32,0.14);
+  --border-strong:  rgba(11,16,32,0.24);
+  /* Blue stays legible on white via the deep stop for text/marks. */
+  --brand:          var(--blue);
+  --glass-surface:  color-mix(in srgb, var(--white) 72%, transparent);
+  --glass-border:   rgba(11,16,32,0.10);
+  color-scheme: light;
+}
+
+/* Follow the OS when no explicit theme is set. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --bg-base:        var(--mist-100);
+    --bg-page:        var(--white);
+    --surface-card:   var(--white);
+    --surface-raised: var(--mist-100);
+    --surface-sunken: var(--mist-100);
+    --surface-hover:  var(--mist-100);
+    --text-strong:    var(--ink-900);
+    --text-body:      var(--ink-700);
+    --text-muted:     var(--slate-500);
+    --text-faint:     var(--slate-400);
+    --border-subtle:  rgba(11,16,32,0.08);
+    --border-default: rgba(11,16,32,0.14);
+    --border-strong:  rgba(11,16,32,0.24);
+    --glass-surface:  color-mix(in srgb, var(--white) 72%, transparent);
+    --glass-border:   rgba(11,16,32,0.10);
+    color-scheme: light;
+  }
+}

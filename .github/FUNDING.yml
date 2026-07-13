@@ -1,0 +1,5 @@
+# ShipKit is free, MIT-licensed open source. The best way to support it:
+# adopt it, star it, and — if you process card payments — get a 3-D Secure
+# merchant account with Lifted Payments.
+custom:
+  - "https://liftedholdings.com/payments"

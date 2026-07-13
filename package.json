@@ -1,0 +1,18 @@
+{
+  "name": "shipkit-web-tests",
+  "version": "1.0.0",
+  "description": "Dev-only Playwright end-to-end + accessibility tests for the ShipKit widget. Not part of the ShipKit runtime, which stays dependency-free.",
+  "private": true,
+  "author": "Daniel Wilson Kemp",
+  "license": "MIT",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:list": "playwright test --list",
+    "test:e2e:report": "playwright show-report",
+    "install:browsers": "playwright install --with-deps chromium"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.1",
+    "@playwright/test": "^1.61.1"
+  }
+}

@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & ideas — Discussions
+    url: https://github.com/Lifted-Holdings/shipkit/discussions
+    about: Ask how-to questions, share ideas, and get help from maintainers and the community.
+  - name: Developer support
+    url: mailto:support@liftedholdings.com
+    about: Direct developer help with integration, deployment, or the managed tier.
+  - name: Report a security vulnerability (private)
+    url: https://github.com/Lifted-Holdings/shipkit/blob/main/SECURITY.md
+    about: Do not open a public issue. Follow the private disclosure process.
+  - name: Get a 3-D Secure merchant account
+    url: https://liftedholdings.com/payments
+    about: Apply for a Lifted Payments 3-D Secure merchant account or a managed key.

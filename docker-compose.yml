@@ -1,0 +1,65 @@
+# ShipKit — Docker Compose (local / self-host)
+# ---------------------------------------------------------------------------
+# Values come from your .env file (copy .env.example -> .env). This file
+# contains only placeholders and variable references — NO real secrets.
+# Start (in-memory store):  docker compose up --build
+# Start with PostgreSQL:     docker compose --profile postgres up --build
+# ---------------------------------------------------------------------------
+
+services:
+  shipkit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: shipkit:1.0.0
+    restart: unless-stopped
+    ports:
+      - "${SHIPKIT_PORT:-8080}:8080"
+    environment:
+      # Server
+      SHIPKIT_PORT: "8080"
+      SHIPKIT_BASE_URL: "${SHIPKIT_BASE_URL:-http://localhost:8080}"
+      SHIPKIT_CORS_ORIGINS: "${SHIPKIT_CORS_ORIGINS:-*}"
+      # Shipping
+      EASYPOST_API_KEY: "${EASYPOST_API_KEY:-}"
+      EASYPOST_WEBHOOK_SECRET: "${EASYPOST_WEBHOOK_SECRET:-}"
+      # Lifted Payments — 3-D Secure (always enforced)
+      LIFTED_PAYMENTS_API_BASE: "${LIFTED_PAYMENTS_API_BASE:-https://gateway.maverickpayments.com}"
+      LIFTED_PAYMENTS_DASHBOARD_BASE: "${LIFTED_PAYMENTS_DASHBOARD_BASE:-https://dashboard.maverickpayments.com}"
+      LIFTED_PAYMENTS_BEARER: "${LIFTED_PAYMENTS_BEARER:-}"
+      LIFTED_PAYMENTS_TERMINAL_ID: "${LIFTED_PAYMENTS_TERMINAL_ID:-}"
+      LIFTED_PAYMENTS_DBA_ID: "${LIFTED_PAYMENTS_DBA_ID:-}"
+      # Label store — memory (default) or postgres
+      SHIPKIT_STORE: "${SHIPKIT_STORE:-memory}"
+      SHIPKIT_DATABASE_URL: "${SHIPKIT_DATABASE_URL:-jdbc:postgresql://db:5432/shipkit?sslmode=require}"
+      SHIPKIT_DB_USER: "${SHIPKIT_DB_USER:-shipkit}"
+      SHIPKIT_DB_PASSWORD: "${SHIPKIT_DB_PASSWORD:-}"
+      # Optional SMS
+      SHIPKIT_SMS_ENABLED: "${SHIPKIT_SMS_ENABLED:-false}"
+      TWILIO_ACCOUNT_SID: "${TWILIO_ACCOUNT_SID:-}"
+      TWILIO_AUTH_TOKEN: "${TWILIO_AUTH_TOKEN:-}"
+      TWILIO_VERIFY_SERVICE_SID: "${TWILIO_VERIFY_SERVICE_SID:-}"
+      # Admin (comma-separated phone allowlist for /api/admin)
+      SHIPKIT_ADMIN_PHONES: "${SHIPKIT_ADMIN_PHONES:-}"
+
+  # Optional PostgreSQL label store. Off by default (ShipKit uses in-memory).
+  # Enable with:  docker compose --profile postgres up
+  # Production points SHIPKIT_DATABASE_URL at a managed Postgres with sslmode=require.
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    profiles: ["postgres"]
+    environment:
+      POSTGRES_DB: "${SHIPKIT_DB_NAME:-shipkit}"
+      POSTGRES_USER: "${SHIPKIT_DB_USER:-shipkit}"
+      POSTGRES_PASSWORD: "${SHIPKIT_DB_PASSWORD:-shipkit}"
+    volumes:
+      - shipkit_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SHIPKIT_DB_USER:-shipkit}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  shipkit_pgdata:

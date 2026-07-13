@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ShipKit API reference</title>
+<meta name="description" content="ShipKit REST API reference — endpoints, schemas, examples, and the ShipKit-Api-Key security scheme. Self-contained, no external dependencies." />
+<meta name="color-scheme" content="dark light" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%232E6BFF' d='M3 7l9-4 9 4v6c0 5-3.5 8.5-9 10C6.5 21.5 3 18 3 13V7z'/%3E%3Cpath fill='none' stroke='%2319C7F5' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' d='M8.5 12l2.2 2.2 4.8-4.8'/%3E%3C/svg%3E" />
+<style>
+  :root{
+    --ink:#0B1020; --surface:#141D31; --raised:#202C46; --void:#05080E;
+    --text:#AEB8D0; --heading:#EFF3F9; --muted:#6B7C9C;
+    --line:rgba(174,184,208,.14); --line-strong:rgba(174,184,208,.22);
+    --brand:#2E6BFF; --brand-bright:#5AA6FF; --brand-deep:#1E4FD6;
+    --trust:#19C7F5; --success:#00E18C; --warn:#FFB920; --danger:#FF4D6A;
+    --radius:14px; --radius-sm:9px;
+    --font:'Inter',ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --display:'Sora','Inter',ui-sans-serif,-apple-system,"Segoe UI",system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,"SF Mono",Consolas,"Liberation Mono",monospace;
+  }
+  :root[data-theme="light"]{
+    --ink:#F7F9FB; --surface:#FFFFFF; --raised:#EEF2F7; --void:#FFFFFF;
+    --text:#3A4552; --heading:#131A22; --muted:#657283;
+    --line:rgba(19,26,34,.10); --line-strong:rgba(19,26,34,.16);
+    --trust:#0E86A8;
+  }
+  @media (prefers-color-scheme: light){ :root:not([data-theme]){
+    --ink:#F7F9FB; --surface:#FFFFFF; --raised:#EEF2F7; --void:#FFFFFF;
+    --text:#3A4552; --heading:#131A22; --muted:#657283;
+    --line:rgba(19,26,34,.10); --line-strong:rgba(19,26,34,.16); --trust:#0E86A8;
+  }}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ink);color:var(--text);font-family:var(--font);line-height:1.6;-webkit-font-smoothing:antialiased}
+  a{color:var(--trust);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code,pre{font-family:var(--mono)}
+  .layout{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
+  @media (max-width:900px){ .layout{grid-template-columns:1fr} .side{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line)} }
+
+  /* Sidebar */
+  .side{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;background:var(--surface);
+    border-right:1px solid var(--line);padding:22px 18px}
+  .brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;
+    color:var(--heading);font-size:19px;letter-spacing:-.01em;margin-bottom:4px}
+  .brand svg{width:26px;height:26px;flex:none}
+  .side .sub{font-size:12px;color:var(--muted);margin:0 0 18px 36px}
+  .side .grp{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+    font-weight:700;margin:18px 0 8px}
+  .side nav a{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:8px;color:var(--text);
+    font-size:13.5px}
+  .side nav a:hover{background:var(--raised);text-decoration:none;color:var(--heading)}
+  .m{font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;
+    letter-spacing:.03em;flex:none;min-width:44px;text-align:center;color:#05080E}
+  .m-get{background:var(--trust)} .m-post{background:var(--brand);color:#fff}
+  .m-delete{background:var(--danger);color:#fff}
+
+  /* Content */
+  main{padding:40px 44px 120px;max-width:1000px}
+  @media (max-width:640px){ main{padding:28px 20px 80px} }
+  h1{font-family:var(--display);font-size:34px;font-weight:800;color:var(--heading);letter-spacing:-.02em;margin:0}
+  .lead{font-size:16px;color:var(--text);margin:14px 0 8px;max-width:70ch}
+  .authbox{margin:22px 0;padding:16px 18px;border:1px solid var(--line-strong);border-left:3px solid var(--trust);
+    border-radius:var(--radius-sm);background:var(--surface)}
+  .authbox h3{margin:0 0 6px;font-size:15px;color:var(--heading);font-family:var(--display)}
+  .authbox code{background:var(--void);border:1px solid var(--line);border-radius:6px;padding:2px 7px;color:var(--trust)}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--trust);
+    background:rgba(25,199,245,.12);border:1px solid rgba(25,199,245,.28);padding:4px 11px;border-radius:999px}
+
+  .ep{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);
+    margin:20px 0;overflow:hidden;scroll-margin-top:20px}
+  .ep__head{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);
+    flex-wrap:wrap}
+  .ep__path{font-family:var(--mono);font-size:14px;color:var(--heading);font-weight:600;word-break:break-all}
+  .ep__auth{margin-left:auto;font-size:11.5px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+  .ep__auth svg{width:13px;height:13px;color:var(--trust)}
+  .ep__body{padding:16px 18px}
+  .ep__desc{margin:0 0 14px;font-size:14px}
+  .lbl{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:14px 0 7px}
+  pre{margin:0;background:var(--void);border:1px solid var(--line);border-radius:var(--radius-sm);
+    padding:14px 16px;overflow-x:auto;font-size:12.5px;line-height:1.65;color:#DCE3EC}
+  pre .k{color:var(--brand-bright)} pre .s{color:var(--warn)} pre .n{color:var(--trust)} pre .b{color:var(--success)}
+  .codes{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .codes span{font-family:var(--mono);font-size:12px;padding:3px 9px;border-radius:6px;border:1px solid var(--line-strong);color:var(--text)}
+  .codes .ok{color:var(--success);border-color:rgba(0,225,140,.35)}
+  .codes .err{color:var(--danger);border-color:rgba(255,77,106,.35)}
+  .toggle{position:fixed;top:16px;right:18px;width:38px;height:38px;border-radius:10px;border:1px solid var(--line-strong);
+    background:var(--surface);color:var(--heading);cursor:pointer;display:grid;place-items:center;z-index:10}
+  .toggle svg{width:18px;height:18px}
+  footer{margin-top:44px;padding-top:22px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+  footer a{font-weight:600}
+</style>
+</head>
+<body>
+<button class="toggle" id="themeToggle" aria-label="Toggle theme" title="Toggle theme">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+</button>
+<div class="layout">
+  <aside class="side">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#2E6BFF" d="M3 7l9-4 9 4v6c0 5-3.5 8.5-9 10C6.5 21.5 3 18 3 13V7z"/><path fill="none" stroke="#19C7F5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M8.5 12l2.2 2.2 4.8-4.8"/></svg>
+      ShipKit
+    </div>
+    <p class="sub">API reference · v1.0.0</p>
+    <nav id="nav"></nav>
+  </aside>
+  <main>
+    <h1>ShipKit API reference</h1>
+    <p class="lead">The open shipping toolkit — multi-carrier labels secured by Lifted Payments 3-D Secure. This page is self-contained; the machine-readable spec lives at <a href="/openapi.yaml">/openapi.yaml</a> (OpenAPI 3.1).</p>
+    <div class="authbox">
+      <h3>Authentication</h3>
+      <p>Every <code>/api/*</code> route — except <code>GET /api/health</code> and the HMAC-verified <code>POST /api/webhook/easypost</code> — requires a ShipKit API key in the <code>ShipKit-Api-Key</code> header:</p>
+      <pre><span class="k">ShipKit-Api-Key</span>: <span class="s">sk_live_your_secret_key_here</span></pre>
+      <p style="margin-bottom:0">Keys carry a scope: <strong>secret</strong> <code>sk_…</code> keys (server/admin-only, full access) and browser-safe <strong>publishable</strong> <code>pk_…</code> keys (the widget's key — confined to the customer flow; secret-only actions return <code>403</code>). Mint one with <code>./gradlew shipkitKeygen -Plabel=prod-checkout</code> (add <code>--publishable</code> via <code>KeygenKt</code> for a <code>pk_…</code> key) or the admin-gated <code>POST /api/keys</code>. Only a SHA-256 hash is stored; the full key is shown once. Money fields are <strong>strings</strong> (e.g. <code>"8.42"</code>).</p>
+    </div>
+    <div id="endpoints"></div>
+    <footer>
+      Maintained by Daniel Wilson Kemp · Lifted Holdings. Take live payments through a 3-D Secure merchant account —
+      <a href="https://liftedholdings.com/payments">apply at liftedholdings.com/payments</a>.
+    </footer>
+  </main>
+</div>
+<script>
+(function(){
+  "use strict";
+  // Curated, self-contained mirror of openapi.yaml (§2 endpoints + /api/keys).
+  var GROUPS = [
+    { name: "Health", items: [
+      { m:"GET", p:"/api/health", auth:false, d:"Liveness/readiness probe. No API key required.",
+        res:'{ "status": "ok", "shipping": true, "payments": true }', codes:[["200","ok"]] }
+    ]},
+    { name: "Addresses", items: [
+      { m:"POST", p:"/api/address/verify", auth:true, d:"Verify and normalize a delivery address.",
+        req:'{ "name":"Ada Lovelace", "street1":"1600 Pennsylvania Ave NW",\n  "city":"Washington", "state":"DC", "zip":"20500", "country":"US" }',
+        res:'{ "verified": true,\n  "address": { "street1":"1600 PENNSYLVANIA AVE NW", "city":"WASHINGTON",\n    "state":"DC", "zip":"20500-0003", "country":"US" },\n  "residential": false, "errors": [] }',
+        codes:[["200","ok"],["401","err"],["503","err"]] }
+    ]},
+    { name: "Shipments", items: [
+      { m:"POST", p:"/api/shipment/create", auth:true, d:"Create a shipment and return carrier rates. Empty rates + populated messages = a carrier error.",
+        req:'{ "to": {"name":"Ada","street1":"1600 Pennsylvania Ave NW",\n    "city":"Washington","state":"DC","zip":"20500","country":"US"},\n  "parcel": { "weight_oz": 32, "length_in": 10, "width_in": 8, "height_in": 4 } }',
+        res:'{ "id":"shp_1a2b3c",\n  "rates":[{ "id":"rate_aaa","carrier":"USPS","service":"Priority",\n    "rate":"8.42","currency":"USD","delivery_days":2 }],\n  "messages":[] }',
+        codes:[["200","ok"],["400","err"],["401","err"],["503","err"]] },
+      { m:"POST", p:"/api/shipment/smartrates", auth:true, d:"Delivery-date-accurate SmartRates for a shipment.",
+        req:'{ "shipment_id": "shp_1a2b3c" }', res:'{ "shipment_id":"shp_1a2b3c", "rates":[ … ] }',
+        codes:[["200","ok"],["400","err"],["401","err"],["503","err"]] },
+      { m:"POST", p:"/api/shipment/buy", auth:true, d:"Buy a label directly for a chosen rate (payment handled out of band).",
+        req:'{ "shipment_id":"shp_1a2b3c", "rate_id":"rate_aaa" }',
+        res:'{ "tracking_code":"9400100000000000000000",\n  "label_url":"https://…/label.png", "carrier":"USPS", "service":"Priority" }',
+        codes:[["200","ok"],["400","err"],["401","err"],["503","err"]] }
+    ]},
+    { name: "Payment · 3-D Secure", items: [
+      { m:"POST", p:"/api/payment/session", auth:true, d:"Open a 3-D Secure payment session. Amount is server-computed (rate + markup); form_url is the canonical hosted-form key.",
+        req:'{ "shipment_id":"shp_1a2b3c", "rate_id":"rate_aaa" }',
+        res:'{ "session_id":"sess_9f8e7d",\n  "form_url":"https://dashboard.maverickpayments.com/hosted-fields/sess_9f8e7d",\n  "amount":"9.48", "currency":"USD", "expires_at":"2026-07-12T18:05:00Z" }',
+        codes:[["200","ok"],["400","err"],["401","err"],["502","err"],["503","err"]] },
+      { m:"GET", p:"/api/payment/status/{session_id}", auth:true, d:"Server-verified payment / 3-D Secure status. Buy only when status==approved AND three_ds.liability_shift==true.",
+        res:'{ "status":"approved",\n  "three_ds":{ "eci":"05", "cavv":"AAABB…", "liability_shift":true } }',
+        codes:[["200","ok"],["401","err"],["404","err"],["502","err"]] },
+      { m:"POST", p:"/api/payment/purchase-label/{session_id}", auth:true, d:"Buy the label for an approved session. Idempotent — a second call returns the same label.",
+        res:'{ "label_url":"https://…/label.png", "qr_code_url":"https://…/qr.png",\n  "tracking_code":"9400100000000000000000", "carrier":"USPS", "service":"Priority" }',
+        codes:[["200","ok"],["401","err"],["402","err"],["404","err"],["409","err"]] }
+    ]},
+    { name: "Webhooks", items: [
+      { m:"POST", p:"/api/webhook/easypost", auth:"hmac", d:"Receive EasyPost events. Authenticated by X-Hmac-Signature (HMAC-SHA256 over the raw body) — no API key.",
+        req:'{ "id":"evt_123", "description":"tracker.updated",\n  "result":{ "tracking_code":"9400…", "status":"in_transit", "carrier":"USPS" } }',
+        res:'200 — event verified and accepted', codes:[["200","ok"],["401","err"],["503","err"]] }
+    ]},
+    { name: "API keys", items: [
+      { m:"POST", p:"/api/keys", auth:"admin", d:"Mint an API key (admin-gated). The full key is returned once in api_key.",
+        req:'{ "label":"prod-checkout", "mode":"live" }',
+        res:'{ "id":"b2f1c0de-…", "label":"prod-checkout", "prefix":"sk_live_Ab12Cd",\n  "mode":"live", "revoked":false,\n  "api_key":"sk_live_your_secret_key_here",  // shown ONCE\n  "message":"Store this key now — it is shown only once…" }',
+        codes:[["201","ok"],["400","err"],["401","err"],["403","err"]] },
+      { m:"GET", p:"/api/keys", auth:"admin", d:"List API keys (metadata only; never the key or its hash).",
+        res:'{ "count":1, "keys":[{ "id":"b2f1c0de-…", "label":"prod-checkout",\n  "prefix":"sk_live_Ab12Cd", "last_used_at":"2026-07-12T17:05:00Z", "revoked":false }] }',
+        codes:[["200","ok"],["401","err"],["403","err"]] },
+      { m:"DELETE", p:"/api/keys/{id}", auth:"admin", d:"Revoke an API key by id (idempotent).",
+        res:'{ "success":true, "id":"b2f1c0de-…", "revoked":true, "already_revoked":false }',
+        codes:[["200","ok"],["401","err"],["403","err"],["404","err"]] }
+    ]}
+  ];
+
+  function slug(p){ return p.replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"").toLowerCase(); }
+  function mClass(m){ return "m m-" + m.toLowerCase(); }
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  // Light syntax tint for JSON-ish example blocks.
+  function tint(s){
+    return esc(s)
+      .replace(/(&quot;[^&]*?&quot;)(\s*:)/g, '<span class="k">$1</span>$2')
+      .replace(/:\s*(&quot;[^&]*?&quot;)/g, ': <span class="s">$1</span>')
+      .replace(/\b(true|false|null)\b/g, '<span class="b">$1</span>')
+      .replace(/:\s*(-?\d+\.?\d*)/g, ': <span class="n">$1</span>');
+  }
+  function authNote(a){
+    if(a === true) return '<span class="ep__auth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> ShipKit-Api-Key</span>';
+    if(a === "hmac") return '<span class="ep__auth">HMAC-signed (no key)</span>';
+    if(a === "admin") return '<span class="ep__auth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> API key + admin</span>';
+    return '<span class="ep__auth">Public</span>';
+  }
+
+  var nav = document.getElementById("nav");
+  var out = document.getElementById("endpoints");
+  GROUPS.forEach(function(g){
+    var h = document.createElement("div"); h.className = "grp"; h.textContent = g.name; nav.appendChild(h);
+    g.items.forEach(function(ep){
+      var id = slug(ep.m + ep.p);
+      var a = document.createElement("a"); a.href = "#" + id;
+      a.innerHTML = '<span class="' + mClass(ep.m) + '">' + ep.m + '</span><span>' + esc(ep.p.replace("/api/","")) + '</span>';
+      nav.appendChild(a);
+
+      var card = document.createElement("section"); card.className = "ep"; card.id = id;
+      var html = '<div class="ep__head"><span class="' + mClass(ep.m) + '">' + ep.m + '</span>' +
+        '<span class="ep__path">' + esc(ep.p) + '</span>' + authNote(ep.auth) + '</div>' +
+        '<div class="ep__body"><p class="ep__desc">' + esc(ep.d) + '</p>';
+      if(ep.req){ html += '<div class="lbl">Request</div><pre>' + tint(ep.req) + '</pre>'; }
+      if(ep.res){ html += '<div class="lbl">Response</div><pre>' + tint(ep.res) + '</pre>'; }
+      if(ep.codes){
+        html += '<div class="lbl">Status codes</div><div class="codes">' +
+          ep.codes.map(function(c){ return '<span class="' + c[1] + '">' + c[0] + '</span>'; }).join("") + '</div>';
+      }
+      html += '</div>';
+      card.innerHTML = html;
+      out.appendChild(card);
+    });
+  });
+
+  // Theme toggle.
+  var root = document.documentElement;
+  document.getElementById("themeToggle").addEventListener("click", function(){
+    var cur = root.getAttribute("data-theme") ||
+      (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    root.setAttribute("data-theme", cur === "dark" ? "light" : "dark");
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+name: Feature request
+description: Propose a new capability or improvement for ShipKit.
+title: "feat: <short description>"
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping shape ShipKit. The best proposals describe the
+        problem first, then a possible solution. For open-ended ideas, consider
+        starting a **Discussion** instead — it is a better place to explore.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight checklist
+      options:
+        - label: I searched existing issues and Discussions and found no duplicate.
+          required: true
+        - label: This request contains no secrets or private information.
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What are you trying to do, and why is it hard today?
+      placeholder: As a developer integrating ShipKit, I need ... because ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like ShipKit to do?
+      placeholder: Add a callback `onLabelVoid` so I can ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you weighed and why they fall short.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Shipping / carriers (EasyPost)
+        - Payments / 3-D Secure
+        - JS widget / frontend
+        - Backend / API
+        - Managed tier
+        - Docs
+        - Build / CI / tooling
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I am willing to open a pull request for this.
+          required: false

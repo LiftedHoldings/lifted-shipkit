@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShipKit — The open shipping toolkit, secured by 3-D Secure</title>
+  <meta name="description" content="Open-source multi-carrier shipping labels with card payment secured by Lifted Payments 3-D Secure. Self-host it free, or drop in the managed widget." />
+  <meta name="color-scheme" content="dark light" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%232E6BFF' d='M3 7l9-4 9 4v6c0 5-3.5 8.5-9 10C6.5 21.5 3 18 3 13V7z'/%3E%3Cpath fill='none' stroke='%23fff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' d='M8.5 12l2.2 2.2 4.8-4.8'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/site.css" />
+  <link rel="stylesheet" href="css/shipkit.css" />
+</head>
+<body>
+  <!-- ===================== Nav ===================== -->
+  <header class="nav">
+    <div class="wrap nav__inner">
+      <a class="brand" href="/" aria-label="ShipKit home">
+        <svg class="brand__mark" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="#2E6BFF" d="M3 7l9-4 9 4v6c0 5-3.5 8.5-9 10C6.5 21.5 3 18 3 13V7z" />
+          <path fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M8.5 12l2.2 2.2 4.8-4.8" />
+        </svg>
+        ShipKit
+      </a>
+      <nav class="nav__links" aria-label="Primary">
+        <a href="#features">Features</a>
+        <a href="#tiers">Pricing</a>
+        <a href="#quickstart">Quickstart</a>
+        <a href="#secure">3-D Secure</a>
+        <a href="https://github.com/Lifted-Holdings/shipkit" rel="noopener">GitHub</a>
+        <a class="nav__cta" href="https://liftedholdings.com/payments" rel="noopener">Get a merchant account</a>
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle color theme" title="Toggle theme">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+          </svg>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- ===================== Hero ===================== -->
+    <section class="hero section">
+      <div class="hero__mesh" aria-hidden="true"></div>
+      <div class="hero__meshgrid" aria-hidden="true"></div>
+      <div class="wrap hero__grid">
+        <div class="hero__copy">
+          <span class="eyebrow">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6l7-3z" />
+              <path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Secured by Lifted Payments · 3-D Secure
+          </span>
+          <h1>The open shipping toolkit, <span class="accent">secured by 3-D Secure.</span></h1>
+          <p class="lead">
+            Buy multi-carrier shipping labels from your store. Compare live rates,
+            print or scan a QR, and take card payment authenticated by 3-D Secure —
+            so fraud chargeback liability shifts to the issuer. Self-host it free, or
+            drop in the managed widget and go live in minutes.
+          </p>
+          <div class="hero__actions">
+            <a class="btn btn--primary" href="#quickstart">Read the quickstart</a>
+            <a class="btn btn--ghost" href="https://github.com/Lifted-Holdings/shipkit" rel="noopener">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2z" /></svg>
+              Star on GitHub
+            </a>
+          </div>
+          <div class="hero__meta">
+            <div><strong>10+</strong><span>Carriers via EasyPost</span></div>
+            <div><strong>0</strong><span>PCI scope on managed</span></div>
+            <div><strong>MIT</strong><span>Free, open source</span></div>
+          </div>
+        </div>
+
+        <!-- Live widget: this is the real ShipKit widget, running in demo mode -->
+        <div class="hero__widget">
+          <div class="browser">
+            <div class="browser__bar">
+              <span class="browser__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="browser__url">app.yourstore.com/checkout</span>
+              <span class="browser__powered">
+                <svg class="browser__shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                Lifted Payments
+              </span>
+            </div>
+            <div id="ship" aria-label="ShipKit label checkout"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider" />
+
+    <!-- ===================== Features ===================== -->
+    <section class="section" id="features">
+      <div class="wrap">
+        <div class="section__head">
+          <h2>Everything a store needs to ship.</h2>
+          <p>Real carrier functionality on the backend. A clean, accessible widget on the front. One tasteful, secure checkout.</p>
+        </div>
+        <div class="features">
+          <article class="card">
+            <svg class="card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+            <h3>Address verify</h3>
+            <p>Validate and normalize the recipient address before you quote — fewer failed deliveries, fewer surprises.</p>
+          </article>
+          <article class="card">
+            <svg class="card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h12" stroke-linecap="round" /></svg>
+            <h3>Live rate compare</h3>
+            <p>Pull real-time rates and delivery estimates across carriers and services. Cheapest first, ranked and readable.</p>
+          </article>
+          <article class="card">
+            <svg class="card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M7 8v8M11 8v8M15 8v4M19 8v8" stroke-linecap="round" /></svg>
+            <h3>Label &amp; QR</h3>
+            <p>Buy the label and get a printable PDF plus a scannable QR for paperless drop-off — instantly.</p>
+          </article>
+          <article class="card">
+            <svg class="card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6l7-3z" /><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            <h3>3-D Secure payment</h3>
+            <p>The issuer authenticates the cardholder before authorization. Fraud liability shifts. Approvals go up.</p>
+          </article>
+          <article class="card">
+            <svg class="card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4-8-4z" /><path d="M4 12l8 4 8-4M4 17l8 4 8-4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            <h3>Drop-in widget</h3>
+            <p>Dependency-free, framework-agnostic, themeable with CSS variables. One <code>&lt;script&gt;</code> and you're live.</p>
+          </article>
+          <article class="card">
+            <svg class="card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            <h3>Yours to own</h3>
+            <p>MIT-licensed Kotlin backend and vanilla-JS front. Read it, fork it, ship it. No lock-in.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== Adoption tiers ===================== -->
+    <section class="section" id="tiers">
+      <div class="wrap">
+        <div class="section__head">
+          <h2>Two ways to use ShipKit.</h2>
+          <p>Self-host for full control, or let Lifted run the payments and infrastructure for you. Both are first-class. Managed is recommended for teams that just want it to work.</p>
+        </div>
+        <div class="tiers">
+          <article class="tier">
+            <h3>Self-host</h3>
+            <p class="tier__price">Free · MIT · your infrastructure</p>
+            <ul>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> Run the Kotlin backend yourself</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> Bring your own EasyPost account</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> Full control of data and deploys</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> Bring a Lifted Payments 3-D Secure merchant account</li>
+            </ul>
+            <a class="btn btn--ghost" href="https://liftedholdings.com/payments" rel="noopener">Apply for a 3-D Secure account</a>
+          </article>
+          <article class="tier tier--managed">
+            <span class="tier__badge">Recommended</span>
+            <h3>ShipKit Managed</h3>
+            <p class="tier__price">Plug-and-play · small managed fee per label</p>
+            <ul>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> One <code>&lt;script&gt;</code> tag and a managed key</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> No backend, no API keys, no PCI scope</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> Pre-funded and fully managed by Lifted</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> Powered by Lifted Payments 3-D Secure</li>
+            </ul>
+            <a class="btn btn--primary" href="https://liftedholdings.com/payments" rel="noopener">Get a managed key</a>
+          </article>
+        </div>
+        <p style="color:var(--muted);font-size:.82rem;margin-top:16px;">
+          A small managed service fee per label is what keeps the open-source tooling free. No subscriptions, no minimums.
+        </p>
+      </div>
+    </section>
+
+    <hr class="divider" />
+
+    <!-- ===================== Quickstart ===================== -->
+    <section class="section" id="quickstart">
+      <div class="wrap">
+        <div class="section__head">
+          <h2>Live in three lines.</h2>
+          <p>Drop the widget anywhere. Point it at your self-hosted backend, or at Lifted with a managed key. Style it with CSS custom properties.</p>
+        </div>
+        <div class="quickstart">
+          <div class="codewin" aria-label="Managed install example">
+            <div class="codewin__bar">
+              <span class="codewin__dot"></span><span class="codewin__dot"></span><span class="codewin__dot"></span>
+              <span class="codewin__file">index.html — managed</span>
+            </div>
+            <pre><code><span class="tok-com">&lt;!-- Managed: no backend, no keys --&gt;</span>
+<span class="tok-tag">&lt;div</span> <span class="tok-attr">id</span>=<span class="tok-str">"ship"</span><span class="tok-tag">&gt;&lt;/div&gt;</span>
+<span class="tok-tag">&lt;script</span>
+  <span class="tok-attr">src</span>=<span class="tok-str">"https://cdn.liftedholdings.com/shipkit.js"</span>
+  <span class="tok-attr">integrity</span>=<span class="tok-str">"sha384-…"</span>
+  <span class="tok-attr">crossorigin</span>=<span class="tok-str">"anonymous"</span>
+  <span class="tok-attr">data-managed-key</span>=<span class="tok-str">"pk_live_…"</span>
+  <span class="tok-attr">data-mount</span>=<span class="tok-str">"#ship"</span><span class="tok-tag">&gt;&lt;/script&gt;</span></code></pre>
+          </div>
+          <div class="codewin" aria-label="Self-host install example">
+            <div class="codewin__bar">
+              <span class="codewin__dot"></span><span class="codewin__dot"></span><span class="codewin__dot"></span>
+              <span class="codewin__file">app.js — self-host</span>
+            </div>
+            <pre><code><span class="tok-com">// Self-host: talks to your own backend</span>
+<span class="tok-fn">ShipKit</span>.<span class="tok-fn">init</span>({
+  mount: <span class="tok-str">'#ship'</span>,
+  endpoint: <span class="tok-str">'/api'</span>,
+  apiKey: <span class="tok-str">'pk_live_…'</span>, <span class="tok-com">// publishable widget key → ShipKit-Api-Key header</span>
+  <span class="tok-fn">onQuote</span>: <span class="tok-fn">rates</span> =&gt; console.<span class="tok-fn">log</span>(rates),
+  <span class="tok-fn">onPurchase</span>: <span class="tok-fn">label</span> =&gt; {
+    window.location = label.labelUrl;
+  },
+  <span class="tok-fn">onError</span>: <span class="tok-fn">err</span> =&gt; console.<span class="tok-fn">error</span>(err)
+});
+
+<span class="tok-com">// Retheme with CSS variables:</span>
+<span class="tok-com">// .sk { --sk-primary:#7C3AED; }</span></code></pre>
+          </div>
+        </div>
+        <p style="margin-top:20px;">
+          Full config table, callback reference, and React / Vue / plain-HTML snippets in
+          <a href="https://github.com/Lifted-Holdings/shipkit/blob/main/docs/integration.md" rel="noopener">docs/integration.md</a>.
+        </p>
+      </div>
+    </section>
+
+    <!-- ===================== 3-D Secure ===================== -->
+    <section class="section" id="secure">
+      <div class="wrap">
+        <div class="secure-panel">
+          <div class="secure-panel__grid">
+            <div>
+              <span class="eyebrow">Why 3-D Secure</span>
+              <h2 style="margin-top:14px;">Authenticated payments, on the merchant's side.</h2>
+              <ul class="pillars">
+                <li class="pillar">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6l7-3z" /><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                  <span><strong>Liability shift.</strong> On authenticated transactions, fraud-related chargeback liability shifts from the merchant to the card issuer.</span>
+                </li>
+                <li class="pillar">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6l7-3z" /><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                  <span><strong>Fraud reduction.</strong> The issuer authenticates the cardholder — biometric, OTP, or risk-based — before authorization.</span>
+                </li>
+                <li class="pillar">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6l7-3z" /><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                  <span><strong>Compliance.</strong> Meets SCA / PSD2-style strong-customer-authentication expectations, with a frictionless flow for low-risk transactions.</span>
+                </li>
+                <li class="pillar">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6l7-3z" /><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                  <span><strong>Better approvals.</strong> Issuers approve authenticated transactions at higher rates.</span>
+                </li>
+              </ul>
+            </div>
+            <div class="secure-cta">
+              <h3>Get a 3-D Secure merchant account</h3>
+              <p class="secure-cta__note">
+                ShipKit's payment layer is Secured by Lifted Payments · 3-D Secure. Apply for an account to
+                self-host, or get a managed key to skip the infrastructure entirely.
+              </p>
+              <a class="btn btn--secure" href="https://liftedholdings.com/payments" rel="noopener">Apply at liftedholdings.com/payments</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== Footer ===================== -->
+  <footer class="footer">
+    <div class="wrap footer__grid">
+      <div>
+        <div class="footer__secure">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6l7-3z" /><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          Secured by Lifted Payments · 3-D Secure
+        </div>
+        <p style="margin-top:8px;">ShipKit is open-source software. MIT © 2026 Lifted Holdings.</p>
+      </div>
+      <nav class="footer__links" aria-label="Footer">
+        <a href="https://github.com/Lifted-Holdings/shipkit" rel="noopener">GitHub</a>
+        <a href="https://github.com/Lifted-Holdings/shipkit/blob/main/docs/integration.md" rel="noopener">Docs</a>
+        <a href="https://liftedholdings.com/payments" rel="noopener">Payments</a>
+        <a href="mailto:support@liftedholdings.com">Support</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script src="js/shipkit.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

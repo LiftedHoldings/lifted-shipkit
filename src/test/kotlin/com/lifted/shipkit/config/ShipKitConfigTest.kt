@@ -1,0 +1,142 @@
+package com.lifted.shipkit.config
+
+import com.lifted.shipkit.store.StoreBackend
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+
+/**
+ * Config resolution is security-relevant (it decides whether secrets are present
+ * and features enabled), so it is tested against a stubbed environment rather
+ * than the real process environment. It also pins the canonical env-var names.
+ */
+class ShipKitConfigTest {
+    private fun env(vars: Map<String, String>) = ShipKitConfig.Companion.Env { vars[it] }
+
+    @Test
+    fun `empty environment yields safe, feature-off defaults`() {
+        val config = ShipKitConfig.fromEnv(env(emptyMap()))
+
+        assertEquals(8080, config.port)
+        assertEquals("http://localhost:8080", config.baseUrl)
+        assertEquals("*", config.corsOrigins)
+        assertNull(config.easyPostApiKey)
+        assertFalse(config.shippingEnabled)
+        assertFalse(config.paymentsEnabled)
+        assertFalse(config.sms.enabled)
+        assertEquals(StoreBackend.MEMORY, config.storeBackend)
+        assertNull(config.db)
+        assertTrue(config.adminPhoneWhitelist.isEmpty())
+    }
+
+    @Test
+    fun `payments enabled only when bearer, terminal, and dba are all present`() {
+        val partial =
+            ShipKitConfig.fromEnv(
+                env(
+                    mapOf(
+                        "LIFTED_PAYMENTS_BEARER" to "token",
+                        "LIFTED_PAYMENTS_TERMINAL_ID" to "1",
+                    ),
+                ),
+            )
+        assertFalse(partial.paymentsEnabled, "missing DBA id should leave payments disabled")
+
+        val full =
+            ShipKitConfig.fromEnv(
+                env(
+                    mapOf(
+                        "LIFTED_PAYMENTS_BEARER" to "token",
+                        "LIFTED_PAYMENTS_TERMINAL_ID" to "42",
+                        "LIFTED_PAYMENTS_DBA_ID" to "7",
+                    ),
+                ),
+            )
+        assertTrue(full.paymentsEnabled)
+        assertEquals(42, full.payments?.terminalId)
+        assertEquals(7, full.payments?.dbaId)
+        assertEquals("https://gateway.maverickpayments.com", full.payments?.gatewayBaseUrl)
+        assertEquals("https://dashboard.maverickpayments.com", full.payments?.dashboardBaseUrl)
+    }
+
+    @Test
+    fun `admin phone whitelist is normalized to ten digits`() {
+        val config =
+            ShipKitConfig.fromEnv(
+                env(
+                    mapOf("SHIPKIT_ADMIN_PHONES" to "+1 (555) 123-4567, 555-987-6543"),
+                ),
+            )
+        assertEquals(listOf("5551234567", "5559876543"), config.adminPhoneWhitelist)
+    }
+
+    @Test
+    fun `sms enabled parses common truthy values`() {
+        assertTrue(ShipKitConfig.fromEnv(env(mapOf("SHIPKIT_SMS_ENABLED" to "true"))).sms.enabled)
+        assertTrue(ShipKitConfig.fromEnv(env(mapOf("SHIPKIT_SMS_ENABLED" to "YES"))).sms.enabled)
+        assertTrue(ShipKitConfig.fromEnv(env(mapOf("SHIPKIT_SMS_ENABLED" to "1"))).sms.enabled)
+        assertFalse(ShipKitConfig.fromEnv(env(mapOf("SHIPKIT_SMS_ENABLED" to "false"))).sms.enabled)
+        assertFalse(ShipKitConfig.fromEnv(env(mapOf("SHIPKIT_SMS_ENABLED" to "off"))).sms.enabled)
+    }
+
+    @Test
+    fun `postgres backend reads the database DSN from the environment`() {
+        val config =
+            ShipKitConfig.fromEnv(
+                env(
+                    mapOf(
+                        "SHIPKIT_STORE" to "postgres",
+                        "SHIPKIT_DATABASE_URL" to
+                            "jdbc:postgresql://db.internal:5432/shipkit?sslmode=require",
+                        "SHIPKIT_DB_USER" to "shipkit",
+                        "SHIPKIT_DB_PASSWORD" to "secret",
+                    ),
+                ),
+            )
+        assertEquals(StoreBackend.POSTGRES, config.storeBackend)
+        assertEquals(5432, config.db?.port)
+        assertEquals("shipkit", config.db?.username)
+        assertTrue(config.db?.jdbcUrl?.startsWith("jdbc:postgresql://") == true)
+        assertTrue(config.db?.jdbcUrl?.contains("sslmode=require") == true)
+    }
+
+    @Test
+    fun `only the canonical env names are read — legacy aliases are ignored`() {
+        // Non-canonical aliases must have NO effect: the store stays MEMORY and the
+        // EasyPost key stays unset, proving the code reads only the documented names.
+        val config =
+            ShipKitConfig.fromEnv(
+                env(
+                    mapOf(
+                        "DATABASE_URL" to "jdbc:postgresql://legacy:3306/x",
+                        "STORE" to "postgres",
+                        "EASYPOST_KEY" to "should-be-ignored",
+                        "SK_PORT" to "9999",
+                    ),
+                ),
+            )
+        assertEquals(StoreBackend.MEMORY, config.storeBackend, "legacy STORE alias ignored")
+        assertNull(config.easyPostApiKey, "legacy EASYPOST_KEY alias ignored")
+        assertEquals(8080, config.port, "legacy SK_PORT alias ignored; canonical default used")
+        assertNull(config.db)
+    }
+
+    @Test
+    fun `postgres port defaults to 5432 when the DSN omits an explicit port`() {
+        val config =
+            ShipKitConfig.fromEnv(
+                env(
+                    mapOf(
+                        "SHIPKIT_STORE" to "postgres",
+                        "SHIPKIT_DATABASE_URL" to
+                            "jdbc:postgresql://db.internal/shipkit?sslmode=require",
+                        "SHIPKIT_DB_USER" to "shipkit",
+                        "SHIPKIT_DB_PASSWORD" to "secret",
+                    ),
+                ),
+            )
+        assertEquals(5432, config.db?.port)
+    }
+}
