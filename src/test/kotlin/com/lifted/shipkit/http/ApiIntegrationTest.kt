@@ -198,7 +198,7 @@ class ApiIntegrationTest {
         val easyPost = mockk<EasyPostService>()
         val payments = mockk<LiftedPaymentsClient>()
         every { payments.verifyPayment(any()) } returns
-            PaymentVerification("approved", eci = "05", cavv = "crypto", liabilityShift = true)
+            PaymentVerification("approved", eci = "05", cavv = "cavv3ds", liabilityShift = true)
         every { easyPost.buyLabel(any(), any(), any(), any()) } returns boughtLabel()
 
         val store = InMemoryLabelStore().apply { savePaymentSession(session()) }
@@ -271,7 +271,7 @@ class ApiIntegrationTest {
         val easyPost = mockk<EasyPostService>()
         val payments = mockk<LiftedPaymentsClient>()
         every { payments.verifyPayment(any()) } returns
-            PaymentVerification("approved", eci = "05", cavv = "crypto", liabilityShift = true)
+            PaymentVerification("approved", eci = "05", cavv = "cavv3ds", liabilityShift = true)
         // Slow the buy so all callers race the single claim window.
         every { easyPost.buyLabel(any(), any(), any(), any()) } answers {
             Thread.sleep(200)
@@ -428,7 +428,7 @@ class ApiIntegrationTest {
         val easyPost = mockk<EasyPostService>()
         val payments = mockk<LiftedPaymentsClient>()
         every { payments.verifyPayment(any()) } returns
-            PaymentVerification("approved", eci = "05", cavv = "crypto", liabilityShift = true)
+            PaymentVerification("approved", eci = "05", cavv = "cavv3ds", liabilityShift = true)
         // createdAt 31 minutes ago → past the 30-minute charge window.
         val stale = session().copy(createdAt = System.currentTimeMillis() - 31 * 60 * 1000L)
         val store = InMemoryLabelStore().apply { savePaymentSession(stale) }
@@ -451,7 +451,7 @@ class ApiIntegrationTest {
             PaymentVerification(
                 "approved",
                 eci = "05",
-                cavv = "crypto",
+                cavv = "cavv3ds",
                 liabilityShift = true,
                 amount = BigDecimal("999.99"),
             )
@@ -721,7 +721,7 @@ class ApiIntegrationTest {
         val easyPost = mockk<EasyPostService>()
         val payments = mockk<LiftedPaymentsClient>()
         every { payments.verifyPayment(any()) } returns
-            PaymentVerification("approved", eci = "05", cavv = "crypto", liabilityShift = true)
+            PaymentVerification("approved", eci = "05", cavv = "cavv3ds", liabilityShift = true)
         var buyCalls = 0
         every { easyPost.buyLabel(any(), any(), any(), any()) } answers {
             if (buyCalls++ == 0) throw RuntimeException("carrier blip") else boughtLabel()

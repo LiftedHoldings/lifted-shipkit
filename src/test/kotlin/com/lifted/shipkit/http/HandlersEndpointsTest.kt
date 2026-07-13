@@ -295,7 +295,7 @@ class HandlersEndpointsTest {
                 amount = BigDecimal("8.74"),
             )
         every { payments.verifyPayment(any()) } returns
-            PaymentVerification("approved", eci = "05", cavv = "crypto", liabilityShift = true)
+            PaymentVerification("approved", eci = "05", cavv = "cavv3ds", liabilityShift = true)
 
         JavalinTest.test(app()) { _, client ->
             val body =

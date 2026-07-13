@@ -109,7 +109,7 @@ class PostgresLabelStoreTest {
             ).apply {
                 status = "approved"
                 threeDsEci = "05"
-                threeDsCavv = "crypto123"
+                threeDsCavv = "cavv3ds01"
                 liabilityShift = true
             }
         store.savePaymentSession(s)
@@ -120,7 +120,7 @@ class PostgresLabelStoreTest {
         assertEquals(8.74, loaded.amount, 1e-9)
         assertEquals(7.36, loaded.paidBaseRate!!, 1e-9)
         assertEquals("05", loaded.threeDsEci)
-        assertEquals("crypto123", loaded.threeDsCavv)
+        assertEquals("cavv3ds01", loaded.threeDsCavv)
         assertTrue(loaded.liabilityShift)
     }
 

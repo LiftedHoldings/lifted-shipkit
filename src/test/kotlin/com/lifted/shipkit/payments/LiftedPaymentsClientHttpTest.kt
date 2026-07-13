@@ -111,7 +111,7 @@ class LiftedPaymentsClientHttpTest {
         val body =
             """
             {"items":[{"id":"txn_1","status":{"status":"Approved"},
-                       "threeds":{"eci":"05","cavv":"crypto123"}}]}
+                       "threeds":{"eci":"05","cavv":"cavv3ds01"}}]}
             """.trimIndent()
         val client = LiftedPaymentsClient(config, http(200, body))
 
@@ -119,7 +119,7 @@ class LiftedPaymentsClientHttpTest {
         assertEquals("approved", v.status)
         assertTrue(v.liabilityShift)
         assertEquals("05", v.eci)
-        assertEquals("crypto123", v.cavv)
+        assertEquals("cavv3ds01", v.cavv)
     }
 
     @Test
@@ -183,7 +183,7 @@ class LiftedPaymentsClientHttpTest {
             capturing(
                 200,
                 """{"id":"txn_9","status":{"status":"Approved"},"authCode":"OK123",
-                    "threeds":{"eci":"05","cavv":"crypto123"}}""",
+                    "threeds":{"eci":"05","cavv":"cavv3ds01"}}""",
                 slot,
             )
         val client = LiftedPaymentsClient(config, http)
