@@ -83,6 +83,15 @@ enum class CardEntryMode {
  * @param gatewayBaseUrl   Processing host (safe, non-secret default per [environment]).
  * @param dashboardBaseUrl Hosted-assets / vault host (safe, non-secret default).
  * @param hostedFormPath   Hosted-form creation path — UNVERIFIED; see [hostedFormPath].
+ * @param frictionlessAllowed Whether this deployment's account/tier is permitted to
+ *                         run **frictionless** money paths — charge with `3ds:false`
+ *                         and save/charge cards on file. **Account-gated, server-side
+ *                         only** (see `FrictionlessGate`): `false` by default and for
+ *                         every self-host / bring-your-own-payments deployment, where
+ *                         forced 3-D Secure is the only mode. When `false` the
+ *                         frictionless methods ([saleFrictionless], [saveCard],
+ *                         [chargeSavedCard]) refuse to run — defence in depth beneath
+ *                         the HTTP gate, so no caller can charge 3ds-off off the rails.
  */
 data class LiftedPaymentsConfig(
     val bearerToken: String,
@@ -92,6 +101,7 @@ data class LiftedPaymentsConfig(
     val cardEntryMode: CardEntryMode = CardEntryMode.HOSTED_FIELDS,
     val gatewayBaseUrl: String = defaultGatewayBase(environment),
     val dashboardBaseUrl: String = defaultDashboardBase(environment),
+    val frictionlessAllowed: Boolean = false,
     /**
      * Hosted-form (hosted payment page) creation path on the dashboard host.
      * The concrete endpoint is only documented in Maverick's developer-portal
@@ -155,6 +165,25 @@ data class HostedPaymentResult(
 data class HostedFieldsToken(
     val accessToken: String,
     val expiration: Int,
+)
+
+/**
+ * A card saved on file in the Maverick customer vault (SPEC_R3 §5). [vaultId] is
+ * the single reference a caller stores and later passes to
+ * [LiftedPaymentsClient.chargeSavedCard]; it encodes `"{customerId}:{cardId}"`
+ * because charging a saved card needs the card id to resolve its token.
+ *
+ * @param vaultId    opaque `"{customerId}:{cardId}"` saved-card reference.
+ * @param customerId the vault customer id.
+ * @param cardId     the vault card id under that customer.
+ * @param cardToken  the vault card token, when the card-add echoed one (may be blank;
+ *                   [LiftedPaymentsClient.chargeSavedCard] re-resolves it either way).
+ */
+data class SavedCard(
+    val vaultId: String,
+    val customerId: String,
+    val cardId: String,
+    val cardToken: String = "",
 )
 
 /**
@@ -377,6 +406,245 @@ class LiftedPaymentsClient(
                 .firstNotNullOfOrNull { json[it] as? Map<*, *> }
                 ?: json
         return interpretTransaction(record)
+    }
+
+    // ---- Frictionless + card-on-file (account-gated; SPEC_R3 §5) -------------
+
+    /**
+     * Charge a tokenized card **frictionlessly** — `POST /payment/sale` with
+     * `"3ds":false` — for a faster repeat checkout. This is the ONE code path that
+     * charges a card without 3-D Secure, and it is **account-gated**: it runs only
+     * when [LiftedPaymentsConfig.frictionlessAllowed] is true (a Lifted
+     * merchant/managed account that opted in). A self-host / bring-your-own-payments
+     * deployment never reaches an allowed config, so this method refuses with
+     * [IOException] — forced 3-D Secure ([sale]) stays its only charge path.
+     *
+     * Unlike [sale], approval is NOT liability-shift-gated (there is no 3-D Secure
+     * authentication to shift liability); `approved` reflects the gateway's own
+     * decision.
+     *
+     * @param amount    the server-computed charge (never a client-supplied number).
+     * @param cardToken a Maverick card token (Hosted Fields tokenization or a vault
+     *                  card token from [chargeSavedCard]).
+     * @param billing   optional billing details passed through to the gateway.
+     */
+    @Throws(IOException::class)
+    fun saleFrictionless(
+        amount: BigDecimal,
+        cardToken: String,
+        billing: Map<String, Any?>? = null,
+    ): GatewayResult {
+        requireFrictionless()
+        if (cardToken.isBlank()) throw IOException("a card token is required to charge")
+        val body =
+            buildMap<String, Any?> {
+                put("terminal", mapOf("id" to config.terminalId))
+                put("amount", amount2dp(amount))
+                put("card", mapOf("token" to cardToken))
+                // Frictionless — 3-D Secure is explicitly OFF (a BOOLEAN false).
+                put("3ds", false)
+                put("source", "Internet")
+                billing?.takeIf { it.isNotEmpty() }?.let { put("billing", it) }
+            }
+        val json = postJson("${config.gatewayBaseUrl}/payment/sale", body)
+        // No 3-D Secure here, so approval is not shift-gated.
+        return toGatewayResult(json, requireShift = false)
+    }
+
+    /**
+     * Save a card on file in the Maverick **customer vault**, modelled on Launchpad
+     * `maverick_gateway.vault_add`: create a vault customer, attach a billing
+     * record, then attach the card — all on the dashboard host. Returns a
+     * [SavedCard] whose [SavedCard.vaultId] encodes `"{customerId}:{cardId}"`, the
+     * single reference [chargeSavedCard] later resolves to a card token to charge.
+     *
+     * **Account-gated** — refuses with [IOException] unless
+     * [LiftedPaymentsConfig.frictionlessAllowed] is true. Card data never reaches
+     * ShipKit: [cardToken] is a Maverick Hosted Fields card token, not a PAN.
+     *
+     * Fail-closed: if the card cannot be attached (a 2xx with no card id yields an
+     * unchargeable vault entry), the just-created customer is best-effort deleted and
+     * an [IOException] is raised, so no orphan/phantom saved card is left behind.
+     *
+     * @param cardToken a Maverick Hosted Fields card token to vault.
+     * @param billing   cardholder billing (`first_name`, `last_name`, `email`,
+     *                  `phone`, `company`, `address1`, `city`, `state`, `zip`,
+     *                  `country`); `address1` + `zip` are needed for the billing
+     *                  record the card-add references.
+     */
+    @Throws(IOException::class)
+    fun saveCard(
+        cardToken: String,
+        billing: Map<String, Any?>? = null,
+    ): SavedCard {
+        requireFrictionless()
+        if (cardToken.isBlank()) {
+            throw IOException(
+                "a Hosted Fields card token is required to save a card",
+            )
+        }
+        val b = billing ?: emptyMap()
+
+        val customerBody =
+            buildMap<String, Any?> {
+                mapVaultString(b, "first_name", "firstName")
+                mapVaultString(b, "last_name", "lastName")
+                mapVaultString(b, "email", "email")
+                mapVaultString(b, "phone", "phone")
+                mapVaultString(b, "company", "company")
+                mapVaultString(b, "address1", "address1")
+                mapVaultString(b, "city", "city")
+                mapVaultString(b, "state", "state")
+                mapVaultString(b, "zip", "zipCode")
+                put("dba", mapOf("id" to config.dbaId))
+            }
+        val customer = postJson("${config.dashboardBaseUrl}/api/customer-vault", customerBody)
+        val customerId =
+            (customer["id"] ?: customer["customerId"])?.toString()?.trim()?.takeIf {
+                it.isNotEmpty()
+            }
+                ?: throw IOException("vault customer was not created")
+
+        // Billing record is REQUIRED before a card (the card-add references its id);
+        // returns "" when the merchant supplied too little address to create one.
+        val billingId = createVaultBilling(customerId, b)
+
+        val cardBody =
+            buildMap<String, Any?> {
+                put("terminal", mapOf("id" to config.terminalId))
+                billingId?.let { put("billing", mapOf("id" to it)) }
+                put("token", cardToken)
+            }
+        val added =
+            postJson("${config.dashboardBaseUrl}/api/customer-vault/$customerId/card", cardBody)
+        val cardId =
+            (added["id"] ?: added["cardId"])?.toString()?.trim()?.takeIf { it.isNotEmpty() }
+        if (cardId == null) {
+            // Fail closed: an id-less card-add is unchargeable. Best-effort delete the
+            // orphan customer so nothing phantom is left in the merchant's vault.
+            deleteQuiet("${config.dashboardBaseUrl}/api/customer-vault/$customerId")
+            throw IOException("the card could not be saved; please re-enter the card details")
+        }
+        val cardToken2 = (added["token"] as? String)?.trim().orEmpty()
+        return SavedCard(
+            vaultId = encodeVault(customerId, cardId),
+            customerId = customerId,
+            cardId = cardId,
+            cardToken = cardToken2,
+        )
+    }
+
+    /**
+     * Charge a **saved card** frictionlessly. Resolves [vaultId]
+     * (`"{customerId}:{cardId}"`) to its vault card token
+     * (`GET /api/customer-vault/{customerId}/card/{cardId}`), then charges it via
+     * [saleFrictionless] (`3ds:false`) — the one-tap repeat-purchase path, modelled
+     * on Launchpad `maverick_gateway.sale(vault_id=...)`.
+     *
+     * **Account-gated** — refuses with [IOException] unless
+     * [LiftedPaymentsConfig.frictionlessAllowed] is true.
+     *
+     * @param amount  the server-computed charge (never a client-supplied number).
+     * @param vaultId the saved-card reference from [saveCard].
+     * @param billing optional billing details passed through to the gateway.
+     */
+    @Throws(IOException::class)
+    fun chargeSavedCard(
+        amount: BigDecimal,
+        vaultId: String,
+        billing: Map<String, Any?>? = null,
+    ): GatewayResult {
+        requireFrictionless()
+        val token = vaultCardToken(vaultId)
+        return saleFrictionless(amount, token, billing)
+    }
+
+    /**
+     * Resolve a saved-card [vaultId] (`"{customerId}:{cardId}"`) to the vault CARD
+     * token used to charge it (`GET /api/customer-vault/{customerId}/card/{cardId}`).
+     * `internal` so the resolution is unit-testable without a live gateway.
+     */
+    @Throws(IOException::class)
+    internal fun vaultCardToken(vaultId: String): String {
+        requireFrictionless()
+        val (customerId, cardId) = decodeVault(vaultId)
+        if (customerId.isEmpty() || cardId.isEmpty()) {
+            throw IOException("invalid saved-card reference")
+        }
+        val rec = getJson("${config.dashboardBaseUrl}/api/customer-vault/$customerId/card/$cardId")
+        return (rec["token"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
+            ?: throw IOException("saved card token not found")
+    }
+
+    /** Refuse any frictionless money path unless this account/tier is gated on. */
+    private fun requireFrictionless() {
+        if (!config.frictionlessAllowed) {
+            throw IOException(
+                "Frictionless mode (3-D Secure off / card-on-file) is not enabled for this " +
+                    "account. Forced 3-D Secure is the only mode off Lifted's rails.",
+            )
+        }
+    }
+
+    /**
+     * POST a billing-information record for a vault customer; returns its id, or
+     * `null` when there is too little address to create one (the card-add then
+     * surfaces Maverick's own error). Mirrors Launchpad `_create_billing_information`.
+     */
+    @Throws(IOException::class)
+    private fun createVaultBilling(
+        customerId: String,
+        billing: Map<String, Any?>,
+    ): String? {
+        val body =
+            buildMap<String, Any?> {
+                mapVaultString(billing, "first_name", "firstName")
+                mapVaultString(billing, "last_name", "lastName")
+                mapVaultString(billing, "address1", "address")
+                mapVaultString(billing, "city", "city")
+                mapVaultString(billing, "state", "state")
+                mapVaultString(billing, "zip", "zip")
+                put(
+                    "country",
+                    (billing["country"] as? String)?.trim()?.takeIf { it.isNotEmpty() } ?: "US",
+                )
+            }
+        // Not enough to create a billing record — the card-add will surface the error.
+        if (body["address"] == null || body["zip"] == null) return null
+        val rec =
+            postJson(
+                "${config.dashboardBaseUrl}/api/customer-vault/$customerId/billing-information",
+                body,
+            )
+        return (rec["id"])?.toString()?.trim()?.takeIf { it.isNotEmpty() }
+    }
+
+    /** Copy `billing[srcKey]` (a non-blank string) into this map under [dstKey], capped at 120 chars. */
+    private fun MutableMap<String, Any?>.mapVaultString(
+        billing: Map<String, Any?>,
+        srcKey: String,
+        dstKey: String,
+    ) {
+        (billing[srcKey] as? String)?.trim()?.takeIf { it.isNotEmpty() }?.let {
+            put(
+                dstKey,
+                it.take(120),
+            )
+        }
+    }
+
+    /** Best-effort DELETE that never throws — used only for fail-closed vault cleanup. */
+    private fun deleteQuiet(url: String) {
+        runCatching {
+            val request =
+                Request
+                    .Builder()
+                    .url(url)
+                    .header("Authorization", "Bearer ${config.bearerToken}")
+                    .delete()
+                    .build()
+            http.newCall(request).execute().use { /* discard */ }
+        }
     }
 
     // ---- Hosted form (config-driven; exact path UNVERIFIED) ------------------
@@ -749,5 +1017,23 @@ class LiftedPaymentsClient(
             eci: String?,
             cavv: String?,
         ): Boolean = !cavv.isNullOrBlank() && eci?.trim() in LIABILITY_SHIFT_ECIS
+
+        /** Encode a vault `customerId` + `cardId` into a single `"{cust}:{card}"` reference. */
+        internal fun encodeVault(
+            customerId: String,
+            cardId: String,
+        ): String = "${customerId.trim()}:${cardId.trim()}"
+
+        /**
+         * Decode a `"{customerId}:{cardId}"` reference back to its parts. Splits on the
+         * FIRST `:` only (ids never contain one, but this is unambiguous either way);
+         * a malformed reference yields a blank part, which callers reject.
+         */
+        internal fun decodeVault(vaultId: String): Pair<String, String> {
+            val raw = vaultId.trim()
+            val idx = raw.indexOf(':')
+            if (idx <= 0 || idx == raw.length - 1) return "" to ""
+            return raw.substring(0, idx).trim() to raw.substring(idx + 1).trim()
+        }
     }
 }

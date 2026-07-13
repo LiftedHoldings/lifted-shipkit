@@ -4,7 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ShipKit — The open shipping toolkit, secured by 3-D Secure</title>
-  <meta name="description" content="Open-source multi-carrier shipping labels with card payment secured by Lifted Payments 3-D Secure. Self-host it free, or drop in the managed widget." />
+  <meta name="description" content="Open-source multi-carrier shipping labels with card payment secured by Lifted Payments 3-D Secure. Import the drop-in widget into your own checkout, self-host it free, or create a free account and drop in one script tag." />
+  <meta name="author" content="Daniel Wilson Kemp" />
   <meta name="color-scheme" content="dark light" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%232E6BFF' d='M3 7l9-4 9 4v6c0 5-3.5 8.5-9 10C6.5 21.5 3 18 3 13V7z'/%3E%3Cpath fill='none' stroke='%23fff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' d='M8.5 12l2.2 2.2 4.8-4.8'/%3E%3C/svg%3E" />
   <link rel="stylesheet" href="css/tokens.css" />
@@ -24,12 +25,16 @@
       </a>
       <nav class="nav__links" aria-label="Primary">
         <a href="#features">Features</a>
+        <a href="#import">Import</a>
         <a href="#tiers">Pricing</a>
         <a href="#quickstart">Quickstart</a>
         <a href="#secure">3-D Secure</a>
         <a href="#developers">API</a>
         <a href="https://github.com/Lifted-Holdings/shipkit" rel="noopener">GitHub</a>
-        <a class="nav__cta" href="https://liftedholdings.com/payments" rel="noopener">Get a merchant account</a>
+        <a class="nav__pm" href="https://god.gw.postman.com/run-collection/36630865-bd2412e8-cfe6-42e4-9fe6-e3ae9d025750?action=collection%2Ffork" target="_blank" rel="noopener" title="Open in Postman">
+          <span class="pm-orb" aria-hidden="true"></span> Open in Postman
+        </a>
+        <a class="nav__cta" href="https://liftedholdings.com/shipkit" rel="noopener">Create free account</a>
         <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle color theme" title="Toggle theme">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
@@ -42,8 +47,10 @@
   <main>
     <!-- ===================== Hero ===================== -->
     <section class="hero section">
+      <canvas id="aurora" aria-hidden="true"></canvas>
       <div class="hero__mesh" aria-hidden="true"></div>
       <div class="hero__meshgrid" aria-hidden="true"></div>
+      <div class="hero__glowline" aria-hidden="true"></div>
       <div class="wrap hero__grid">
         <div class="hero__copy">
           <span class="eyebrow">
@@ -51,17 +58,21 @@
               <path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6l7-3z" />
               <path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
-            Secured by Lifted Payments · 3-D Secure
+            Open source · MIT · Secured by Lifted Payments 3-D Secure
           </span>
-          <h1>The open shipping toolkit, <span class="accent">secured by 3-D Secure.</span></h1>
+          <h1>Drop live shipping into <span class="accent">your own checkout.</span></h1>
           <p class="lead">
-            Buy multi-carrier shipping labels from your store. Compare live rates,
-            print or scan a QR, and take card payment authenticated by 3-D Secure —
-            so fraud chargeback liability shifts to the issuer. Self-host it free, or
-            drop in the managed widget and go live in minutes.
+            ShipKit is the open shipping toolkit. Import one drop-in widget — or the
+            tiny SDK — and your app compares live multi-carrier rates, buys the label
+            in one call, and takes a card payment authenticated by 3-D Secure, so
+            fraud chargeback liability shifts to the issuer. Self-host it free, or
+            create a free account and go live with a single script tag.
           </p>
           <div class="hero__actions">
             <a class="btn btn--primary" href="#quickstart">Read the quickstart</a>
+            <a class="btn btn--pm" href="https://god.gw.postman.com/run-collection/36630865-bd2412e8-cfe6-42e4-9fe6-e3ae9d025750?action=collection%2Ffork" target="_blank" rel="noopener">
+              <span class="pm-orb" aria-hidden="true"></span> Open in Postman
+            </a>
             <a class="btn btn--ghost" href="https://github.com/Lifted-Holdings/shipkit" rel="noopener">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2z" /></svg>
               Star on GitHub
@@ -84,6 +95,10 @@
                 <svg class="browser__shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
                 Lifted Payments
               </span>
+            </div>
+            <div class="livefeed" aria-hidden="true">
+              <span class="live"><span class="pip"></span> Live rate feed</span>
+              <span>EasyPost · multi-carrier · <span class="lat" id="latency">128 ms</span></span>
             </div>
             <div id="ship" aria-label="ShipKit label checkout"></div>
           </div>
@@ -163,11 +178,10 @@
           </article>
 
           <!-- Tier 2 -->
-          <article class="tier tier--managed">
+          <article class="tier">
             <span class="tier__eyebrow">Tier 2</span>
-            <span class="tier__badge">Most popular</span>
-            <h3>Lifted 3-D Secure account</h3>
-            <p class="tier__blurb">Our 3-D Secure processing, your choice of host. Bring your own EasyPost — you host or we host, both free.</p>
+            <h3>Your 3-D Secure account</h3>
+            <p class="tier__blurb">Our 3-D Secure processing on your own merchant account. Bring your own EasyPost — you host or we host, both free.</p>
             <div class="tier__price">
               <span class="amt compact">3.75% + 15¢ <small>/ transaction</small></span>
               <span class="note">plus <strong style="color:var(--heading)">$25 / month</strong> — the merchant account only. Hosting is free either way.</span>
@@ -189,21 +203,25 @@
           <!-- Tier 3 -->
           <article class="tier tier--managed">
             <span class="tier__eyebrow">Tier 3</span>
-            <span class="tier__badge tier__badge--turn">Turnkey</span>
+            <span class="tier__badge tier__badge--pop">Most popular</span>
             <h3>Fully managed</h3>
-            <p class="tier__blurb">Plug &amp; play. One JS snippet on our rails — our 3-D Secure account and our EasyPost. Zero infrastructure.</p>
+            <p class="tier__blurb">No application, no infra — sign up, drop in one script tag, done. Our 3-D Secure account and our EasyPost.</p>
             <div class="tier__price">
               <span class="amt">$0 <small>setup · free hosting</small></span>
-              <span class="note">We earn only on a configurable markup of the shipping rate.</span>
+              <span class="note">We earn only on a small, configurable markup of the shipping rate.</span>
             </div>
+            <p class="tier__note">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" /></svg>
+              No merchant-account application. Create a free account and get your managed key + JS snippet instantly.
+            </p>
             <ul>
-              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> One <code>&lt;script&gt;</code> tag — live in minutes</li>
-              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> OUR 3-D Secure account + OUR EasyPost</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> Create a free account — JS snippet + managed key instantly</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> OUR 3-D Secure account + OUR EasyPost — nothing to wire</li>
               <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> No keys to manage, no PCI scope, free hosting</li>
               <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg> Best for "just make it work"</li>
             </ul>
-            <a class="btn btn--primary" href="https://liftedholdings.com/payments" rel="noopener">Get a managed key</a>
-            <p class="tier__subcta">Get your key at <a href="https://liftedholdings.com/payments">liftedholdings.com/payments</a></p>
+            <a class="btn btn--primary" href="https://liftedholdings.com/shipkit" rel="noopener">Create your free account → get the JS</a>
+            <p class="tier__subcta">Sign up free at <a href="https://liftedholdings.com/shipkit">liftedholdings.com/shipkit</a></p>
           </article>
         </div>
 
@@ -219,6 +237,121 @@
             </div>
           </div>
           <a class="btn btn--primary" href="mailto:support@liftedholdings.com?subject=ShipKit%20custom%20development">support@liftedholdings.com</a>
+        </div>
+
+        <!-- Frictionless vs forced-3DS (tier-2/3 / enterprise benefit) -->
+        <div class="friction" id="frictionless">
+          <div class="friction-head">
+            <span class="kicker">Checkout speed</span>
+            <h3>Frictionless checkout &amp; saved cards — on our rails</h3>
+            <p>3-D Secure is forced by default, and self-host stays that way — it is the fraud and chargeback protection that makes ShipKit safe to ship. Merchants on Lifted Payments (tier&nbsp;2 or&nbsp;3) or enterprise custom-dev can opt into a faster path: skip the challenge on low-risk orders and keep cards on file for one-tap repeat charges. It is an account-level, server-side capability — never a client toggle.</p>
+          </div>
+          <div class="friction-grid">
+            <div class="fcol forced">
+              <div class="fc-top">
+                <span class="fc-t">Forced 3-D Secure</span>
+                <span class="fc-tag def">Default · all tiers</span>
+              </div>
+              <div class="fc-sub">The only mode for self-host &amp; bring-your-own-payments.</div>
+              <ul>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg> Every charge authenticated — liability shifts to the issuer.</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg> No card-on-file. Maximum fraud &amp; chargeback protection.</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Self-host cannot disable 3DS — by design.</li>
+              </ul>
+            </div>
+            <div class="fcol rails">
+              <div class="fc-top">
+                <span class="fc-t">Frictionless on our rails</span>
+                <span class="fc-tag opt">Tier 2 / 3 · enterprise</span>
+              </div>
+              <div class="fc-sub">Opt-in, tied to your Lifted account &amp; tier.</div>
+              <ul>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg> <code>3ds:false</code> on low-risk orders — fewer checkout drop-offs.</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg> Saved cards on file (tokenized vault) → one-tap repeat charges.</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg> Server-side &amp; account-gated — never exposed to the widget.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="friction-foot">
+            <p>Need frictionless mode or a custom vault flow for your enterprise checkout? Our team wires it to your account.</p>
+            <a class="btn btn--trust" href="mailto:support@liftedholdings.com?subject=ShipKit%20frictionless%20%2F%20saved-cards">Talk to us · support@liftedholdings.com</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== Import into your checkout ===================== -->
+    <section class="section" id="import">
+      <div class="wrap">
+        <div class="section__head">
+          <h2>Import ShipKit into your own checkout.</h2>
+          <p>One mount point, one import. The widget renders address entry, live multi-carrier rates and the 3-D Secure card step right inside your app — framework-agnostic, dependency-free, themeable with CSS variables. Point it at your own backend, or at our managed rails. Copy, paste, ship.</p>
+        </div>
+        <div class="import-grid">
+          <div>
+            <div class="fw-tabs" role="tablist" aria-label="Choose a framework">
+              <button type="button" class="fw-tab on" data-fw="react" role="tab" aria-selected="true"><span class="fd"></span> React</button>
+              <button type="button" class="fw-tab" data-fw="vue" role="tab" aria-selected="false"><span class="fd"></span> Vue</button>
+              <button type="button" class="fw-tab" data-fw="html" role="tab" aria-selected="false"><span class="fd"></span> Plain HTML</button>
+            </div>
+            <div class="import-steps">
+              <div class="import-step"><span class="n">1</span><div><h3>Add a mount point</h3><p>Any element — <code>&lt;div id="ship"&gt;</code>. ShipKit owns its own subtree inside it and inherits your layout.</p></div></div>
+              <div class="import-step"><span class="n">2</span><div><h3>Import &amp; init</h3><p>Talk to your own backend with <code>endpoint:'/api'</code> + a publishable <code>pk_live_…</code> key, or hand it a managed key for our rails.</p></div></div>
+              <div class="import-step"><span class="n">3</span><div><h3>Listen for the label</h3><p>Subscribe to <code>onPurchase</code> for the tracking code, label URL and QR. That is the whole integration.</p></div></div>
+            </div>
+            <p class="import-note">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>
+              Full React, Vue &amp; plain-HTML examples ship in the repo under <code>/examples</code>.
+            </p>
+          </div>
+
+          <div class="codewin">
+            <div class="codewin__bar">
+              <span class="codewin__dot"></span><span class="codewin__dot"></span><span class="codewin__dot"></span>
+              <span class="codewin__file" id="import-fname">Checkout.jsx</span>
+            </div>
+<pre class="fw-src" id="fw-react"><code><span class="tok-com">// Drop the widget straight into your checkout route.</span>
+<span class="tok-fn">import</span> ShipWidget <span class="tok-fn">from</span> <span class="tok-str">'./ShipWidget'</span>;
+
+<span class="tok-fn">export default function</span> <span class="tok-fn">Checkout</span>() {
+  <span class="tok-fn">return</span> (
+    <span class="tok-tag">&lt;ShipWidget</span>
+      <span class="tok-attr">endpoint</span>=<span class="tok-str">"/api"</span>
+      <span class="tok-attr">apiKey</span>=<span class="tok-str">"pk_live_…"</span>
+      <span class="tok-attr">theme</span>=<span class="tok-str">"dark"</span>
+      <span class="tok-attr">onPurchase</span>={(label) =&gt; router.push(label.trackingUrl)}
+      <span class="tok-attr">onError</span>={(err) =&gt; toast.error(err.message)}
+    <span class="tok-tag">/&gt;</span>
+  );
+}</code></pre>
+<pre class="fw-src" id="fw-vue" hidden><code><span class="tok-tag">&lt;script setup&gt;</span>
+<span class="tok-fn">import</span> ShipWidget <span class="tok-fn">from</span> <span class="tok-str">'./ShipWidget.vue'</span>;
+<span class="tok-tag">&lt;/script&gt;</span>
+
+<span class="tok-tag">&lt;template&gt;</span>
+  <span class="tok-tag">&lt;ShipWidget</span>
+    <span class="tok-attr">endpoint</span>=<span class="tok-str">"/api"</span>
+    <span class="tok-attr">api-key</span>=<span class="tok-str">"pk_live_…"</span>
+    <span class="tok-attr">theme</span>=<span class="tok-str">"dark"</span>
+    <span class="tok-attr">@purchase</span>=<span class="tok-str">"(label) =&gt; (window.location = label.labelUrl)"</span>
+    <span class="tok-attr">@error</span>=<span class="tok-str">"(err) =&gt; notify(err.message)"</span>
+  <span class="tok-tag">/&gt;</span>
+<span class="tok-tag">&lt;/template&gt;</span></code></pre>
+<pre class="fw-src" id="fw-html" hidden><code><span class="tok-com">&lt;!-- One mount point --&gt;</span>
+<span class="tok-tag">&lt;div</span> <span class="tok-attr">id</span>=<span class="tok-str">"ship"</span><span class="tok-tag">&gt;&lt;/div&gt;</span>
+
+<span class="tok-tag">&lt;script</span> <span class="tok-attr">src</span>=<span class="tok-str">"/js/shipkit.js"</span><span class="tok-tag">&gt;&lt;/script&gt;</span>
+<span class="tok-tag">&lt;script&gt;</span>
+  ShipKit.<span class="tok-fn">init</span>({
+    mount: <span class="tok-str">'#ship'</span>,
+    endpoint: <span class="tok-str">'/api'</span>,
+    apiKey: <span class="tok-str">'pk_live_…'</span>,
+    theme: <span class="tok-str">'dark'</span>,
+    onPurchase: (label) =&gt; { window.location = label.labelUrl; },
+    onError: (err) =&gt; console.error(err.stage, err.message)
+  });
+<span class="tok-tag">&lt;/script&gt;</span></code></pre>
+          </div>
         </div>
       </div>
     </section>
@@ -250,7 +383,10 @@
             <h3>Postman collection</h3>
             <p>Every endpoint pre-built with example bodies and <code>{{baseUrl}}</code> / <code>{{apiKey}}</code> variables. Import and send in seconds.</p>
             <span class="devres__path">shipkit.postman_collection.json</span>
-            <a class="devres__link" href="/shipkit.postman_collection.json" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 10l5 5 5-5" /><path d="M12 15V3" /></svg> Import into Postman</a>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:14px;">
+              <a class="devres__link" style="margin-top:0" href="https://god.gw.postman.com/run-collection/36630865-bd2412e8-cfe6-42e4-9fe6-e3ae9d025750?action=collection%2Ffork" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z" /></svg> Open in Postman</a>
+              <a class="devres__link" style="margin-top:0" href="/shipkit.postman_collection.json" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 10l5 5 5-5" /><path d="M12 15V3" /></svg> Import JSON</a>
+            </div>
           </article>
         </div>
       </div>
@@ -362,8 +498,9 @@
       <nav class="footer__links" aria-label="Footer">
         <a href="/openapi.yaml">OpenAPI</a>
         <a href="/docs">API reference</a>
-        <a href="/shipkit.postman_collection.json" download>Postman</a>
+        <a href="https://god.gw.postman.com/run-collection/36630865-bd2412e8-cfe6-42e4-9fe6-e3ae9d025750?action=collection%2Ffork" target="_blank" rel="noopener">Open in Postman</a>
         <a href="https://github.com/Lifted-Holdings/shipkit" rel="noopener">GitHub</a>
+        <a href="https://liftedholdings.com/shipkit" rel="noopener">Create free account</a>
         <a href="https://liftedholdings.com/payments" rel="noopener">Payments</a>
         <a href="mailto:support@liftedholdings.com">Support</a>
       </nav>
@@ -372,5 +509,91 @@
 
   <script src="js/shipkit.js"></script>
   <script src="js/app.js"></script>
+
+  <!-- Elevation enhancements: aurora atmosphere, live-feed shimmer, import tabs.
+       Self-contained, reduced-motion-safe; independent of app.js. -->
+  <script>
+  (function () {
+    "use strict";
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* ---- Aurora canvas (GPU-cheap, reduced-motion-safe) ---- */
+    (function () {
+      var canvas = document.getElementById('aurora');
+      if (!canvas || !canvas.getContext) return;
+      var ctx = canvas.getContext('2d');
+      var W = 0, H = 0, DPR = 1;
+      var palette = [[46,107,255],[25,199,245],[124,92,255],[46,107,255],[25,199,245]];
+      var blobs = [];
+      function build() {
+        blobs = [];
+        var seeds = [
+          {x:.22,y:.20,r:.52,px:.07,py:.05,sx:.00009,sy:.00007},
+          {x:.80,y:.16,r:.46,px:.06,py:.06,sx:.00007,sy:.00010},
+          {x:.60,y:.72,r:.60,px:.08,py:.05,sx:.00006,sy:.00008},
+          {x:.10,y:.66,r:.42,px:.05,py:.07,sx:.00010,sy:.00006},
+          {x:.92,y:.60,r:.40,px:.06,py:.05,sx:.00008,sy:.00009}
+        ];
+        for (var i = 0; i < seeds.length; i++) {
+          var s = seeds[i];
+          blobs.push({ bx:s.x, by:s.y, r:s.r, px:s.px, py:s.py, sx:s.sx, sy:s.sy, phase:i*1.3, col:palette[i % palette.length] });
+        }
+      }
+      function resize() {
+        DPR = Math.min(window.devicePixelRatio || 1, 1.5);
+        W = canvas.clientWidth; H = canvas.clientHeight;
+        if (W === 0 || H === 0) return;
+        canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      }
+      function frame(t) {
+        if (W === 0 || H === 0) { resize(); if (W === 0 || H === 0) return; }
+        ctx.clearRect(0, 0, W, H);
+        ctx.globalCompositeOperation = 'lighter';
+        var span = Math.max(W, H);
+        for (var i = 0; i < blobs.length; i++) {
+          var b = blobs[i];
+          var cx = (b.bx + Math.sin(t * b.sx + b.phase) * b.px) * W;
+          var cy = (b.by + Math.cos(t * b.sy + b.phase) * b.py) * H;
+          var rad = b.r * span * 0.9;
+          var g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+          var c = b.col;
+          g.addColorStop(0, 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',0.42)');
+          g.addColorStop(0.55, 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',0.12)');
+          g.addColorStop(1, 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',0)');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.globalCompositeOperation = 'source-over';
+      }
+      build(); resize();
+      var raf = null, last = 0;
+      function loop(now) { raf = window.requestAnimationFrame(loop); if (now - last < 33) return; last = now; frame(now); }
+      var resizeT;
+      window.addEventListener('resize', function () { clearTimeout(resizeT); resizeT = setTimeout(function () { resize(); if (reduce) frame(3000); }, 150); });
+      if (reduce) { frame(3000); } else { raf = window.requestAnimationFrame(loop); }
+    })();
+
+    /* ---- Live-feed latency shimmer (cosmetic) ---- */
+    var latEl = document.getElementById('latency');
+    if (latEl && !reduce) {
+      setInterval(function () { latEl.textContent = (108 + Math.floor(Math.random() * 46)) + ' ms'; }, 2600);
+    }
+
+    /* ---- Import: framework tab switcher ---- */
+    (function () {
+      var tabs = Array.prototype.slice.call(document.querySelectorAll('.fw-tab'));
+      var srcs = { react: document.getElementById('fw-react'), vue: document.getElementById('fw-vue'), html: document.getElementById('fw-html') };
+      var fname = document.getElementById('import-fname');
+      var FN = { react: 'Checkout.jsx', vue: 'Checkout.vue', html: 'index.html' };
+      function select(fw) {
+        if (!srcs[fw]) return;
+        tabs.forEach(function (t) { var on = t.getAttribute('data-fw') === fw; t.classList.toggle('on', on); t.setAttribute('aria-selected', on ? 'true' : 'false'); });
+        Object.keys(srcs).forEach(function (k) { if (srcs[k]) srcs[k].hidden = (k !== fw); });
+        if (fname) fname.textContent = FN[fw];
+      }
+      tabs.forEach(function (t) { t.addEventListener('click', function () { select(t.getAttribute('data-fw')); }); });
+    })();
+  })();
+  </script>
 </body>
 </html>

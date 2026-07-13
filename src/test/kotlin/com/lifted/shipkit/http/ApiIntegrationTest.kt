@@ -6,9 +6,11 @@ import com.lifted.shipkit.model.BoughtLabel
 import com.lifted.shipkit.model.PaymentSession
 import com.lifted.shipkit.model.SurchargeConfig
 import com.lifted.shipkit.model.TierMode
+import com.lifted.shipkit.payments.GatewayResult
 import com.lifted.shipkit.payments.HostedPaymentResult
 import com.lifted.shipkit.payments.LiftedPaymentsClient
 import com.lifted.shipkit.payments.PaymentVerification
+import com.lifted.shipkit.payments.SavedCard
 import com.lifted.shipkit.security.ApiKeyStore
 import com.lifted.shipkit.security.InMemoryApiKeyStore
 import com.lifted.shipkit.security.KeyGenerator
@@ -523,5 +525,159 @@ class ApiIntegrationTest {
                 assertEquals(200, it.code, "publishable key can read tier config")
             }
         }
+    }
+
+    // ---- Frictionless / card-on-file gate (SPEC_R3 §5) -----------------------
+
+    @Test
+    fun `tier config surfaces the frictionless capability, on and off`() {
+        // Self-host / BYO default → forced 3-D Secure (frictionless off).
+        val off = wire()
+        JavalinTest.test(off.app) { _, client ->
+            get(client.origin, "/api/config/tier", off.key).use {
+                assertTrue(it.body!!.string().contains(""""frictionless":{"allowed":false"""))
+            }
+        }
+        // A merchant/managed account that opted in → allowed.
+        val on = wire(config = config().copy(tier = TierMode.MANAGED, frictionlessAllowed = true))
+        JavalinTest.test(on.app) { _, client ->
+            get(client.origin, "/api/config/tier", on.key).use {
+                val body = it.body!!.string()
+                assertTrue(body.contains(""""frictionless":{"allowed":true"""), body)
+                assertTrue(body.contains(""""save_cards":true"""), body)
+            }
+        }
+    }
+
+    @Test
+    fun `frictionless endpoints are refused (403) for a self-host or BYO deployment`() {
+        // Payments IS configured, so reaching 403 (not 503) proves the gate — not a
+        // missing feature — is what refuses these paths.
+        val payments = mockk<LiftedPaymentsClient>()
+        val w = wire(payments = payments) // config() default: frictionlessAllowed = false
+        JavalinTest.test(w.app) { _, client ->
+            post(
+                client.origin,
+                "/api/payment/save-card",
+                w.key,
+                """{"card_token":"hf_tok"}""",
+            ).use { assertEquals(403, it.code, "self-host cannot save cards on file") }
+            post(
+                client.origin,
+                "/api/payment/charge-saved-card",
+                w.key,
+                """{"vault_id":"c:1","shipment_id":"shp_1","rate_id":"rate_1","idempotency_key":"k1"}""",
+            ).use { assertEquals(403, it.code, "self-host cannot charge 3ds-off") }
+        }
+        // The gate refuses BEFORE any charge is attempted.
+        verify(exactly = 0) { payments.saveCard(any(), any()) }
+        verify(exactly = 0) { payments.chargeSavedCard(any(), any(), any()) }
+    }
+
+    @Test
+    fun `frictionless endpoints are secret-key only — a publishable key is refused`() {
+        val payments = mockk<LiftedPaymentsClient>()
+        val cfg = config().copy(tier = TierMode.MANAGED, frictionlessAllowed = true)
+        val w = wire(payments = payments, config = cfg)
+        val pub =
+            KeyGenerator.mint("widget", KeyGenerator.Mode.TEST, KeyGenerator.Scope.PUBLISHABLE)
+        w.keys.add(pub.record)
+
+        JavalinTest.test(w.app) { _, client ->
+            post(
+                client.origin,
+                "/api/payment/save-card",
+                pub.plaintext,
+                """{"card_token":"t"}""",
+            ).use {
+                assertEquals(403, it.code, "a browser key may never save cards on file")
+            }
+            post(
+                client.origin,
+                "/api/payment/charge-saved-card",
+                pub.plaintext,
+                """{"vault_id":"c:1","shipment_id":"s","rate_id":"r","idempotency_key":"k"}""",
+            ).use { assertEquals(403, it.code, "a browser key may never charge a saved card") }
+        }
+        verify(exactly = 0) { payments.chargeSavedCard(any(), any(), any()) }
+    }
+
+    @Test
+    fun `an allowed account saves a card on file`() {
+        val payments = mockk<LiftedPaymentsClient>()
+        every { payments.saveCard(any(), any()) } returns
+            SavedCard(
+                vaultId = "cust_1:card_1",
+                customerId = "cust_1",
+                cardId = "card_1",
+                cardToken = "vtok_1",
+            )
+        val cfg = config().copy(tier = TierMode.MERCHANT, frictionlessAllowed = true)
+        val w = wire(payments = payments, config = cfg)
+
+        JavalinTest.test(w.app) { _, client ->
+            post(
+                client.origin,
+                "/api/payment/save-card",
+                w.key,
+                """{"card_token":"hf_tok","billing":{"zip":"90210","address1":"1 A St"}}""",
+            ).use {
+                assertEquals(200, it.code)
+                assertTrue(it.body!!.string().contains(""""vault_id":"cust_1:card_1""""))
+            }
+        }
+    }
+
+    @Test
+    fun `an allowed account charges a saved card once and is idempotent`() {
+        val easyPost = mockk<EasyPostService>()
+        val payments = mockk<LiftedPaymentsClient>()
+        every { easyPost.priceRate(any(), any(), any()) } returns
+            PaymentPricing.Quote(amount = "8.74", baseRate = BigDecimal("7.36"), currency = "USD")
+        every { payments.chargeSavedCard(any(), any(), any()) } returns
+            GatewayResult(transactionId = "txn_s", status = "approved", approved = true)
+        every { easyPost.buyLabel(any(), any(), any(), any()) } returns boughtLabel()
+        val cfg = config().copy(tier = TierMode.MANAGED, frictionlessAllowed = true)
+        val w = wire(easyPost = easyPost, payments = payments, config = cfg)
+
+        val reqBody =
+            """{"vault_id":"cust_1:card_1","shipment_id":"shp_1","rate_id":"rate_1","idempotency_key":"k-42"}"""
+        JavalinTest.test(w.app) { _, client ->
+            post(client.origin, "/api/payment/charge-saved-card", w.key, reqBody).use {
+                assertEquals(200, it.code)
+                val body = it.body!!.string()
+                assertTrue(body.contains("https://label.example/1.png"), "label returned: $body")
+                assertTrue(body.contains(""""transaction_id":"txn_s""""), body)
+            }
+            // Same idempotency key → same label, no second charge or buy.
+            post(client.origin, "/api/payment/charge-saved-card", w.key, reqBody).use {
+                assertEquals(200, it.code)
+                assertTrue(it.body!!.string().contains("https://label.example/1.png"))
+            }
+        }
+        verify(exactly = 1) { payments.chargeSavedCard(any(), any(), any()) }
+        verify(exactly = 1) { easyPost.buyLabel(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `a declined saved-card charge never buys a label`() {
+        val easyPost = mockk<EasyPostService>()
+        val payments = mockk<LiftedPaymentsClient>()
+        every { easyPost.priceRate(any(), any(), any()) } returns
+            PaymentPricing.Quote(amount = "8.74", baseRate = BigDecimal("7.36"), currency = "USD")
+        every { payments.chargeSavedCard(any(), any(), any()) } returns
+            GatewayResult(transactionId = "txn_d", status = "declined", approved = false)
+        val cfg = config().copy(tier = TierMode.MANAGED, frictionlessAllowed = true)
+        val w = wire(easyPost = easyPost, payments = payments, config = cfg)
+
+        JavalinTest.test(w.app) { _, client ->
+            post(
+                client.origin,
+                "/api/payment/charge-saved-card",
+                w.key,
+                """{"vault_id":"cust_1:card_1","shipment_id":"shp_1","rate_id":"rate_1","idempotency_key":"k-d"}""",
+            ).use { assertEquals(402, it.code, "a declined charge is refused") }
+        }
+        verify(exactly = 0) { easyPost.buyLabel(any(), any(), any(), any()) }
     }
 }

@@ -307,4 +307,201 @@ class LiftedPaymentsClientHttpTest {
         val client = LiftedPaymentsClient(config, http(200, "{}"))
         assertThrows(IOException::class.java) { client.hostedFieldsToken("http://shop.example") }
     }
+
+    // ---- Frictionless + card-on-file (account-gated; SPEC_R3 §5) -------------
+
+    /** Same connection details as [config] but with the frictionless capability armed. */
+    private val frictionlessConfig = config.copy(frictionlessAllowed = true)
+
+    @Test
+    fun `saleFrictionless posts 3ds false and approval is not shift-gated`() {
+        val slot = slot<Request>()
+        // Approved with NO 3-D Secure block (no threeds/eci) — must still approve.
+        val http = capturing(200, """{"id":"txn_f","status":{"status":"Approved"}}""", slot)
+        val result =
+            LiftedPaymentsClient(frictionlessConfig, http)
+                .saleFrictionless(BigDecimal("4.20"), cardToken = "tok_f")
+
+        assertEquals("approved", result.status)
+        assertTrue(result.approved, "no shift required when 3DS is off")
+        assertEquals(
+            "https://gateway.maverickpayments.com/payment/sale",
+            slot.captured.url.toString(),
+        )
+        val sent = bodyOf(slot.captured)
+        assertTrue(sent.contains(""""3ds":false"""), "3ds is explicitly OFF: $sent")
+        assertTrue(sent.contains(""""card":{"token":"tok_f"}"""), sent)
+        assertTrue(sent.contains(""""amount":"4.20""""), sent)
+    }
+
+    @Test
+    fun `frictionless methods are REFUSED when the account is not gated on`() {
+        // config (frictionlessAllowed=false) is the self-host / BYO default.
+        val client = LiftedPaymentsClient(config, http(200, "{}"))
+        assertThrows(IOException::class.java) {
+            client.saleFrictionless(BigDecimal("1.00"), cardToken = "tok")
+        }
+        assertThrows(IOException::class.java) { client.saveCard("hf_tok") }
+        assertThrows(IOException::class.java) {
+            client.chargeSavedCard(BigDecimal("1.00"), vaultId = "10:20")
+        }
+    }
+
+    @Test
+    fun `saveCard creates a vault customer, billing, and card on the dashboard host`() {
+        // Distinct id per POST: customer(1) → billing(2, has address+zip) → card(3).
+        val urls = mutableListOf<String>()
+        val bodies = mutableListOf<String>()
+        var call = 0
+        val http = mockk<OkHttpClient>()
+        every { http.newCall(any()) } answers {
+            val req = firstArg<Request>()
+            urls += req.url.toString()
+            bodies += bodyOf(req)
+            val body =
+                when (++call) {
+                    1 -> """{"id":"cust_1"}"""
+                    2 -> """{"id":"bill_1"}"""
+                    else -> """{"id":"card_1","token":"vtok_1"}"""
+                }
+            val c = mockk<Call>()
+            every { c.execute() } returns
+                Response
+                    .Builder()
+                    .request(req)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("ok")
+                    .body(body.toResponseBody("application/json".toMediaType()))
+                    .build()
+            c
+        }
+
+        val saved =
+            LiftedPaymentsClient(frictionlessConfig, http).saveCard(
+                cardToken = "hf_card_tok",
+                billing =
+                    mapOf(
+                        "first_name" to "Ada",
+                        "last_name" to "Lovelace",
+                        "address1" to "1 Analytical Way",
+                        "city" to "London",
+                        "state" to "CA",
+                        "zip" to "90210",
+                    ),
+            )
+
+        assertEquals("cust_1:card_1", saved.vaultId)
+        assertEquals("vtok_1", saved.cardToken)
+        // Vault ops are DASHBOARD-host; the card-add carries the Hosted Fields token.
+        assertTrue(
+            urls.all {
+                it.startsWith("https://dashboard.maverickpayments.com/api/customer-vault")
+            },
+            "$urls",
+        )
+        assertEquals("https://dashboard.maverickpayments.com/api/customer-vault", urls[0])
+        assertTrue(urls[1].endsWith("/customer-vault/cust_1/billing-information"), urls[1])
+        assertTrue(urls[2].endsWith("/customer-vault/cust_1/card"), urls[2])
+        assertTrue(
+            bodies[0].contains(""""dba":{"id":7}"""),
+            "customer scoped to the DBA: ${bodies[0]}",
+        )
+        assertTrue(
+            bodies[2].contains(""""token":"hf_card_tok""""),
+            "card token attached: ${bodies[2]}",
+        )
+    }
+
+    @Test
+    fun `saveCard fails closed and deletes the orphan customer when no card id comes back`() {
+        val methods = mutableListOf<String>()
+        var call = 0
+        val http = mockk<OkHttpClient>()
+        every { http.newCall(any()) } answers {
+            val req = firstArg<Request>()
+            methods += req.method
+            // customer(1) ok, billing(2) ok, card(3) returns NO id → unchargeable.
+            val body =
+                when (++call) {
+                    1 -> """{"id":"cust_9"}"""
+                    2 -> """{"id":"bill_9"}"""
+                    else -> """{"status":"ok"}""" // no id / no token
+                }
+            val c = mockk<Call>()
+            every { c.execute() } returns
+                Response
+                    .Builder()
+                    .request(req)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("ok")
+                    .body(body.toResponseBody("application/json".toMediaType()))
+                    .build()
+            c
+        }
+
+        assertThrows(IOException::class.java) {
+            LiftedPaymentsClient(frictionlessConfig, http).saveCard(
+                cardToken = "hf_card_tok",
+                billing = mapOf("address1" to "1 A St", "zip" to "90210"),
+            )
+        }
+        // A best-effort DELETE cleaned up the orphan customer (no phantom saved card).
+        assertTrue(methods.contains("DELETE"), "orphan customer deleted: $methods")
+    }
+
+    @Test
+    fun `chargeSavedCard resolves the vault token then charges it frictionlessly`() {
+        val urls = mutableListOf<String>()
+        val bodies = mutableListOf<String>()
+        var call = 0
+        val http = mockk<OkHttpClient>()
+        every { http.newCall(any()) } answers {
+            val req = firstArg<Request>()
+            urls += req.url.toString()
+            bodies += bodyOf(req)
+            // 1: GET vault card → token; 2: POST /payment/sale → approved.
+            val body =
+                if (++call == 1) {
+                    """{"id":"card_1","token":"vtok_resolved"}"""
+                } else {
+                    """{"id":"txn_s","status":{"status":"Approved"}}"""
+                }
+            val c = mockk<Call>()
+            every { c.execute() } returns
+                Response
+                    .Builder()
+                    .request(req)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("ok")
+                    .body(body.toResponseBody("application/json".toMediaType()))
+                    .build()
+            c
+        }
+
+        val result =
+            LiftedPaymentsClient(frictionlessConfig, http)
+                .chargeSavedCard(BigDecimal("6.66"), vaultId = "cust_1:card_1")
+
+        assertTrue(result.approved)
+        assertEquals(
+            "https://dashboard.maverickpayments.com/api/customer-vault/cust_1/card/card_1",
+            urls[0],
+            "resolves the vault card token on the dashboard host first",
+        )
+        assertEquals("https://gateway.maverickpayments.com/payment/sale", urls[1])
+        // The resolved vault token is what is charged, 3ds OFF.
+        assertTrue(bodies[1].contains(""""card":{"token":"vtok_resolved"}"""), bodies[1])
+        assertTrue(bodies[1].contains(""""3ds":false"""), bodies[1])
+    }
+
+    @Test
+    fun `chargeSavedCard rejects a malformed vault reference`() {
+        val client = LiftedPaymentsClient(frictionlessConfig, http(200, "{}"))
+        assertThrows(IOException::class.java) {
+            client.chargeSavedCard(BigDecimal("1.00"), vaultId = "no-colon")
+        }
+    }
 }

@@ -330,6 +330,106 @@ paths:
         "502": { $ref: "#/components/responses/GatewayError" }
         "503": { $ref: "#/components/responses/FeatureUnconfigured" }
 
+  /api/payment/save-card:
+    post:
+      tags: [Payment]
+      summary: Save a card on file (frictionless / card-on-file — account-gated).
+      description: |
+        Vault a card for one-tap repeat checkout (Maverick customer vault). The body
+        carries a Maverick **Hosted Fields card token**, never a PAN. Returns a
+        `vault_id` (`"{customerId}:{cardId}"`) to charge later via
+        `POST /api/payment/charge-saved-card`.
+
+        **Account-gated and secret-key only.** Available ONLY when the deployment's
+        tier armed frictionless mode (a Lifted merchant/managed or enterprise
+        custom-dev account). Self-host / bring-your-own-payments is **refused**
+        (`403`) — forced 3-D Secure is its only mode. Never reachable by a
+        publishable (`pk_…`) key.
+      operationId: saveCardOnFile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaveCardRequest" }
+            example:
+              card_token: "hf_card_tok_abc"
+              billing: { first_name: "Ada", last_name: "Lovelace", address1: "1 Analytical Way", city: "London", state: "CA", zip: "90210", country: "US" }
+      responses:
+        "200":
+          description: The saved card's vault reference.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SavedCardResponse" }
+              example: { success: true, vault_id: "cust_1:card_1", card_token: "vtok_1" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Frictionless / card-on-file is not enabled for this account (forced 3-D Secure).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "502": { $ref: "#/components/responses/GatewayError" }
+        "503": { $ref: "#/components/responses/FeatureUnconfigured" }
+
+  /api/payment/charge-saved-card:
+    post:
+      tags: [Payment]
+      summary: One-tap purchase on a saved card (frictionless — account-gated).
+      description: |
+        Price the rate **on the server** (a client-sent amount is ignored), charge
+        the saved card **frictionlessly** (`3ds:false`), and buy the label — the
+        one-tap repeat-checkout path. **Idempotent** on the required
+        `idempotency_key`: the card is charged and the label bought at most once, and
+        the card is charged before the label — a buy that fails after a successful
+        charge is retried WITHOUT re-charging.
+
+        **Account-gated and secret-key only** (as with `save-card`). Self-host / BYO
+        is refused with `403`.
+      operationId: chargeSavedCard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChargeSavedCardRequest" }
+            example:
+              vault_id: "cust_1:card_1"
+              shipment_id: "shp_1a2b3c"
+              rate_id: "rate_aaa"
+              idempotency_key: "order-8842"
+      responses:
+        "200":
+          description: The purchased label plus the charge reference and amount.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SavedCardChargeResponse" }
+              example:
+                label_url: "https://easypost-files.s3.amazonaws.com/files/postage_label/label.png"
+                qr_code_url: null
+                tracking_code: "9400100000000000000000"
+                carrier: "USPS"
+                service: "Priority"
+                transaction_id: "txn_s"
+                amount: "9.48"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "402":
+          description: The saved-card charge was not approved.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: Frictionless mode is not enabled for this account (forced 3-D Secure).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: A saved-card purchase for this idempotency key is already in progress.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "502": { $ref: "#/components/responses/GatewayError" }
+        "503": { $ref: "#/components/responses/FeatureUnconfigured" }
+
   /api/batch/create:
     post:
       tags: [Bulk & international]
@@ -893,6 +993,60 @@ components:
             configured: { type: boolean }
             environment: { type: [string, "null"], enum: [live, sandbox, null] }
             card_entry: { type: [string, "null"], enum: [hosted_fields, hosted_form, null] }
+        frictionless:
+          type: object
+          description: |
+            The account-gated frictionless / card-on-file capability (SPEC_R3 §5).
+            `false` by default and always false for self-host / bring-your-own-
+            payments (forced 3-D Secure is their only mode). Server-derived — never a
+            client toggle.
+          properties:
+            allowed: { type: boolean, description: "May this account charge 3ds-off?" }
+            save_cards: { type: boolean, description: "May this account save cards on file? (same capability)" }
+    SaveCardRequest:
+      type: object
+      required: [card_token]
+      properties:
+        card_token: { type: string, description: "A Maverick Hosted Fields card token (never a PAN)." }
+        billing: { $ref: "#/components/schemas/VaultBilling" }
+    VaultBilling:
+      type: object
+      description: Cardholder billing for the vault record; address1 + zip enable the billing record the card-add references.
+      properties:
+        first_name: { type: string }
+        last_name: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        company: { type: string }
+        address1: { type: string }
+        city: { type: string }
+        state: { type: string }
+        zip: { type: string }
+        country: { type: string, examples: ["US"] }
+    SavedCardResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        vault_id: { type: string, description: "Opaque saved-card reference (\"{customerId}:{cardId}\")." }
+        card_token: { type: string, description: "Vault card token when the gateway echoed one (may be empty)." }
+    ChargeSavedCardRequest:
+      type: object
+      required: [vault_id, shipment_id, rate_id, idempotency_key]
+      properties:
+        vault_id: { type: string, description: "The saved-card reference from POST /api/payment/save-card." }
+        shipment_id: { type: string }
+        rate_id: { type: string }
+        idempotency_key: { type: string, description: "Makes the charge + label buy at-most-once." }
+        end_shipper_id: { type: string }
+        description: { type: string }
+        billing: { $ref: "#/components/schemas/VaultBilling" }
+    SavedCardChargeResponse:
+      allOf:
+        - { $ref: "#/components/schemas/LabelResponse" }
+        - type: object
+          properties:
+            transaction_id: { type: string }
+            amount: { type: string, description: "The amount charged; money as a STRING." }
     ThreeDs:
       type: [object, "null"]
       properties:

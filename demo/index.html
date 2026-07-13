@@ -4,31 +4,31 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>ShipKit — The open shipping toolkit, secured by Lifted Payments 3-D Secure</title>
-<meta name="description" content="ShipKit is a free, MIT-licensed multi-carrier shipping toolkit. Buy labels across USPS, UPS and FedEx with card payments secured by Lifted Payments 3-D Secure. Self-host it, or drop in the managed widget with one script tag." />
+<meta name="description" content="ShipKit is a free, MIT-licensed multi-carrier shipping toolkit. Compare live USPS, UPS, FedEx and DHL rates and buy labels with card payments secured by Lifted Payments 3-D Secure. Self-host it, or create a free account and drop in one script tag." />
 <meta name="author" content="Daniel Wilson Kemp" />
 <meta name="color-scheme" content="dark light" />
 <meta name="theme-color" content="#0B1020" media="(prefers-color-scheme: dark)" />
 <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
-<link rel="canonical" href="https://liftedholdings.com/shippingtool" />
+<link rel="canonical" href="https://liftedholdings.com/shipkit" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%232E6BFF' d='M3 7l9-4 9 4v6c0 5-3.5 8.5-9 10C6.5 21.5 3 18 3 13V7z'/%3E%3Cpath fill='none' stroke='%2319C7F5' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' d='M8.5 12l2.2 2.2 4.8-4.8'/%3E%3C/svg%3E" />
 <!-- Open Graph -->
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="ShipKit" />
-<meta property="og:url" content="https://liftedholdings.com/shippingtool" />
+<meta property="og:url" content="https://liftedholdings.com/shipkit" />
 <meta property="og:title" content="ShipKit — The open shipping toolkit, secured by Lifted Payments 3-D Secure" />
-<meta property="og:description" content="Multi-carrier shipping labels (USPS, UPS, FedEx via EasyPost) with card payments secured by 3-D Secure. MIT licensed. Self-host free or drop in the managed widget." />
+<meta property="og:description" content="Live multi-carrier rates (USPS, UPS, FedEx, DHL via EasyPost) and label purchase with card payments secured by 3-D Secure. MIT licensed. Self-host free, or create a free account and drop in one script tag." />
 <meta property="og:locale" content="en_US" />
-<meta property="og:image" content="https://liftedholdings.com/shippingtool/og.png" />
+<meta property="og:image" content="https://liftedholdings.com/shipkit/og.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:image:alt" content="ShipKit — multi-carrier shipping labels with 3-D Secure card payments" />
+<meta property="og:image:alt" content="ShipKit — live multi-carrier shipping rates with 3-D Secure card payments" />
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:site" content="@LiftedHoldings" />
 <meta name="twitter:title" content="ShipKit — The open shipping toolkit" />
-<meta name="twitter:description" content="Multi-carrier shipping labels with 3-D Secure card payments. MIT licensed, drop-in JS widget. Secured by Lifted Payments." />
-<meta name="twitter:image" content="https://liftedholdings.com/shippingtool/og.png" />
-<meta name="twitter:image:alt" content="ShipKit — multi-carrier shipping labels with 3-D Secure card payments" />
+<meta name="twitter:description" content="Live multi-carrier shipping rates and labels with 3-D Secure card payments. MIT licensed, drop-in JS widget. Secured by Lifted Payments." />
+<meta name="twitter:image" content="https://liftedholdings.com/shipkit/og.png" />
+<meta name="twitter:image:alt" content="ShipKit — live multi-carrier shipping rates with 3-D Secure card payments" />
 <!-- Structured data: a developer tool / web application -->
 <script type="application/ld+json">
 {
@@ -39,20 +39,24 @@
   "operatingSystem": "Any",
   "softwareVersion": "1.0.0",
   "applicationSubCategory": "Shipping & Payments",
-  "description": "Open-source, MIT-licensed multi-carrier shipping toolkit. Buy USPS, UPS and FedEx shipping labels via EasyPost with card payments secured by Lifted Payments 3-D Secure. Self-host the Kotlin backend, or drop in the managed JavaScript widget.",
-  "url": "https://liftedholdings.com/shippingtool",
+  "description": "Open-source, MIT-licensed multi-carrier shipping toolkit. Compare live USPS, UPS, FedEx and DHL rates via EasyPost and buy labels with card payments secured by Lifted Payments 3-D Secure. Self-host the Kotlin backend, or create a free account and drop in the managed JavaScript widget.",
+  "url": "https://liftedholdings.com/shipkit",
   "sameAs": ["https://github.com/Lifted-Holdings/shipkit"],
   "codeRepository": "https://github.com/Lifted-Holdings/shipkit",
   "license": "https://opensource.org/licenses/MIT",
   "author": { "@type": "Person", "name": "Daniel Wilson Kemp" },
   "publisher": { "@type": "Organization", "name": "Lifted Holdings", "url": "https://liftedholdings.com" },
-  "keywords": "shipping api, multi-carrier shipping labels, EasyPost, 3-D Secure payments, hosted card fields, chargeback protection, fraud prevention, kotlin, javascript widget",
-  "featureList": "Multi-carrier rates (USPS, UPS, FedEx), address verification, label purchase, batch & scan forms, customs, tracking webhooks, 3-D Secure hosted card fields, drop-in JS widget",
+  "keywords": "shipping api, multi-carrier shipping labels, live shipping rates, EasyPost, 3-D Secure payments, hosted card fields, chargeback protection, fraud prevention, kotlin, javascript widget",
+  "featureList": "Live multi-carrier rates (USPS, UPS, FedEx, DHL), address verification, label purchase, batch & scan forms, customs, tracking webhooks, 3-D Secure hosted card fields, drop-in JS widget",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
 }
 </script>
 <style>
-  /* ---------- Design tokens ---------- */
+  /* ============================================================
+     ShipKit — Direction C · "Product-forward / Live"
+     Launchpad-blue Lifted DS. Signature: a live streaming
+     multi-carrier rate ticker feeding an operations-console widget.
+     ============================================================ */
   :root{
     /* Lifted ink spine (dark, primary theme) */
     --ink:#0B1020; --surface:#141D31; --surface-2:#070B16;
@@ -60,36 +64,53 @@
     --line:rgba(174,184,208,.12); --line-strong:rgba(174,184,208,.20);
     --primary:#2E6BFF; --primary-hover:#5AA6FF; --primary-ink:#FFFFFF;
     --trust:#19C7F5; --trust-soft:rgba(25,199,245,.14);
-    --amber:#FFB920; --danger:#FF4D6A;
+    --violet:#7C5CFF;
+    --amber:#FFB920; --danger:#FF4D6A; --up:#00E18C;
     --primary-soft:rgba(46,107,255,.14);
     --code-bg:#070B16; --card:#141D31;
-    --shadow:0 1px 0 rgba(255,255,255,.04), 0 24px 60px -30px rgba(0,0,0,.78);
+    /* glass depth (aurora graft) */
+    --glass:rgba(20,29,49,.55); --glass-strong:rgba(20,29,49,.72);
+    --glass-brd:rgba(174,184,208,.14); --glass-hi:rgba(255,255,255,.06);
+    --shadow:0 1px 0 rgba(255,255,255,.05), 0 30px 80px -36px rgba(0,0,0,.85);
+    --glow:0 0 0 1px rgba(46,107,255,.14), 0 40px 120px -40px rgba(46,107,255,.5);
     --radius:16px; --radius-sm:10px;
-    --mesh-1:rgba(46,107,255,.28); --mesh-2:rgba(25,199,245,.18); --mesh-3:rgba(46,107,255,.10);
+    --aurora-op:.95;
+    --mesh-1:rgba(46,107,255,.30); --mesh-2:rgba(25,199,245,.20); --mesh-3:rgba(46,107,255,.12);
     /* Self-contained: Lifted type names first, strong system fallbacks (no CDN). */
     --font-ui:'Inter',ui-sans-serif,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
     --font-display:'Sora','Inter',ui-sans-serif,-apple-system,"Segoe UI",system-ui,sans-serif;
     --font-mono:'JetBrains Mono',ui-monospace,"SF Mono",Consolas,"Liberation Mono",monospace;
   }
   :root[data-theme="light"]{
-    --ink:#F7F9FB; --surface:#FFFFFF; --surface-2:#F1F4F8;
-    --text:#3A4552; --heading:#131A22; --muted:#657283;
-    --line:rgba(19,26,34,.10); --line-strong:rgba(19,26,34,.16);
+    --ink:#F5F8FC; --surface:#FFFFFF; --surface-2:#EEF3F9;
+    --text:#3A4552; --heading:#0E1726; --muted:#5C6B80;
+    --line:rgba(14,23,38,.10); --line-strong:rgba(14,23,38,.16);
     --primary:#2E6BFF; --primary-hover:#1E4FD6; --primary-ink:#FFFFFF;
-    --trust:#0E86A8; --trust-soft:rgba(25,199,245,.12);
+    --trust:#0C7FA0; --trust-soft:rgba(25,199,245,.13);
+    --violet:#6C4BFF;
+    --up:#0E9E6E;
     --primary-soft:rgba(46,107,255,.10);
-    --code-bg:#0E141C; --card:#FFFFFF;
-    --shadow:0 1px 0 rgba(19,26,34,.02), 0 24px 50px -32px rgba(19,26,34,.28);
-    --mesh-1:rgba(46,107,255,.20); --mesh-2:rgba(25,199,245,.14); --mesh-3:rgba(46,107,255,.07);
+    --code-bg:#0B111C; --card:#FFFFFF;
+    --glass:rgba(255,255,255,.62); --glass-strong:rgba(255,255,255,.80);
+    --glass-brd:rgba(14,23,38,.10); --glass-hi:rgba(255,255,255,.7);
+    --shadow:0 1px 0 rgba(14,23,38,.02), 0 30px 60px -38px rgba(14,23,38,.30);
+    --glow:0 0 0 1px rgba(46,107,255,.10), 0 40px 110px -46px rgba(46,107,255,.30);
+    --aurora-op:.55;
+    --mesh-1:rgba(46,107,255,.22); --mesh-2:rgba(25,199,245,.16); --mesh-3:rgba(46,107,255,.08);
   }
   @media (prefers-color-scheme: light){
     :root:not([data-theme]){
-      --ink:#F7F9FB; --surface:#FFFFFF; --surface-2:#F1F4F8;
-      --text:#3A4552; --heading:#131A22; --muted:#657283;
-      --line:rgba(19,26,34,.10); --line-strong:rgba(19,26,34,.16);
-      --primary-hover:#1E4FD6; --primary-ink:#FFFFFF; --trust:#0E86A8;
-      --primary-soft:rgba(46,107,255,.10); --code-bg:#0E141C; --card:#FFFFFF;
-      --shadow:0 1px 0 rgba(19,26,34,.02), 0 24px 50px -32px rgba(19,26,34,.28);
+      --ink:#F5F8FC; --surface:#FFFFFF; --surface-2:#EEF3F9;
+      --text:#3A4552; --heading:#0E1726; --muted:#5C6B80;
+      --line:rgba(14,23,38,.10); --line-strong:rgba(14,23,38,.16);
+      --primary-hover:#1E4FD6; --primary-ink:#FFFFFF; --trust:#0C7FA0; --up:#0E9E6E; --violet:#6C4BFF;
+      --primary-soft:rgba(46,107,255,.10); --code-bg:#0B111C; --card:#FFFFFF;
+      --glass:rgba(255,255,255,.62); --glass-strong:rgba(255,255,255,.80);
+      --glass-brd:rgba(14,23,38,.10); --glass-hi:rgba(255,255,255,.7);
+      --shadow:0 1px 0 rgba(14,23,38,.02), 0 30px 60px -38px rgba(14,23,38,.30);
+      --glow:0 0 0 1px rgba(46,107,255,.10), 0 40px 110px -46px rgba(46,107,255,.30);
+      --aurora-op:.55;
+      --mesh-1:rgba(46,107,255,.22); --mesh-2:rgba(25,199,245,.16); --mesh-3:rgba(46,107,255,.08);
     }
   }
 
@@ -97,18 +118,28 @@
   *{box-sizing:border-box}
   [hidden]{display:none!important}
   html{scroll-behavior:smooth}
-  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} *{animation-duration:.001ms!important;transition-duration:.001ms!important} }
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto}
+    *{animation-duration:.001ms!important; animation-iteration-count:1!important; transition-duration:.001ms!important}
+    .ticker-track{animation:none!important; transform:none!important}
+  }
   body{
     margin:0; background:var(--ink); color:var(--text);
     font-family:var(--font-ui); font-size:16px; line-height:1.6;
     -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
-    overflow-x:hidden;
+    overflow-x:hidden; position:relative;
   }
-  h1,h2,h3,h4{color:var(--heading); font-family:var(--font-display); line-height:1.12; text-wrap:balance; letter-spacing:-.02em; margin:0}
+  /* page-wide atmospheric wash beneath everything (aurora graft) */
+  body::before{content:""; position:fixed; inset:0; z-index:-2; pointer-events:none;
+    background:
+      radial-gradient(60% 40% at 12% -6%, rgba(46,107,255,.16), transparent 60%),
+      radial-gradient(50% 40% at 92% 4%, rgba(25,199,245,.12), transparent 62%),
+      radial-gradient(70% 60% at 50% 118%, rgba(124,92,255,.10), transparent 60%);}
+  h1,h2,h3,h4,h5{color:var(--heading); font-family:var(--font-display); line-height:1.12; text-wrap:balance; letter-spacing:-.02em; margin:0}
   p{margin:0}
   a{color:inherit; text-decoration:none}
   ::selection{background:var(--primary-soft); color:var(--heading)}
-  .wrap{max-width:1120px; margin:0 auto; padding:0 24px}
+  .wrap{max-width:1180px; margin:0 auto; padding:0 24px}
   .mono{font-family:var(--font-mono); font-variant-numeric:tabular-nums}
   .tnum{font-variant-numeric:tabular-nums}
   :focus-visible{outline:2px solid var(--primary); outline-offset:2px; border-radius:6px}
@@ -116,7 +147,7 @@
   /* ---------- Buttons ---------- */
   .btn{display:inline-flex; align-items:center; gap:8px; font-weight:600; font-size:15px;
     padding:11px 18px; border-radius:12px; border:1px solid transparent; cursor:pointer;
-    transition:transform .12s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
+    transition:transform .12s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease, color .18s ease;
     white-space:nowrap; font-family:inherit}
   .btn:active{transform:translateY(1px)}
   .btn-primary{position:relative; overflow:hidden; background:var(--primary); color:var(--primary-ink); box-shadow:0 8px 24px -10px rgba(46,107,255,.7)}
@@ -126,9 +157,24 @@
   .btn-primary:hover::after{left:150%}
   .btn-ghost{background:transparent; color:var(--heading); border-color:var(--line-strong)}
   .btn-ghost:hover{border-color:var(--primary); color:var(--heading)}
-  .btn-trust{background:var(--trust); color:#05141C; box-shadow:0 8px 24px -12px rgba(25,199,245,.7)}
+  .btn-trust{position:relative; overflow:hidden; background:var(--trust); color:#05141C; box-shadow:0 8px 24px -12px rgba(25,199,245,.7)}
   .btn-trust:hover{filter:brightness(1.06)}
+  .btn-trust::after{content:""; position:absolute; top:0; left:-120%; width:55%; height:100%;
+    background:linear-gradient(100deg, transparent, rgba(255,255,255,.4), transparent); transform:skewX(-18deg); transition:left .6s ease}
+  .btn-trust:hover::after{left:150%}
   .btn svg{width:18px; height:18px; flex:none}
+
+  /* Postman pill — self-contained, no external SVG */
+  .btn-postman{background:transparent; color:var(--heading); border-color:var(--line-strong)}
+  .btn-postman:hover{border-color:#FF6C37; color:var(--heading)}
+  .pm-orb{width:16px; height:16px; border-radius:50%; flex:none;
+    background:radial-gradient(circle at 32% 30%, #FF8A5B, #FF6C37 62%, #E14E1E);
+    box-shadow:0 0 0 2px rgba(255,108,55,.18)}
+
+  /* ---------- Live indicator ---------- */
+  .live{display:inline-flex; align-items:center; gap:7px; font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--up)}
+  .live .pip{width:7px; height:7px; border-radius:50%; background:var(--up); box-shadow:0 0 0 0 rgba(0,225,140,.55); animation:pulse 1.9s ease-out infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(0,225,140,.5)}70%{box-shadow:0 0 0 7px rgba(0,225,140,0)}100%{box-shadow:0 0 0 0 rgba(0,225,140,0)}}
 
   /* ---------- Nav ---------- */
   header.nav{position:sticky; top:0; z-index:50; backdrop-filter:saturate(140%) blur(14px);
@@ -136,7 +182,7 @@
   .nav-inner{display:flex; align-items:center; justify-content:space-between; height:64px}
   .brand{display:flex; align-items:center; gap:11px; font-weight:700; color:var(--heading); letter-spacing:-.01em; font-size:17px}
   .brand .logo{width:30px; height:30px; flex:none}
-  .nav-links{display:flex; align-items:center; gap:26px}
+  .nav-links{display:flex; align-items:center; gap:24px}
   .nav-links a.link{color:var(--muted); font-size:14.5px; font-weight:500}
   .nav-links a.link:hover{color:var(--heading)}
   .nav-actions{display:flex; align-items:center; gap:10px}
@@ -144,62 +190,114 @@
     border:1px solid var(--line-strong); background:transparent; color:var(--heading); cursor:pointer}
   .icon-btn:hover{border-color:var(--primary)}
   .icon-btn svg{width:18px;height:18px}
-  @media (max-width:860px){ .nav-links{display:none} }
+  @media (max-width:1000px){ .nav-links{display:none} }
+  @media (max-width:560px){ .nav-actions .hide-sm{display:none} }
 
-  /* ---------- Hero ---------- */
-  .hero{position:relative; padding:96px 0 40px; overflow:hidden}
-  .hero-mesh{position:absolute; inset:-20% -10% auto -10%; height:640px; z-index:0; pointer-events:none;
+  /* ---------- Hero (aurora-elevated) ---------- */
+  .hero{position:relative; padding:92px 0 34px; overflow:hidden; isolation:isolate}
+  /* animated aurora canvas — GPU-cheap, reduced-motion-safe */
+  #aurora{position:absolute; inset:0; width:100%; height:100%; z-index:0; opacity:var(--aurora-op);
+    pointer-events:none; mask-image:radial-gradient(130% 100% at 50% 0%, #000 42%, transparent 92%);
+    -webkit-mask-image:radial-gradient(130% 100% at 50% 0%, #000 42%, transparent 92%)}
+  .hero-mesh{position:absolute; inset:-24% -10% auto -10%; height:720px; z-index:0; pointer-events:none; opacity:.6;
     background:
-      radial-gradient(50% 40% at 22% 18%, var(--mesh-1), transparent 60%),
-      radial-gradient(45% 45% at 82% 12%, var(--mesh-2), transparent 62%),
-      radial-gradient(60% 50% at 60% 70%, var(--mesh-3), transparent 65%);
-    filter:saturate(115%);}
-  .hero-grid{position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.5;
+      radial-gradient(48% 42% at 20% 16%, var(--mesh-1), transparent 60%),
+      radial-gradient(44% 46% at 84% 10%, var(--mesh-2), transparent 62%),
+      radial-gradient(58% 52% at 64% 74%, var(--mesh-3), transparent 66%);
+    filter:saturate(118%); animation:drift 22s ease-in-out infinite alternate}
+  @keyframes drift{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(-2%,1.5%,0) scale(1.05)}}
+  .hero-grid{position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.45;
     background-image:linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
-    background-size:56px 56px; mask-image:radial-gradient(120% 80% at 50% 0%, #000 20%, transparent 72%)}
-  .hero-inner{position:relative; z-index:1; display:grid; grid-template-columns:1.05fr .95fr; gap:56px; align-items:center}
-  @media (max-width:960px){ .hero-inner{grid-template-columns:1fr; gap:40px} .hero{padding-top:64px} }
+    background-size:56px 56px; mask-image:radial-gradient(120% 82% at 50% 0%, #000 20%, transparent 72%);
+    -webkit-mask-image:radial-gradient(120% 82% at 50% 0%, #000 20%, transparent 72%)}
+  .hero-glowline{position:absolute; left:0; right:0; top:0; height:1px; z-index:0; pointer-events:none;
+    background:linear-gradient(90deg, transparent, rgba(25,199,245,.5), rgba(46,107,255,.5), transparent)}
+  .hero-inner{position:relative; z-index:1; display:grid; grid-template-columns:1fr 1.02fr; gap:52px; align-items:center}
+  @media (max-width:980px){ .hero-inner{grid-template-columns:1fr; gap:36px} .hero{padding-top:56px} }
   .eyebrow{display:inline-flex; align-items:center; gap:9px; font-size:13px; font-weight:600; color:var(--trust);
     background:var(--trust-soft); border:1px solid rgba(25,199,245,.25); padding:6px 12px; border-radius:999px; letter-spacing:.01em}
   .eyebrow .dot{width:7px; height:7px; border-radius:50%; background:var(--trust); box-shadow:0 0 0 4px rgba(25,199,245,.18)}
-  h1.hero-title{font-size:clamp(38px,5.4vw,60px); font-weight:800; margin:20px 0 0; letter-spacing:-.03em}
+  h1.hero-title{font-size:clamp(38px,5.2vw,60px); font-weight:800; margin:20px 0 0; letter-spacing:-.03em}
   h1.hero-title .accent{background:linear-gradient(100deg,var(--primary),var(--trust)); -webkit-background-clip:text; background-clip:text; color:transparent}
-  .hero-sub{margin-top:20px; font-size:clamp(16px,1.5vw,19px); color:var(--text); max-width:60ch}
-  .hero-cta{margin-top:30px; display:flex; flex-wrap:wrap; gap:12px; align-items:center}
-  .hero-meta{margin-top:26px; display:flex; flex-wrap:wrap; gap:22px; color:var(--muted); font-size:13.5px}
+  .hero-sub{margin-top:20px; font-size:clamp(16px,1.5vw,18.5px); color:var(--text); max-width:56ch}
+  .hero-cta{margin-top:28px; display:flex; flex-wrap:wrap; gap:12px; align-items:center}
+  .hero-meta{margin-top:24px; display:flex; flex-wrap:wrap; gap:12px 22px; color:var(--muted); font-size:13.5px}
   .hero-meta .m{display:flex; align-items:center; gap:8px}
-  .hero-meta svg{width:16px; height:16px; color:var(--trust)}
-  .stars{display:inline-flex; align-items:center; gap:8px; font-size:14px; color:var(--muted)}
-  .stars b{color:var(--heading)}
+  .hero-meta svg{width:16px; height:16px; color:var(--trust); flex:none}
+  .hero-meta code{font-family:var(--font-mono); color:var(--heading)}
 
-  /* ---------- Demo widget (hero right + interactive) ---------- */
-  .browser{border:1px solid var(--line-strong); border-radius:var(--radius); background:var(--card);
-    box-shadow:var(--shadow); overflow:hidden}
+  /* ---------- Rate ticker (signature) ---------- */
+  .ticker{position:relative; z-index:1; margin-top:34px; border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, color-mix(in srgb, var(--card) 60%, transparent), transparent);
+    overflow:hidden; padding:12px 0}
+  .ticker-head{display:flex; align-items:center; gap:10px; padding:0 24px 10px; max-width:1180px; margin:0 auto}
+  .ticker-head .lbl{font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+  .ticker-mask{position:relative; overflow:hidden;
+    mask-image:linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+    -webkit-mask-image:linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent)}
+  .ticker-track{display:flex; gap:12px; width:max-content; animation:marquee 42s linear infinite}
+  .ticker:hover .ticker-track{animation-play-state:paused}
+  @keyframes marquee{from{transform:translateX(0)} to{transform:translateX(-50%)}}
+  .tk{display:inline-flex; align-items:center; gap:10px; padding:9px 14px; border:1px solid var(--line-strong); border-radius:12px;
+    background:var(--card); white-space:nowrap; flex:none}
+  .tk .cc{font-family:var(--font-mono); font-size:10px; font-weight:800; letter-spacing:.04em; color:#fff; padding:3px 6px; border-radius:6px}
+  .tk .svc{font-size:13px; color:var(--heading); font-weight:600}
+  .tk .px{font-family:var(--font-mono); font-size:13.5px; font-weight:700; color:var(--heading); font-variant-numeric:tabular-nums}
+  .tk .mv{display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:700; font-variant-numeric:tabular-nums}
+  .tk .mv.dn{color:var(--up)} .tk .mv.up{color:var(--amber)}
+  .cc.c-usps{background:linear-gradient(135deg,#3C4B8C,#2B3568)} .cc.c-ups{background:linear-gradient(135deg,#6B4A2B,#4A3218)}
+  .cc.c-fedex{background:linear-gradient(135deg,#4B2E83,#7B2E9E)} .cc.c-dhl{background:linear-gradient(135deg,#C7A008,#9E7F06); color:#2b2400}
+
+  /* ---------- Demo widget (the operations console, glass-elevated) ---------- */
+  .browser-wrap{position:relative; z-index:1}
+  .browser-wrap::before{content:""; position:absolute; inset:-14% -8%; z-index:-1; pointer-events:none;
+    background:radial-gradient(60% 55% at 62% 28%, rgba(46,107,255,.5), transparent 66%),
+              radial-gradient(55% 55% at 30% 82%, rgba(25,199,245,.4), transparent 66%);
+    filter:blur(36px); opacity:.6}
+  .browser{position:relative; border:1px solid var(--glass-brd); border-radius:var(--radius);
+    background:var(--glass-strong); backdrop-filter:blur(20px) saturate(140%); -webkit-backdrop-filter:blur(20px) saturate(140%);
+    box-shadow:var(--shadow), var(--glow); overflow:hidden}
+  .browser::before{content:""; position:absolute; inset:0 0 auto 0; height:3px; background:linear-gradient(90deg,var(--primary),var(--trust)); z-index:2}
   .browser-bar{display:flex; align-items:center; gap:8px; padding:11px 14px; border-bottom:1px solid var(--line);
-    background:color-mix(in srgb, var(--card) 88%, var(--ink))}
+    background:linear-gradient(180deg, var(--glass-hi), transparent)}
   .dot3{display:flex; gap:6px}
   .dot3 i{width:11px; height:11px; border-radius:50%; display:block}
   .dot3 i:nth-child(1){background:#E5484D} .dot3 i:nth-child(2){background:#E0A83B} .dot3 i:nth-child(3){background:#00E18C}
   .url{flex:1; text-align:center; font-family:var(--font-mono); font-size:12px; color:var(--muted);
-    background:var(--ink); border:1px solid var(--line); border-radius:8px; padding:5px 10px; max-width:340px; margin:0 auto;
+    background:var(--ink); border:1px solid var(--line); border-radius:8px; padding:5px 10px; max-width:300px; margin:0 auto;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .url svg{width:11px; height:11px; vertical-align:-1px; margin-right:5px; color:var(--trust)}
   .powered{font-size:11px; color:var(--muted); display:inline-flex; align-items:center; gap:6px; white-space:nowrap}
   .powered .shield{width:13px; height:13px; color:var(--trust)}
 
+  .console-strip{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 16px;
+    border-bottom:1px solid var(--line); background:color-mix(in srgb, var(--card) 94%, var(--ink)); font-size:11.5px; color:var(--muted)}
+  .console-strip .lat{font-family:var(--font-mono); color:var(--heading)}
+
   .widget{padding:22px}
   .steps{display:flex; align-items:center; gap:0; margin-bottom:20px}
-  .step{display:flex; align-items:center; gap:9px; flex:1; min-width:0}
+  .step{display:flex; align-items:center; gap:9px; flex:none; min-width:0}
   .step .num{width:26px; height:26px; border-radius:50%; display:grid; place-items:center; flex:none;
     font-size:12.5px; font-weight:700; border:1.5px solid var(--line-strong); color:var(--muted); background:transparent; transition:.2s}
   .step .lbl{font-size:12.5px; color:var(--muted); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-  .step .bar{flex:1; height:1.5px; background:var(--line-strong); margin:0 8px; min-width:8px}
-  .step.active .num{border-color:var(--primary); color:var(--primary); background:var(--primary-soft)}
-  .step.active .lbl{color:var(--heading)}
-  .step.done .num{background:var(--trust); border-color:var(--trust); color:#05141C}
-  .step.done .lbl{color:var(--heading)}
-  @media (max-width:520px){ .step .lbl{display:none} .step .bar{margin:0 6px} }
+  .step .bar{flex:1; height:2px; background:var(--line-strong); margin:0 8px; min-width:8px; border-radius:2px; position:relative; overflow:hidden}
+  .step .bar::after{content:""; position:absolute; inset:0; width:0; background:linear-gradient(90deg,var(--primary),var(--trust)); transition:width .5s ease}
+  .step.filled .bar::after{width:100%}
+  .steprow{display:flex; align-items:center; gap:0; margin-bottom:20px}
+  .stepitem{display:flex; align-items:center; gap:9px}
+  .connector{flex:1; height:2px; background:var(--line-strong); margin:0 8px; min-width:10px; border-radius:2px; position:relative; overflow:hidden}
+  .connector::after{content:""; position:absolute; inset:0; width:0; background:linear-gradient(90deg,var(--primary),var(--trust)); transition:width .5s ease}
+  .connector.filled::after{width:100%}
+  .stepitem .num{width:26px; height:26px; border-radius:50%; display:grid; place-items:center; flex:none;
+    font-size:12.5px; font-weight:700; border:1.5px solid var(--line-strong); color:var(--muted); background:transparent; transition:.2s}
+  .stepitem .lbl{font-size:12.5px; color:var(--muted); font-weight:600; white-space:nowrap}
+  .stepitem.active .num{border-color:var(--primary); color:var(--primary); background:var(--primary-soft)}
+  .stepitem.active .lbl{color:var(--heading)}
+  .stepitem.done .num{background:var(--trust); border-color:var(--trust); color:#05141C}
+  .stepitem.done .lbl{color:var(--heading)}
+  @media (max-width:520px){ .stepitem .lbl{display:none} .connector{margin:0 6px} }
 
-  .panel{display:none} .panel.show{display:block; animation:fade .3s ease}
+  .panel{display:none} .panel.show{display:block; animation:fade .32s ease}
   @keyframes fade{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
 
   .field{margin-bottom:12px}
@@ -216,16 +314,40 @@
   .verified-chip{display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600; color:var(--trust);
     background:var(--trust-soft); padding:3px 9px; border-radius:999px; border:1px solid rgba(25,199,245,.25)}
 
+  /* tactile parcel controls */
+  .parcel{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:2px; padding:12px; border:1px solid var(--line);
+    border-radius:12px; background:var(--ink)}
+  .parcel .pk{font-size:11.5px; font-weight:700; letter-spacing:.02em; color:var(--muted); text-transform:uppercase}
+  .stepper{display:inline-flex; align-items:center; gap:0; border:1px solid var(--line-strong); border-radius:10px; overflow:hidden; background:var(--card)}
+  .stepper button{width:34px; height:34px; border:none; background:transparent; color:var(--heading); font-size:18px; font-weight:700; cursor:pointer; line-height:1; display:grid; place-items:center}
+  .stepper button:hover{background:var(--primary-soft); color:var(--primary)}
+  .stepper .val{min-width:66px; text-align:center; font-family:var(--font-mono); font-size:13.5px; font-weight:700; color:var(--heading); font-variant-numeric:tabular-nums}
+  .seg{display:inline-flex; border:1px solid var(--line-strong); border-radius:10px; overflow:hidden; background:var(--card)}
+  .seg button{border:none; background:transparent; color:var(--muted); font-family:inherit; font-size:12.5px; font-weight:600; padding:8px 12px; cursor:pointer; transition:.15s}
+  .seg button.on{background:var(--primary-soft); color:var(--primary)}
+  .seg button:not(.on):hover{color:var(--heading)}
+
   .widget-foot{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:18px; flex-wrap:wrap}
   .widget-foot .btn{padding:10px 16px; font-size:14px}
   .hint{font-size:11.5px; color:var(--muted)}
 
-  /* rates */
-  .loading{display:flex; align-items:center; gap:12px; color:var(--muted); font-size:14px; padding:20px 0}
-  .spinner{width:20px; height:20px; border-radius:50%; border:2.5px solid var(--line-strong); border-top-color:var(--primary); animation:spin .7s linear infinite}
+  /* fetching carriers */
+  .fetching{padding:6px 0 2px}
+  .fetching .row{display:flex; align-items:center; gap:10px; font-size:13px; color:var(--muted); margin-bottom:12px}
+  .fetching .spinner{width:18px; height:18px; border-radius:50%; border:2.5px solid var(--line-strong); border-top-color:var(--primary); animation:spin .7s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
+  .carrier-chips{display:flex; gap:8px; flex-wrap:wrap}
+  .cchip{display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:600; color:var(--muted);
+    border:1px solid var(--line-strong); border-radius:999px; padding:5px 11px; background:var(--ink); transition:.25s}
+  .cchip .tick{width:14px; height:14px; border-radius:50%; border:1.5px solid var(--line-strong); display:grid; place-items:center; flex:none}
+  .cchip .tick svg{width:9px; height:9px; opacity:0; color:#fff; transition:.2s}
+  .cchip.ok{color:var(--heading); border-color:rgba(25,199,245,.4)}
+  .cchip.ok .tick{background:var(--trust); border-color:var(--trust)} .cchip.ok .tick svg{opacity:1}
+
+  /* rates */
   .rate{display:flex; align-items:center; gap:14px; padding:13px 14px; border:1px solid var(--line-strong); border-radius:12px; margin-bottom:10px;
-    cursor:pointer; transition:.16s; background:var(--ink)}
+    cursor:pointer; transition:border-color .16s, background .16s, box-shadow .16s; background:var(--ink); opacity:0; transform:translateY(8px); animation:rateIn .42s ease forwards}
+  @keyframes rateIn{to{opacity:1; transform:none}}
   .rate:hover{border-color:var(--primary)}
   .rate.sel{border-color:var(--primary); background:var(--primary-soft); box-shadow:0 0 0 3px var(--primary-soft)}
   .carrier{width:52px; height:36px; border-radius:8px; display:grid; place-items:center; flex:none; font-weight:800; font-size:11px;
@@ -237,43 +359,51 @@
   .rate .svc .d{font-size:12px; color:var(--muted); display:flex; align-items:center; gap:8px; margin-top:2px}
   .badge-fast{font-size:10px; font-weight:700; color:var(--trust); background:var(--trust-soft); padding:2px 7px; border-radius:999px; letter-spacing:.02em}
   .badge-cheap{font-size:10px; font-weight:700; color:var(--amber); background:rgba(224,168,59,.14); padding:2px 7px; border-radius:999px}
-  .rate .price{font-size:17px; font-weight:800; color:var(--heading); font-variant-numeric:tabular-nums}
+  .rate .price{font-size:17px; font-weight:800; color:var(--heading); font-variant-numeric:tabular-nums; transition:color .2s}
+  .rate .price.flash{color:var(--trust)}
   .rate .check{width:20px; height:20px; border-radius:50%; border:1.5px solid var(--line-strong); flex:none; display:grid; place-items:center}
   .rate.sel .check{background:var(--primary); border-color:var(--primary)}
   .rate.sel .check svg{opacity:1} .rate .check svg{width:12px; height:12px; opacity:0; color:#fff}
 
   /* payment / 3ds */
   .pay-head{display:flex; align-items:center; gap:10px; margin-bottom:16px}
-  .pay-head .shield{width:20px; height:20px; color:var(--trust)}
+  .pay-head .shield{width:20px; height:20px; color:var(--trust); flex:none}
   .pay-head .t{font-size:14px; font-weight:700; color:var(--heading)}
   .pay-head .s{font-size:11.5px; color:var(--muted)}
   .card-input{position:relative}
   .card-input .brand-mark{position:absolute; right:12px; top:50%; transform:translateY(-50%); font-family:var(--font-mono); font-size:11px; color:var(--muted); font-weight:700}
-  .threeds{border:1px solid rgba(25,199,245,.3); background:var(--trust-soft); border-radius:12px; padding:18px 18px 20px; text-align:center; animation:fade .3s}
+  .threeds{position:relative; border:1px solid rgba(25,199,245,.32); border-radius:14px; padding:18px 18px 20px; text-align:center; animation:fade .3s; overflow:hidden;
+    background:radial-gradient(120% 90% at 50% -10%, rgba(25,199,245,.16), transparent 60%), linear-gradient(180deg,var(--trust-soft),transparent);
+    box-shadow:0 0 0 1px rgba(25,199,245,.08), 0 24px 60px -30px rgba(25,199,245,.5)}
+  .threeds::before{content:""; position:absolute; left:0; right:0; top:0; height:1px; background:linear-gradient(90deg,transparent,rgba(25,199,245,.7),transparent)}
   .threeds .th-head{display:flex; align-items:center; justify-content:space-between; gap:10px; text-align:left; padding-bottom:13px; margin-bottom:16px; border-bottom:1px solid rgba(25,199,245,.22)}
   .threeds .th-lock{display:inline-flex; align-items:center; gap:8px; font-size:12px; font-weight:700; letter-spacing:.02em; color:var(--trust)}
   .threeds .th-lock svg{width:16px; height:16px}
   .threeds .bank-pill{display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600; color:var(--heading); background:var(--trust-soft); border:1px solid rgba(25,199,245,.28); padding:4px 10px; border-radius:999px}
   .threeds .bank-pill svg{width:13px; height:13px; color:var(--trust)}
-  .threeds .otp-label{font-size:13.5px; color:var(--heading); font-weight:600; margin-bottom:12px}
-  .otp-row{display:flex; gap:8px; justify-content:center; margin-bottom:12px}
-  .otp-row input{width:42px; height:48px; text-align:center; font-size:20px; font-weight:700; font-family:var(--font-mono);
-    background:var(--ink); border:1px solid var(--line-strong); border-radius:10px; color:var(--heading)}
+  .threeds .otp-label{font-size:13.5px; color:var(--heading); font-weight:600; margin-bottom:4px}
+  .threeds .otp-sub{font-size:11.5px; color:var(--muted); margin-bottom:14px}
+  .otp-row{display:flex; gap:8px; justify-content:center; margin-bottom:14px}
+  .otp-row input{width:44px; height:50px; text-align:center; font-size:20px; font-weight:700; font-family:var(--font-mono);
+    background:var(--ink); border:1px solid var(--line-strong); border-radius:10px; color:var(--heading); transition:.16s}
+  .otp-row input.lit{border-color:var(--trust); box-shadow:0 0 0 3px var(--trust-soft)}
   .otp-row input:focus{border-color:var(--trust); outline:none; box-shadow:0 0 0 3px var(--trust-soft)}
+  .th-progress{height:3px; border-radius:3px; background:var(--line-strong); overflow:hidden; margin-top:12px}
+  .th-progress i{display:block; height:100%; width:0; background:linear-gradient(90deg,var(--trust),var(--primary)); transition:width .3s ease}
 
   /* result */
   .result{text-align:center; padding:6px 0}
   .result .ok{width:56px; height:56px; border-radius:50%; background:var(--trust-soft); display:grid; place-items:center; margin:0 auto 14px;
-    border:1px solid rgba(25,199,245,.3)}
+    border:1px solid rgba(25,199,245,.3); animation:pop .4s cubic-bezier(.2,1.3,.5,1)}
+  @keyframes pop{from{transform:scale(.6); opacity:0} to{transform:scale(1); opacity:1}}
   .result .ok svg{width:28px; height:28px; color:var(--trust)}
   .result h4{font-size:18px; margin-bottom:6px}
-  .result .track{font-family:var(--font-mono); font-size:13px; color:var(--muted); margin-top:4px}
   .label-card{display:flex; align-items:center; gap:16px; text-align:left; border:1px solid var(--line-strong); border-radius:12px; padding:14px; margin-top:18px; background:var(--ink)}
   .qr{width:78px; height:78px; flex:none; border-radius:8px; background:#fff; padding:6px}
   .qr svg{width:100%; height:100%; display:block}
   .label-card .meta{flex:1; min-width:0}
-  .label-card .meta .r{display:flex; justify-content:space-between; font-size:12.5px; padding:2px 0}
-  .label-card .meta .r span:first-child{color:var(--muted)} .label-card .meta .r span:last-child{color:var(--heading); font-weight:600}
+  .label-card .meta .r{display:flex; justify-content:space-between; font-size:12.5px; padding:2px 0; gap:12px}
+  .label-card .meta .r span:first-child{color:var(--muted)} .label-card .meta .r span:last-child{color:var(--heading); font-weight:600; text-align:right}
   .liab{display:inline-flex; align-items:center; gap:7px; font-size:11.5px; font-weight:600; color:var(--trust); background:var(--trust-soft);
     border:1px solid rgba(25,199,245,.25); padding:5px 11px; border-radius:999px; margin-top:14px}
   .liab svg{width:14px;height:14px}
@@ -287,7 +417,15 @@
   h2.sec-title{font-size:clamp(28px,3.4vw,40px); font-weight:800; margin-top:12px; letter-spacing:-.025em}
   .sec-lede{margin-top:14px; font-size:17px; color:var(--text); max-width:62ch}
 
-  /* logos strip */
+  /* live metric bar */
+  .metrics{display:grid; grid-template-columns:repeat(4,1fr); gap:1px; border:1px solid var(--line); border-radius:16px; overflow:hidden; background:var(--line); box-shadow:var(--shadow)}
+  @media (max-width:720px){ .metrics{grid-template-columns:repeat(2,1fr)} }
+  .metric{background:var(--card); padding:22px 22px}
+  .metric .mv{font-family:var(--font-display); font-size:clamp(24px,3vw,32px); font-weight:800; color:var(--heading); letter-spacing:-.02em; font-variant-numeric:tabular-nums; line-height:1}
+  .metric .ml{font-size:12.5px; color:var(--muted); margin-top:7px}
+  .metric .mv .u{font-size:15px; color:var(--muted); font-weight:600}
+
+  /* carrier strip */
   .strip{border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:22px 0; background:var(--surface-2)}
   .strip-inner{display:flex; align-items:center; justify-content:center; gap:14px 40px; flex-wrap:wrap; color:var(--muted)}
   .strip .lbl{font-size:12px; letter-spacing:.06em; text-transform:uppercase; font-weight:700}
@@ -297,18 +435,22 @@
   /* ---------- Tiers ---------- */
   .tiers{display:grid; grid-template-columns:repeat(3,1fr); gap:20px; align-items:stretch}
   @media (max-width:1000px){ .tiers{grid-template-columns:1fr} .tiers .tier{max-width:560px; margin:0 auto; width:100%} }
-  .tier{border:1px solid var(--line-strong); border-radius:18px; padding:26px 24px; background:var(--card); box-shadow:var(--shadow); display:flex; flex-direction:column; position:relative; overflow:hidden; transition:transform .2s ease, border-color .2s ease, box-shadow .2s ease}
-  .tier:hover{transform:translateY(-4px); border-color:var(--line-strong)}
-  .tier.featured{border-color:rgba(46,107,255,.55)}
-  .tier.featured::before{content:""; position:absolute; inset:0 0 auto 0; height:3px; background:linear-gradient(90deg,var(--primary),var(--trust))}
-  .tier.featured:hover{box-shadow:0 1px 0 rgba(255,255,255,.04), 0 30px 70px -30px rgba(46,107,255,.5)}
+  .tier{border:1px solid var(--glass-brd); border-radius:18px; padding:26px 24px;
+    background:var(--glass); backdrop-filter:blur(16px) saturate(130%); -webkit-backdrop-filter:blur(16px) saturate(130%);
+    box-shadow:var(--shadow); display:flex; flex-direction:column; position:relative; overflow:hidden; transition:transform .22s ease, border-color .22s ease, box-shadow .22s ease}
+  .tier:hover{transform:translateY(-5px); border-color:var(--line-strong)}
+  .tier.featured{border-color:rgba(46,107,255,.5); box-shadow:var(--shadow), var(--glow)}
+  .tier.featured::before{content:""; position:absolute; inset:0 0 auto 0; height:3px; background:linear-gradient(90deg,var(--primary),var(--trust),var(--violet))}
+  .tier.featured::after{content:""; position:absolute; inset:-40% -30% auto auto; width:70%; height:70%; z-index:-1;
+    background:radial-gradient(circle, rgba(46,107,255,.32), transparent 62%); filter:blur(30px); pointer-events:none}
+  .tier.featured:hover{box-shadow:var(--shadow), 0 0 0 1px rgba(46,107,255,.2), 0 44px 120px -40px rgba(46,107,255,.6)}
   .tier-top{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:2px}
   .tier .n{font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
   .tier h3{font-size:20px; font-weight:800; margin-top:9px; letter-spacing:-.01em}
   .tier .tag{font-size:10.5px; font-weight:800; letter-spacing:.04em; padding:5px 10px; border-radius:999px; white-space:nowrap; text-transform:uppercase}
   .tag-mit{color:var(--trust); background:var(--trust-soft); border:1px solid rgba(25,199,245,.25)}
   .tag-rec{color:var(--primary-ink); background:var(--primary); box-shadow:0 6px 18px -8px rgba(46,107,255,.8)}
-  .tag-turn{color:#05141C; background:var(--trust)}
+  .tag-own{color:var(--heading); background:transparent; border:1px solid var(--line-strong)}
   .tier .blurb{font-size:13px; color:var(--muted); margin-top:8px; min-height:38px; line-height:1.5}
   .tier .price-big{margin-top:16px; padding-bottom:16px; border-bottom:1px dashed var(--line-strong)}
   .tier .price-big .amt{font-family:var(--font-display); font-size:30px; font-weight:800; color:var(--heading); letter-spacing:-.02em; line-height:1; display:flex; align-items:baseline; gap:6px; flex-wrap:wrap}
@@ -342,10 +484,13 @@
   /* ---------- Developer resources ---------- */
   .devres{display:grid; grid-template-columns:repeat(3,1fr); gap:18px}
   @media (max-width:820px){ .devres{grid-template-columns:1fr} }
-  .devcard{display:flex; flex-direction:column; gap:0; border:1px solid var(--line-strong); border-radius:16px; padding:24px; background:var(--card); box-shadow:var(--shadow); transition:transform .18s ease, border-color .18s ease}
-  .devcard:hover{transform:translateY(-3px); border-color:var(--primary)}
+  .devcard{position:relative; display:flex; flex-direction:column; gap:0; border:1px solid var(--glass-brd); border-radius:16px; padding:24px;
+    background:var(--glass); backdrop-filter:blur(14px) saturate(130%); -webkit-backdrop-filter:blur(14px) saturate(130%);
+    box-shadow:var(--shadow); transition:transform .18s ease, border-color .18s ease; overflow:hidden}
+  .devcard:hover{transform:translateY(-4px); border-color:var(--primary)}
   .devcard .dv-ic{width:44px; height:44px; border-radius:12px; display:grid; place-items:center; background:var(--primary-soft); border:1px solid rgba(46,107,255,.25); color:var(--primary); margin-bottom:16px}
   .devcard .dv-ic svg{width:22px; height:22px}
+  .devcard .dv-ic.pm{background:rgba(255,108,55,.12); border-color:rgba(255,108,55,.3)}
   .devcard h4{font-size:16px; font-weight:800}
   .devcard p{font-size:13.5px; color:var(--muted); margin-top:6px; line-height:1.5; flex:1}
   .devcard .dv-path{font-family:var(--font-mono); font-size:12px; color:var(--trust); margin-top:12px; background:var(--ink); border:1px solid var(--line); border-radius:8px; padding:7px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
@@ -353,9 +498,12 @@
   .devcard .dv-links a{display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700; color:var(--primary); background:var(--primary-soft); border:1px solid rgba(46,107,255,.22); padding:7px 12px; border-radius:9px; transition:.15s}
   .devcard .dv-links a:hover{background:var(--primary); color:var(--primary-ink)}
   .devcard .dv-links a svg{width:14px; height:14px}
+  .devcard .dv-links a.pm-link{color:#FF6C37; background:rgba(255,108,55,.1); border-color:rgba(255,108,55,.25)}
+  .devcard .dv-links a.pm-link:hover{background:#FF6C37; color:#fff}
 
   /* ---------- Why 3DS ---------- */
-  .threeds-panel{position:relative; border:1px solid var(--line-strong); border-radius:20px; overflow:hidden; background:var(--card)}
+  .threeds-panel{position:relative; border:1px solid var(--glass-brd); border-radius:20px; overflow:hidden;
+    background:var(--glass); backdrop-filter:blur(16px) saturate(130%); -webkit-backdrop-filter:blur(16px) saturate(130%); box-shadow:var(--shadow)}
   .threeds-panel::before{content:""; position:absolute; inset:0; background:radial-gradient(80% 120% at 100% 0%, var(--trust-soft), transparent 55%); pointer-events:none}
   .tp-grid{position:relative; display:grid; grid-template-columns:1fr 1fr; gap:0}
   @media (max-width:860px){ .tp-grid{grid-template-columns:1fr} }
@@ -372,6 +520,45 @@
   .pillar .ic svg{width:20px; height:20px}
   .pillar h4{font-size:15.5px; font-weight:700}
   .pillar p{font-size:13.5px; color:var(--muted); margin-top:4px; line-height:1.5}
+
+  /* ---------- Import into your checkout (framework tabs) ---------- */
+  .fw-tabs{display:flex; gap:8px; flex-wrap:wrap; margin:2px 0 22px}
+  .fw-tab{display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:600; color:var(--muted);
+    background:var(--glass); border:1px solid var(--glass-brd); backdrop-filter:blur(6px); padding:7px 13px; border-radius:999px; cursor:pointer;
+    transition:.15s; font-family:inherit}
+  .fw-tab:hover{color:var(--heading); border-color:var(--line-strong)}
+  .fw-tab.on{color:var(--primary); background:var(--primary-soft); border-color:rgba(46,107,255,.35)}
+  .fw-tab .fd{width:7px; height:7px; border-radius:50%; background:currentColor; flex:none}
+  .import-note{margin-top:16px; font-size:13px; color:var(--muted); display:flex; align-items:center; gap:9px; line-height:1.5}
+  .import-note svg{width:16px; height:16px; color:var(--trust); flex:none}
+  .import-note code{font-family:var(--font-mono); color:var(--primary)}
+
+  /* ---------- Frictionless vs forced-3DS comparison ---------- */
+  .friction{position:relative; margin-top:22px; border:1px solid var(--glass-brd); border-radius:20px; overflow:hidden;
+    background:radial-gradient(120% 150% at 100% 0%, var(--trust-soft), transparent 52%), var(--glass);
+    backdrop-filter:blur(16px) saturate(130%); -webkit-backdrop-filter:blur(16px) saturate(130%); box-shadow:var(--shadow)}
+  .friction-head{padding:26px 28px 6px}
+  .friction-head .kicker{color:var(--trust)}
+  .friction-head h3{font-size:22px; font-weight:800; margin-top:10px; letter-spacing:-.02em}
+  .friction-head p{margin-top:10px; font-size:14px; color:var(--muted); max-width:66ch; line-height:1.55}
+  .friction-grid{display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--line); margin:22px 0 0}
+  @media (max-width:680px){ .friction-grid{grid-template-columns:1fr} }
+  .fcol{background:var(--card); padding:22px 24px 24px}
+  .fcol.rails{background:linear-gradient(180deg, var(--trust-soft), transparent), var(--card)}
+  .fcol .fc-top{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:4px}
+  .fcol .fc-t{font-size:14px; font-weight:800; color:var(--heading); letter-spacing:-.01em}
+  .fcol .fc-tag{font-size:10px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; padding:4px 9px; border-radius:999px}
+  .fc-tag.def{color:var(--muted); border:1px solid var(--line-strong)}
+  .fc-tag.opt{color:var(--trust); background:var(--trust-soft); border:1px solid rgba(25,199,245,.3)}
+  .fcol .fc-sub{font-size:12.5px; color:var(--muted); margin-bottom:14px}
+  .fcol ul{list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:9px}
+  .fcol li{display:flex; gap:9px; font-size:13px; color:var(--text); align-items:flex-start; line-height:1.45}
+  .fcol li svg{width:16px; height:16px; flex:none; margin-top:1px}
+  .fcol.forced li svg{color:var(--muted)}
+  .fcol.rails li svg{color:var(--trust)}
+  .friction-foot{display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; padding:18px 28px 24px}
+  .friction-foot p{font-size:12.5px; color:var(--muted); max-width:60ch; line-height:1.5}
+  .friction-foot .btn{flex:none}
 
   /* ---------- Quickstart ---------- */
   .qs-grid{display:grid; grid-template-columns:.9fr 1.1fr; gap:32px; align-items:center}
@@ -393,6 +580,7 @@
   .code pre .t{color:#7C93FF} .code pre .a{color:#19C7F5} .code pre .s{color:#E0A83B} .code pre .c{color:#5D6B7A; font-style:italic} .code pre .p{color:#8A97A6}
   .qs-note{margin-top:16px; font-size:13px; color:var(--muted); display:flex; align-items:center; gap:9px}
   .qs-note svg{width:16px; height:16px; color:var(--trust); flex:none}
+  .qs-note code{font-family:var(--font-mono)}
 
   /* ---------- Footer ---------- */
   footer{border-top:1px solid var(--line); background:var(--surface-2); padding:56px 0 40px; margin-top:20px}
@@ -436,16 +624,20 @@
     </a>
     <nav class="nav-links" aria-label="Primary">
       <a class="link" href="#demo">Live demo</a>
+      <a class="link" href="#import">Import</a>
       <a class="link" href="#tiers">Pricing</a>
       <a class="link" href="#three-d-secure">3-D Secure</a>
       <a class="link" href="#quickstart">Quickstart</a>
       <a class="link" href="#developers">API &amp; SDKs</a>
     </nav>
     <div class="nav-actions">
+      <a class="btn btn-postman hide-sm" href="https://god.gw.postman.com/run-collection/36630865-bd2412e8-cfe6-42e4-9fe6-e3ae9d025750?action=collection%2Ffork" target="_blank" rel="noopener">
+        <span class="pm-orb" aria-hidden="true"></span> Open in Postman
+      </a>
       <button class="icon-btn" id="theme-toggle" aria-label="Toggle color theme" title="Toggle theme">
         <svg class="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
       </button>
-      <a class="btn btn-ghost" href="https://github.com/Lifted-Holdings/shipkit">
+      <a class="btn btn-ghost hide-sm" href="https://github.com/Lifted-Holdings/shipkit">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.85 9.73.5.1.68-.22.68-.49 0-.24-.01-.87-.01-1.71-2.79.62-3.38-1.37-3.38-1.37-.46-1.19-1.11-1.51-1.11-1.51-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.36-2.23-.26-4.57-1.14-4.57-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05A9.36 9.36 0 0 1 12 6.84c.85 0 1.71.12 2.51.34 1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.48-.01 2.82 0 .27.18.6.69.49A10.02 10.02 0 0 0 22 12.25C22 6.58 17.52 2 12 2z"/></svg>
         <span>Star</span>
       </a>
@@ -457,17 +649,22 @@
 
 <!-- ============ HERO ============ -->
 <section class="hero">
+  <canvas id="aurora" aria-hidden="true"></canvas>
   <div class="hero-mesh" aria-hidden="true"></div>
   <div class="hero-grid" aria-hidden="true"></div>
+  <div class="hero-glowline" aria-hidden="true"></div>
   <div class="wrap hero-inner">
     <div class="hero-copy">
       <span class="eyebrow"><span class="dot"></span> Open source · MIT · Secured by Lifted Payments 3-D Secure</span>
-      <h1 class="hero-title">Multi-carrier shipping labels, <br><span class="accent">secured by 3-D Secure payments.</span></h1>
-      <p class="hero-sub">ShipKit is the open shipping toolkit. Compare live rates across every major carrier, buy labels in one call, and take card payments authenticated by 3-D Secure. Self-host it free, or drop in the managed widget with a single script tag.</p>
+      <h1 class="hero-title">Drop live shipping<br>into <span class="accent">your own checkout.</span></h1>
+      <p class="hero-sub">ShipKit is the open shipping toolkit. Import one drop-in widget — or the tiny SDK — and your app streams live rates across every carrier, buys the label in one call, and takes a card payment authenticated by 3-D Secure. Self-host it free, or create a free account and go live with a single <code>&lt;script&gt;</code>.</p>
       <div class="hero-cta">
         <a class="btn btn-primary" href="#demo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
           Try the live demo
+        </a>
+        <a class="btn btn-postman" href="https://god.gw.postman.com/run-collection/36630865-bd2412e8-cfe6-42e4-9fe6-e3ae9d025750?action=collection%2Ffork" target="_blank" rel="noopener">
+          <span class="pm-orb" aria-hidden="true"></span> Open in Postman
         </a>
         <a class="btn btn-ghost" href="https://github.com/Lifted-Holdings/shipkit">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.85 9.73.5.1.68-.22.68-.49 0-.24-.01-.87-.01-1.71-2.79.62-3.38-1.37-3.38-1.37-.46-1.19-1.11-1.51-1.11-1.51-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.36-2.23-.26-4.57-1.14-4.57-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05A9.36 9.36 0 0 1 12 6.84c.85 0 1.71.12 2.51.34 1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.48-.01 2.82 0 .27.18.6.69.49A10.02 10.02 0 0 0 22 12.25C22 6.58 17.52 2 12 2z"/></svg>
@@ -475,33 +672,38 @@
         </a>
       </div>
       <div class="hero-meta">
-        <span class="m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Kotlin + vanilla JS · zero framework lock-in</span>
-        <span class="m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> One <code style="font-family:var(--font-mono)">&lt;script&gt;</code> to go live</span>
+        <span class="m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Drop-in widget · React, Vue &amp; plain-JS examples</span>
+        <span class="m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> One <code>&lt;script&gt;</code> to go live</span>
         <span class="m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> No PCI scope on the managed tier</span>
       </div>
     </div>
 
-    <!-- Hero demo preview = the interactive widget -->
+    <!-- Hero demo preview = the operations console widget -->
+    <div class="browser-wrap">
     <div class="browser" id="demo" style="scroll-margin-top:88px">
       <div class="browser-bar">
         <span class="dot3"><i></i><i></i><i></i></span>
-        <span class="url">app.yourstore.com/checkout</span>
+        <span class="url"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>app.yourstore.com/checkout</span>
         <span class="powered">
           <svg class="shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           Lifted Payments
         </span>
       </div>
+      <div class="console-strip">
+        <span class="live"><span class="pip"></span> Live rate feed</span>
+        <span>EasyPost · 4 carriers connected · <span class="lat" id="latency">128 ms</span></span>
+      </div>
 
       <div class="widget">
         <!-- Stepper -->
-        <div class="steps" id="stepper">
-          <div class="step active" data-step="1"><span class="num">1</span><span class="lbl">Address</span></div>
-          <span class="bar"></span>
-          <div class="step" data-step="2"><span class="num">2</span><span class="lbl">Rates</span></div>
-          <span class="bar"></span>
-          <div class="step" data-step="3"><span class="num">3</span><span class="lbl">3-D Secure</span></div>
-          <span class="bar"></span>
-          <div class="step" data-step="4"><span class="num">4</span><span class="lbl">Label</span></div>
+        <div class="steprow" id="stepper">
+          <div class="stepitem active" data-step="1"><span class="num">1</span><span class="lbl">Address</span></div>
+          <span class="connector" data-conn="1"></span>
+          <div class="stepitem" data-step="2"><span class="num">2</span><span class="lbl">Rates</span></div>
+          <span class="connector" data-conn="2"></span>
+          <div class="stepitem" data-step="3"><span class="num">3</span><span class="lbl">3-D Secure</span></div>
+          <span class="connector" data-conn="3"></span>
+          <div class="stepitem" data-step="4"><span class="num">4</span><span class="lbl">Label</span></div>
         </div>
 
         <!-- STEP 1: Address -->
@@ -519,6 +721,19 @@
             <div class="field"><label for="a-state">State</label><input id="a-state" value="DC" autocomplete="off" /></div>
             <div class="field mono"><label for="a-zip">ZIP</label><input id="a-zip" value="20500" autocomplete="off" /></div>
           </div>
+          <div class="parcel">
+            <span class="pk">Parcel</span>
+            <div class="stepper" role="group" aria-label="Parcel weight in pounds">
+              <button type="button" id="w-minus" aria-label="Decrease weight">−</button>
+              <span class="val" id="w-val">2.0 lb</span>
+              <button type="button" id="w-plus" aria-label="Increase weight">+</button>
+            </div>
+            <div class="seg" role="group" aria-label="Parcel size">
+              <button type="button" class="on" data-size="S">Small</button>
+              <button type="button" data-size="M">Medium</button>
+              <button type="button" data-size="L">Large</button>
+            </div>
+          </div>
           <div class="addr-note" id="verify-note" hidden>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
             Address verified &amp; standardized by ShipKit.
@@ -531,14 +746,26 @@
 
         <!-- STEP 2: Rates -->
         <div class="panel" id="p2">
-          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; gap:10px; flex-wrap:wrap">
             <span class="verified-chip">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
               Washington, DC 20500-0003
             </span>
-            <span class="hint mono">2 lb · 9×6×3 in</span>
+            <div class="stepper" role="group" aria-label="Adjust parcel weight" style="transform:scale(.92)">
+              <button type="button" id="w-minus2" aria-label="Decrease weight">−</button>
+              <span class="val" id="w-val2">2.0 lb</span>
+              <button type="button" id="w-plus2" aria-label="Increase weight">+</button>
+            </div>
           </div>
-          <div class="loading" id="rate-loading"><span class="spinner"></span> Fetching live rates from 4 carriers…</div>
+          <div class="fetching" id="fetching">
+            <div class="row"><span class="spinner"></span> Streaming live rates from EasyPost…</div>
+            <div class="carrier-chips" id="carrier-chips">
+              <span class="cchip" data-c="USPS"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> USPS</span>
+              <span class="cchip" data-c="UPS"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> UPS</span>
+              <span class="cchip" data-c="FedEx"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> FedEx</span>
+              <span class="cchip" data-c="DHL"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span> DHL</span>
+            </div>
+          </div>
           <div id="rate-list" hidden></div>
           <div class="widget-foot">
             <button class="btn btn-ghost" data-back="1">Back</button>
@@ -584,11 +811,13 @@
                   First National
                 </span>
               </div>
-              <div class="otp-label">Enter the code we texted to ••• ••• 4291</div>
-              <div class="otp-row">
-                <input maxlength="1" value="8" aria-label="digit 1"><input maxlength="1" value="1" aria-label="digit 2"><input maxlength="1" value="5" aria-label="digit 3"><input maxlength="1" value="0" aria-label="digit 4">
+              <div class="otp-label">Verify it's you</div>
+              <div class="otp-sub">Enter the code we texted to ••• ••• 4291</div>
+              <div class="otp-row" id="otp-row">
+                <input maxlength="1" inputmode="numeric" aria-label="digit 1"><input maxlength="1" inputmode="numeric" aria-label="digit 2"><input maxlength="1" inputmode="numeric" aria-label="digit 3"><input maxlength="1" inputmode="numeric" aria-label="digit 4">
               </div>
               <button class="btn btn-trust" id="btn-otp" style="width:100%; justify-content:center">Confirm identity</button>
+              <div class="th-progress" aria-hidden="true"><i id="th-bar"></i></div>
             </div>
           </div>
         </div>
@@ -602,10 +831,10 @@
             <div class="label-card">
               <div class="qr" id="qr"></div>
               <div class="meta">
-                <div class="r"><span>Carrier</span><span id="r-carrier">USPS Priority Mail</span></div>
+                <div class="r"><span>Carrier</span><span id="r-carrier">USPS Ground Advantage</span></div>
                 <div class="r"><span>Tracking</span><span class="mono" id="r-track">9405 5118 9956 0000</span></div>
                 <div class="r"><span>Cost</span><span class="tnum" id="r-cost">$8.42</span></div>
-                <div class="r"><span>Est. delivery</span><span id="r-eta">Wed, Apr 3</span></div>
+                <div class="r"><span>Est. delivery</span><span id="r-eta">Fri, Apr 5</span></div>
               </div>
             </div>
             <span class="liab">
@@ -620,11 +849,36 @@
 
       </div>
     </div>
+    </div>
+
+  </div>
+
+  <!-- Signature: live streaming rate ticker -->
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker-head wrap" style="padding-left:0;padding-right:0">
+      <span class="live"><span class="pip"></span> Streaming</span>
+      <span class="lbl">Real-time carrier quotes · 2 lb · Washington, DC</span>
+    </div>
+    <div class="ticker-mask">
+      <div class="ticker-track" id="ticker-track"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LIVE METRICS ============ -->
+<section style="padding:28px 0 8px">
+  <div class="wrap">
+    <div class="metrics">
+      <div class="metric"><div class="mv">4<span class="u"> carriers</span></div><div class="ml">Live-quoted per request via EasyPost</div></div>
+      <div class="metric"><div class="mv">100<span class="u">+</span></div><div class="ml">Carriers reachable through one API</div></div>
+      <div class="metric"><div class="mv" id="m-auth">1.2<span class="u"> s</span></div><div class="ml">Median 3-D Secure authentication</div></div>
+      <div class="metric"><div class="mv">1<span class="u"> tag</span></div><div class="ml">Managed widget — no backend to run</div></div>
+    </div>
   </div>
 </section>
 
 <!-- ============ CARRIER STRIP ============ -->
-<div class="strip">
+<div class="strip" style="margin-top:56px">
   <div class="wrap strip-inner">
     <span class="lbl">One API · every carrier</span>
     <div class="carriers">
@@ -633,13 +887,101 @@
   </div>
 </div>
 
+<!-- ============ IMPORT INTO YOUR CHECKOUT ============ -->
+<section class="section" id="import" style="padding-bottom:64px">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="kicker">Drop-in for developers</span>
+      <h2 class="sec-title">Import ShipKit into your own checkout</h2>
+      <p class="sec-lede">One mount point, one import. The widget renders address entry, live multi-carrier rates and the 3-D Secure card step right inside your app — framework-agnostic, dependency-free, themeable with CSS variables. Point it at your own backend, or at our managed rails. Copy, paste, ship.</p>
+    </div>
+
+    <div class="qs-grid">
+      <div class="qs-copy">
+        <div class="fw-tabs" role="tablist" aria-label="Choose a framework">
+          <button type="button" class="fw-tab on" data-fw="react" role="tab" aria-selected="true"><span class="fd"></span> React</button>
+          <button type="button" class="fw-tab" data-fw="vue" role="tab" aria-selected="false"><span class="fd"></span> Vue</button>
+          <button type="button" class="fw-tab" data-fw="html" role="tab" aria-selected="false"><span class="fd"></span> Plain HTML</button>
+        </div>
+        <div class="stepn">
+          <span class="n">1</span>
+          <div><h4>Add a mount point</h4><p>Any element — <code>&lt;div id="ship"&gt;</code>. ShipKit owns its own subtree inside it and inherits your layout.</p></div>
+        </div>
+        <div class="stepn">
+          <span class="n">2</span>
+          <div><h4>Import &amp; init</h4><p>Talk to your own backend with <code>endpoint:'/api'</code> + a publishable <code>pk_live_…</code> key, or hand it a managed key for our rails.</p></div>
+        </div>
+        <div class="stepn">
+          <span class="n">3</span>
+          <div><h4>Listen for the label</h4><p>Subscribe to <code>onPurchase</code> for the tracking code, label URL and QR. That is the whole integration.</p></div>
+        </div>
+        <div class="import-note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>
+          Same widget, three ways to mount — full React, Vue &amp; plain-HTML examples ship in the repo under <code>/examples</code>.
+        </div>
+      </div>
+
+      <div class="code" id="import-code">
+        <div class="code-bar">
+          <span class="fname" id="import-fname">Checkout.jsx</span>
+          <button class="copy-btn" id="copy-import">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span id="copy-import-label">Copy</span>
+          </button>
+        </div>
+<pre id="fw-react" class="fw-src"><span class="p">import</span> <span class="t">ShipWidget</span> <span class="p">from</span> <span class="s">'./ShipWidget'</span>;
+
+<span class="c">// Drop the widget straight into your checkout route.</span>
+<span class="t">export</span> <span class="t">default</span> <span class="t">function</span> <span class="a">Checkout</span>() {
+  <span class="p">return</span> (
+    <span class="p">&lt;</span><span class="t">ShipWidget</span>
+      <span class="a">endpoint</span>=<span class="s">"/api"</span>
+      <span class="a">apiKey</span>=<span class="s">"pk_live_…"</span>       <span class="c">// publishable → ShipKit-Api-Key header</span>
+      <span class="a">theme</span>=<span class="s">"dark"</span>
+      <span class="a">onPurchase</span>={(label) <span class="p">=&gt;</span> router.<span class="a">push</span>(label.<span class="a">trackingUrl</span>)}
+      <span class="a">onError</span>={(err) <span class="p">=&gt;</span> toast.<span class="a">error</span>(err.<span class="a">message</span>)}
+    <span class="p">/&gt;</span>
+  );
+}</pre>
+<pre id="fw-vue" class="fw-src" hidden><span class="p">&lt;</span><span class="t">script</span> <span class="a">setup</span><span class="p">&gt;</span>
+<span class="p">import</span> <span class="t">ShipWidget</span> <span class="p">from</span> <span class="s">'./ShipWidget.vue'</span>;
+<span class="p">&lt;/</span><span class="t">script</span><span class="p">&gt;</span>
+
+<span class="p">&lt;</span><span class="t">template</span><span class="p">&gt;</span>
+  <span class="p">&lt;</span><span class="t">ShipWidget</span>
+    <span class="a">endpoint</span>=<span class="s">"/api"</span>
+    <span class="a">api-key</span>=<span class="s">"pk_live_…"</span>
+    <span class="a">theme</span>=<span class="s">"dark"</span>
+    <span class="a">@purchase</span>=<span class="s">"(label) =&gt; (window.location = label.labelUrl)"</span>
+    <span class="a">@error</span>=<span class="s">"(err) =&gt; notify(err.message)"</span>
+  <span class="p">/&gt;</span>
+<span class="p">&lt;/</span><span class="t">template</span><span class="p">&gt;</span></pre>
+<pre id="fw-html" class="fw-src" hidden><span class="c">&lt;!-- One mount point --&gt;</span>
+<span class="p">&lt;</span><span class="t">div</span> <span class="a">id</span>=<span class="s">"ship"</span><span class="p">&gt;&lt;/</span><span class="t">div</span><span class="p">&gt;</span>
+
+<span class="p">&lt;</span><span class="t">script</span> <span class="a">src</span>=<span class="s">"/js/shipkit.js"</span><span class="p">&gt;&lt;/</span><span class="t">script</span><span class="p">&gt;</span>
+<span class="p">&lt;</span><span class="t">script</span><span class="p">&gt;</span>
+  <span class="t">ShipKit</span>.<span class="a">init</span>({
+    mount: <span class="s">'#ship'</span>,
+    endpoint: <span class="s">'/api'</span>,
+    apiKey: <span class="s">'pk_live_…'</span>,        <span class="c">// publishable widget key</span>
+    theme: <span class="s">'dark'</span>,
+    onPurchase: (label) <span class="p">=&gt;</span> { window.location = label.labelUrl; },
+    onError: (err) <span class="p">=&gt;</span> <span class="t">console</span>.<span class="a">error</span>(err.stage, err.message)
+  });
+<span class="p">&lt;/</span><span class="t">script</span><span class="p">&gt;</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ============ TIERS ============ -->
-<section class="section" id="tiers">
+<section class="section" id="tiers" style="padding-top:24px">
   <div class="wrap">
     <div class="sec-head">
       <span class="kicker">Adoption tiers</span>
       <h2 class="sec-title">Three ways to run ShipKit</h2>
-      <p class="sec-lede">Start free and self-hosted, bring our 3-D Secure processing to your own stack, or hand us the whole thing. Every tier is powered by Lifted Payments 3-D Secure — pick your level of control.</p>
+      <p class="sec-lede">Self-host it free, bring our 3-D Secure processing to your own stack, or create a free account and let us run the whole thing. Every tier is powered by Lifted Payments 3-D Secure — pick your level of control.</p>
     </div>
 
     <div class="tiers">
@@ -671,13 +1013,13 @@
         </div>
       </div>
 
-      <!-- Tier 2 — Lifted 3-D Secure merchant account -->
-      <div class="tier featured">
+      <!-- Tier 2 — Your own Lifted 3-D Secure merchant account -->
+      <div class="tier">
         <div class="tier-top">
           <span class="n">Tier 2</span>
-          <span class="tag tag-rec">Most popular</span>
+          <span class="tag tag-own">Your account</span>
         </div>
-        <h3>Lifted 3-D Secure account</h3>
+        <h3>Your 3-D Secure account</h3>
         <p class="blurb">Our 3-D Secure processing, your choice of host. Bring your own EasyPost — you host or we host, both free.</p>
         <div class="price-big">
           <div class="amt compact">3.75% + 15¢ <small>/ transaction</small></div>
@@ -685,10 +1027,10 @@
         </div>
         <div class="surcharge">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-          Surcharge the 3.75% + 15¢ to the buyer with a built-in framework toggle — net-zero processing cost to you.
+          Surcharge the 3.75% + 15¢ to the buyer with a built-in toggle — net-zero processing cost to you.
         </div>
         <ul>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> OUR 3-D Secure merchant account — forced 3DS, liability shift on every charge.</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Your OWN 3-D Secure merchant account — forced 3DS, liability shift on every charge.</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Bring your own EasyPost account and rates.</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Self-host it OR let us host it — both free.</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Apply once — the account stays yours.</li>
@@ -703,31 +1045,31 @@
         </div>
       </div>
 
-      <!-- Tier 3 — Fully managed -->
+      <!-- Tier 3 — Fully managed (most popular) -->
       <div class="tier featured">
         <div class="tier-top">
           <span class="n">Tier 3</span>
-          <span class="tag tag-turn">Turnkey</span>
+          <span class="tag tag-rec">Most popular</span>
         </div>
         <h3>Fully managed</h3>
-        <p class="blurb">Plug &amp; play. One JS snippet on our rails — our 3-D Secure account and our EasyPost. Zero infrastructure.</p>
+        <p class="blurb">No application, no infra — sign up, drop in one script tag, done. Our 3-D Secure account and our EasyPost.</p>
         <div class="price-big">
           <div class="amt">$0 <small>setup · free hosting</small></div>
-          <div class="sub">We earn only on a configurable markup of the shipping rate.</div>
+          <div class="sub">We earn only on a small, configurable markup of the shipping rate.</div>
         </div>
         <ul>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> One <code style="font-family:var(--font-mono);color:var(--primary)">&lt;script&gt;</code> tag — live in minutes.</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Create a free account — get your JS snippet + managed key instantly.</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> OUR 3-D Secure account + OUR EasyPost — nothing to wire.</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> No keys to manage, no PCI scope, free hosting.</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> No application, no keys to manage, no PCI scope, free hosting.</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Best for "just make it work."</li>
         </ul>
         <div class="spacer"></div>
         <div class="tier-cta">
-          <a class="btn btn-trust" href="https://liftedholdings.com/payments">
+          <a class="btn btn-primary" href="https://liftedholdings.com/shipkit">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
-            Get a managed key
+            Create your free account → get the JS
           </a>
-          <div class="sub-cta">Get your key at <a href="https://liftedholdings.com/payments">liftedholdings.com/payments</a></div>
+          <div class="sub-cta">Sign up free at <a href="https://liftedholdings.com/shipkit">liftedholdings.com/shipkit</a></div>
         </div>
       </div>
     </div>
@@ -744,9 +1086,51 @@
         </div>
       </div>
       <a class="btn btn-primary" href="mailto:support@liftedholdings.com?subject=ShipKit%20custom%20development">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z" fill="none"/><path d="M22 6l-10 7L2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
         support@liftedholdings.com
       </a>
+    </div>
+
+    <!-- Frictionless vs forced-3DS (tier-2/3 / enterprise benefit) -->
+    <div class="friction" id="frictionless">
+      <div class="friction-head">
+        <span class="kicker">Checkout speed</span>
+        <h3>Frictionless checkout &amp; saved cards — on our rails</h3>
+        <p>3-D Secure is forced by default, and self-host stays that way — it is the fraud and chargeback protection that makes ShipKit safe to ship. Merchants on Lifted Payments (tier&nbsp;2 or&nbsp;3) or enterprise custom-dev can opt into a faster path: skip the challenge on low-risk orders and keep cards on file for one-tap repeat charges. It is an account-level, server-side capability — never a client toggle.</p>
+      </div>
+      <div class="friction-grid">
+        <div class="fcol forced">
+          <div class="fc-top">
+            <span class="fc-t">Forced 3-D Secure</span>
+            <span class="fc-tag def">Default · all tiers</span>
+          </div>
+          <div class="fc-sub">The only mode for self-host &amp; bring-your-own-payments.</div>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg> Every charge authenticated — liability shifts to the issuer.</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg> No card-on-file. Maximum fraud &amp; chargeback protection.</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Self-host cannot disable 3DS — by design.</li>
+          </ul>
+        </div>
+        <div class="fcol rails">
+          <div class="fc-top">
+            <span class="fc-t">Frictionless on our rails</span>
+            <span class="fc-tag opt">Tier 2 / 3 · enterprise</span>
+          </div>
+          <div class="fc-sub">Opt-in, tied to your Lifted account &amp; tier.</div>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg> <code>3ds:false</code> on low-risk orders — fewer checkout drop-offs.</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg> Saved cards on file (tokenized vault) → one-tap repeat charges.</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg> Server-side &amp; account-gated — never exposed to the widget.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="friction-foot">
+        <p>Need frictionless mode or a custom vault flow for your enterprise checkout? Our team wires it to your account.</p>
+        <a class="btn btn-trust" href="mailto:support@liftedholdings.com?subject=ShipKit%20frictionless%20%2F%20saved-cards">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+          Talk to us · support@liftedholdings.com
+        </a>
+      </div>
     </div>
   </div>
 </section>
@@ -796,14 +1180,14 @@
     <div class="sec-head">
       <span class="kicker">Managed quickstart</span>
       <h2 class="sec-title">From zero to shipping in one script tag</h2>
-      <p class="sec-lede">Add the managed widget to any page. Subresource-integrity pinned, cross-origin locked. Your key routes rates, labels and 3-D Secure payments through Lifted — no backend required.</p>
+      <p class="sec-lede">Create a free account, then add the managed widget to any page. Subresource-integrity pinned, cross-origin locked. Your key routes rates, labels and 3-D Secure payments through Lifted — no backend required.</p>
     </div>
 
     <div class="qs-grid">
       <div class="qs-copy">
         <div class="stepn">
           <span class="n">1</span>
-          <div><h4>Get a managed key</h4><p>Apply once at <a href="https://liftedholdings.com/payments" style="color:var(--primary);font-weight:600">liftedholdings.com/payments</a> and receive a publishable <code>pk_live_…</code> key — safe to embed in the browser.</p></div>
+          <div><h4>Create a free account</h4><p>Sign up at <a href="https://liftedholdings.com/shipkit" style="color:var(--primary);font-weight:600">liftedholdings.com/shipkit</a> and get a publishable <code>pk_live_…</code> key — safe to embed in the browser. No application, no infra.</p></div>
         </div>
         <div class="stepn">
           <span class="n">2</span>
@@ -815,7 +1199,7 @@
         </div>
         <div class="qs-note">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
-          Self-hosting instead? Swap <code style="font-family:var(--font-mono)">data-managed-key</code> for <code style="font-family:var(--font-mono)">data-endpoint="/api"</code> to point at your own backend.
+          Self-hosting instead? Swap <code>data-managed-key</code> for <code>data-endpoint="/api"</code> to point at your own backend.
         </div>
       </div>
 
@@ -859,6 +1243,20 @@ kit.<span class="a">on</span>(<span class="s">'error'</span>, <span class="t">er
 
     <div class="devres">
       <div class="devcard">
+        <span class="dv-ic pm"><span class="pm-orb" style="width:22px;height:22px" aria-hidden="true"></span></span>
+        <h4>Open in Postman</h4>
+        <p>Fork the collection into your own workspace — every endpoint pre-built with example bodies and <code style="font-family:var(--font-mono);color:var(--primary)">{{baseUrl}}</code> / <code style="font-family:var(--font-mono);color:var(--primary)">{{apiKey}}</code> variables. Send in seconds.</p>
+        <div class="dv-path">shipkit.postman_collection.json</div>
+        <div class="dv-links">
+          <a class="pm-link" href="https://god.gw.postman.com/run-collection/36630865-bd2412e8-cfe6-42e4-9fe6-e3ae9d025750?action=collection%2Ffork" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z"/></svg> Run in Postman</a>
+          <a href="/shipkit.postman_collection.json" download>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+            Import
+          </a>
+        </div>
+      </div>
+
+      <div class="devcard">
         <span class="dv-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg></span>
         <h4>OpenAPI 3.1 spec</h4>
         <p>The full contract for every route — request/response schemas, error shapes, and the tier &amp; surcharge fields. Import it into any codegen or client.</p>
@@ -880,20 +1278,6 @@ kit.<span class="a">on</span>(<span class="s">'error'</span>, <span class="t">er
           <a href="/docs">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
             Open reference
-          </a>
-        </div>
-      </div>
-
-      <div class="devcard">
-        <span class="dv-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"/><path d="M8 12a4 4 0 0 1 4-4 3 3 0 0 1 0 6 4 4 0 0 0-4 4"/></svg></span>
-        <h4>Postman collection</h4>
-        <p>Every endpoint pre-built with example bodies and <code style="font-family:var(--font-mono);color:var(--primary)">{{baseUrl}}</code> / <code style="font-family:var(--font-mono);color:var(--primary)">{{apiKey}}</code> variables. Import and send in seconds.</p>
-        <div class="dv-path">shipkit.postman_collection.json</div>
-        <div class="dv-links">
-          <a href="https://god.gw.postman.com/run-collection/36630865-bd2412e8-cfe6-42e4-9fe6-e3ae9d025750?action=collection%2Ffork" target="_blank" rel="noopener" style="margin-bottom:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z"/></svg> Run in Postman</a>
-          <a href="/shipkit.postman_collection.json" download>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-            Import into Postman
           </a>
         </div>
       </div>
@@ -925,9 +1309,9 @@ kit.<span class="a">on</span>(<span class="s">'error'</span>, <span class="t">er
       </div>
       <div class="foot-col">
         <h5>Developers</h5>
+        <a href="https://god.gw.postman.com/run-collection/36630865-bd2412e8-cfe6-42e4-9fe6-e3ae9d025750?action=collection%2Ffork" target="_blank" rel="noopener">Open in Postman</a>
         <a href="/openapi.yaml">OpenAPI spec</a>
         <a href="/docs">API reference</a>
-        <a href="/shipkit.postman_collection.json" download>Postman collection</a>
         <a href="https://github.com/Lifted-Holdings/shipkit">GitHub repo</a>
         <a href="mailto:support@liftedholdings.com">support@liftedholdings.com</a>
       </div>
@@ -948,6 +1332,89 @@ kit.<span class="a">on</span>(<span class="s">'error'</span>, <span class="t">er
 (function(){
   "use strict";
   var root = document.documentElement;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- Aurora canvas (GPU-cheap, reduced-motion-safe) ---------- */
+  (function(){
+    var canvas = document.getElementById('aurora');
+    if(!canvas || !canvas.getContext) return;
+    var ctx = canvas.getContext('2d');
+    var W = 0, H = 0, DPR = 1;
+    var palette = [
+      [46,107,255],   // Lifted brand
+      [25,199,245],   // trust cyan
+      [124,92,255],   // depth violet
+      [46,107,255],
+      [25,199,245]
+    ];
+    var blobs = [];
+    function build(){
+      blobs = [];
+      var seeds = [
+        {x:.22,y:.20,r:.52,px:.07,py:.05,sx:.00009,sy:.00007},
+        {x:.80,y:.16,r:.46,px:.06,py:.06,sx:.00007,sy:.00010},
+        {x:.60,y:.72,r:.60,px:.08,py:.05,sx:.00006,sy:.00008},
+        {x:.10,y:.66,r:.42,px:.05,py:.07,sx:.00010,sy:.00006},
+        {x:.92,y:.60,r:.40,px:.06,py:.05,sx:.00008,sy:.00009}
+      ];
+      for(var i=0;i<seeds.length;i++){
+        var s = seeds[i];
+        blobs.push({
+          bx:s.x, by:s.y, r:s.r, px:s.px, py:s.py, sx:s.sx, sy:s.sy,
+          phase:i*1.3, col:palette[i % palette.length]
+        });
+      }
+    }
+    function resize(){
+      DPR = Math.min(window.devicePixelRatio || 1, 1.5);
+      W = canvas.clientWidth; H = canvas.clientHeight;
+      if(W === 0 || H === 0) return;
+      canvas.width = Math.round(W * DPR);
+      canvas.height = Math.round(H * DPR);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+    function frame(t){
+      if(W === 0 || H === 0){ resize(); if(W === 0 || H === 0) return; }
+      ctx.clearRect(0, 0, W, H);
+      ctx.globalCompositeOperation = 'lighter';
+      var span = Math.max(W, H);
+      for(var i=0;i<blobs.length;i++){
+        var b = blobs[i];
+        var cx = (b.bx + Math.sin(t * b.sx + b.phase) * b.px) * W;
+        var cy = (b.by + Math.cos(t * b.sy + b.phase) * b.py) * H;
+        var rad = b.r * span * 0.9;
+        var g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+        var c = b.col;
+        g.addColorStop(0, 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',0.42)');
+        g.addColorStop(0.55, 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',0.12)');
+        g.addColorStop(1, 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    build();
+    resize();
+    var raf = null, last = 0;
+    function loop(now){
+      raf = window.requestAnimationFrame(loop);
+      if(now - last < 33){ return; } // ~30fps cap
+      last = now;
+      frame(now);
+    }
+    var resizeT;
+    window.addEventListener('resize', function(){
+      clearTimeout(resizeT);
+      resizeT = setTimeout(function(){ resize(); if(reduce) frame(3000); }, 150);
+    });
+    if(reduce){
+      frame(3000); // single static composition
+    } else {
+      raf = window.requestAnimationFrame(loop);
+    }
+  })();
 
   /* ---------- Theme toggle ---------- */
   var toggle = document.getElementById('theme-toggle');
@@ -980,10 +1447,98 @@ kit.<span class="a">on</span>(<span class="s">'error'</span>, <span class="t">er
       document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); done(); }
   });
 
-  /* ---------- Interactive shipping demo ---------- */
-  var steps = Array.prototype.slice.call(document.querySelectorAll('#stepper .step'));
-  var panels = { 1:document.getElementById('p1'), 2:document.getElementById('p2'), 3:document.getElementById('p3'), 4:document.getElementById('p4') };
+  /* ---------- Import: framework tab switcher + copy ---------- */
+  (function(){
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('.fw-tab'));
+    var srcs = { react:document.getElementById('fw-react'), vue:document.getElementById('fw-vue'), html:document.getElementById('fw-html') };
+    var fname = document.getElementById('import-fname');
+    var FN = { react:'Checkout.jsx', vue:'Checkout.vue', html:'index.html' };
+    var current = 'react';
+    function select(fw){
+      if(!srcs[fw]) return;
+      current = fw;
+      tabs.forEach(function(t){ var on = t.getAttribute('data-fw') === fw; t.classList.toggle('on', on); t.setAttribute('aria-selected', on ? 'true' : 'false'); });
+      Object.keys(srcs).forEach(function(k){ srcs[k].hidden = (k !== fw); });
+      if(fname) fname.textContent = FN[fw];
+    }
+    tabs.forEach(function(t){ t.addEventListener('click', function(){ select(t.getAttribute('data-fw')); }); });
 
+    var copyImport = document.getElementById('copy-import');
+    if(copyImport){
+      copyImport.addEventListener('click', function(){
+        var el = srcs[current]; if(!el) return;
+        var text = el.innerText;
+        var label = document.getElementById('copy-import-label');
+        var done = function(){ if(label) label.textContent = 'Copied'; showToast('Snippet copied to clipboard');
+          setTimeout(function(){ if(label) label.textContent = 'Copy'; }, 1600); };
+        if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(done, fallback); }
+        else fallback();
+        function fallback(){ var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+          document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); done(); }
+      });
+    }
+  })();
+
+  /* ---------- Rate data model ---------- */
+  // Base prices are for a 2 lb small parcel; weight & size scale them realistically.
+  var CARRIERS = { USPS:'c-usps', UPS:'c-ups', FedEx:'c-fedex', DHL:'c-dhl' };
+  var CATALOG = [
+    { key:'usps-ground', carrier:'USPS',  name:'USPS Ground Advantage', days:'3–5 business days', base:8.42, perLb:0.55, cheap:true },
+    { key:'usps-prio',   carrier:'USPS',  name:'USPS Priority Mail',    days:'2 business days',   base:9.65, perLb:0.70 },
+    { key:'ups-ground',  carrier:'UPS',   name:'UPS Ground',            days:'2–4 business days', base:11.87, perLb:0.80 },
+    { key:'fedex-2day',  carrier:'FedEx', name:'FedEx 2Day',            days:'By Wed, Apr 3',     base:18.20, perLb:1.10, fast:true },
+    { key:'dhl-exp',     carrier:'DHL',   name:'DHL Express Worldwide', days:'1–3 business days', base:24.60, perLb:1.35 }
+  ];
+  var SIZE_FACTOR = { S:1, M:1.12, L:1.28 };
+
+  var weight = 2.0;         // lb
+  var size = 'S';
+  var selected = null;
+
+  function priceOf(item){
+    var extra = Math.max(0, weight - 2) * item.perLb;
+    return (item.base + extra) * SIZE_FACTOR[size];
+  }
+  function fmt(n){ return '$' + n.toFixed(2); }
+
+  /* ---------- Live ticker (signature) ---------- */
+  var track = document.getElementById('ticker-track');
+  function tickerItem(item){
+    var css = CARRIERS[item.carrier];
+    var px = priceOf(item);
+    // pseudo "market move" purely decorative
+    var down = item.cheap || item.key === 'usps-prio';
+    var delta = (down ? '−' : '+') + (0.1 + (item.perLb)).toFixed(2);
+    var arrow = down
+      ? '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'
+      : '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>';
+    return '<span class="tk">'+
+      '<span class="cc '+css+'">'+item.carrier+'</span>'+
+      '<span class="svc">'+item.name+'</span>'+
+      '<span class="px">'+fmt(px)+'</span>'+
+      '<span class="mv '+(down?'dn':'up')+'">'+arrow+delta+'</span>'+
+    '</span>';
+  }
+  function buildTicker(){
+    var one = CATALOG.map(tickerItem).join('');
+    // duplicate for a seamless -50% loop
+    track.innerHTML = one + one;
+  }
+  buildTicker();
+
+  /* ---------- Live latency shimmer (cosmetic, low-frequency) ---------- */
+  var latEl = document.getElementById('latency');
+  if(!reduce && latEl){
+    setInterval(function(){
+      var ms = 108 + Math.floor(Math.random()*46);
+      latEl.textContent = ms + ' ms';
+    }, 2600);
+  }
+
+  /* ---------- Stepper (progress) ---------- */
+  var steps = Array.prototype.slice.call(document.querySelectorAll('#stepper .stepitem'));
+  var conns = Array.prototype.slice.call(document.querySelectorAll('#stepper .connector'));
+  var panels = { 1:document.getElementById('p1'), 2:document.getElementById('p2'), 3:document.getElementById('p3'), 4:document.getElementById('p4') };
   function goStep(n){
     Object.keys(panels).forEach(function(k){ panels[k].classList.toggle('show', +k === n); });
     steps.forEach(function(s){
@@ -991,18 +1546,40 @@ kit.<span class="a">on</span>(<span class="s">'error'</span>, <span class="t">er
       s.classList.toggle('active', sn === n);
       s.classList.toggle('done', sn < n);
     });
+    conns.forEach(function(c){ c.classList.toggle('filled', +c.getAttribute('data-conn') < n); });
   }
 
-  // Rates dataset (mock, but realistic)
-  var RATES = [
-    { key:'usps-ground', carrier:'USPS', css:'c-usps', name:'USPS Ground Advantage', days:'3–5 business days', price:8.42, cheap:true },
-    { key:'ups-ground',  carrier:'UPS',  css:'c-ups',  name:'UPS Ground',           days:'2–4 business days', price:11.87 },
-    { key:'usps-prio',   carrier:'USPS', css:'c-usps', name:'USPS Priority Mail',    days:'2 business days',   price:9.65 },
-    { key:'fedex-2day',  carrier:'FedEx',css:'c-fedex',name:'FedEx 2Day',            days:'By Wed, Apr 3',     price:18.20, fast:true }
-  ];
-  var selected = null;
+  /* ---------- Weight controls (tactile, reprice live) ---------- */
+  var wVal = document.getElementById('w-val'), wVal2 = document.getElementById('w-val2');
+  function renderWeight(){
+    var s = weight.toFixed(1) + ' lb';
+    if(wVal) wVal.textContent = s;
+    if(wVal2) wVal2.textContent = s;
+  }
+  function bumpWeight(delta){
+    weight = Math.min(20, Math.max(0.5, Math.round((weight + delta) * 10) / 10));
+    renderWeight();
+    buildTicker();
+    repriceRates(true);
+    updateBuyPrice();
+  }
+  ['w-minus','w-minus2'].forEach(function(id){ var b=document.getElementById(id); if(b) b.addEventListener('click', function(){ bumpWeight(-0.5); }); });
+  ['w-plus','w-plus2'].forEach(function(id){ var b=document.getElementById(id); if(b) b.addEventListener('click', function(){ bumpWeight(0.5); }); });
+  renderWeight();
 
-  // Step 1 -> verify + rates
+  // Size segmented control
+  Array.prototype.forEach.call(document.querySelectorAll('.seg button[data-size]'), function(b){
+    b.addEventListener('click', function(){
+      Array.prototype.forEach.call(b.parentNode.children, function(c){ c.classList.remove('on'); });
+      b.classList.add('on');
+      size = b.getAttribute('data-size');
+      buildTicker();
+      repriceRates(true);
+      updateBuyPrice();
+    });
+  });
+
+  /* ---------- Step 1 -> verify + rates ---------- */
   var btnVerify = document.getElementById('btn-verify');
   btnVerify.addEventListener('click', function(){
     document.getElementById('verify-note').hidden = false;
@@ -1012,77 +1589,149 @@ kit.<span class="a">on</span>(<span class="s">'error'</span>, <span class="t">er
       btnVerify.disabled = false; btnVerify.textContent = 'Verify & get rates';
       document.getElementById('verify-note').hidden = true;
       loadRates();
-    }, 620);
+    }, reduce ? 0 : 560);
   });
 
-  function loadRates(){
-    var list = document.getElementById('rate-list'), loading = document.getElementById('rate-loading');
-    var buyBtn = document.getElementById('btn-buy'), buyPrice = document.getElementById('buy-price');
-    list.hidden = true; loading.style.display = 'flex'; list.innerHTML = ''; selected = null;
-    buyBtn.disabled = true; buyPrice.textContent = '—';
+  var listEl = document.getElementById('rate-list');
+  var fetchingEl = document.getElementById('fetching');
+  var chips = Array.prototype.slice.call(document.querySelectorAll('#carrier-chips .cchip'));
 
-    setTimeout(function(){
-      loading.style.display = 'none'; list.hidden = false;
-      RATES.forEach(function(r){
-        var el = document.createElement('div');
-        el.className = 'rate'; el.setAttribute('role','button'); el.setAttribute('tabindex','0');
-        var badge = r.fast ? '<span class="badge-fast">Fastest</span>' : (r.cheap ? '<span class="badge-cheap">Cheapest</span>' : '');
-        el.innerHTML =
-          '<span class="carrier '+r.css+'">'+r.carrier+'</span>'+
-          '<span class="svc"><span class="n">'+r.name+'</span><span class="d">'+r.days+' '+badge+'</span></span>'+
-          '<span class="price">$'+r.price.toFixed(2)+'</span>'+
-          '<span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>';
-        function pick(){
-          selected = r;
-          Array.prototype.forEach.call(list.children, function(c){ c.classList.remove('sel'); });
-          el.classList.add('sel');
-          buyBtn.disabled = false; buyPrice.textContent = '$'+r.price.toFixed(2);
-        }
-        el.addEventListener('click', pick);
-        el.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); pick(); } });
-        list.appendChild(el);
-      });
-      // preselect cheapest
-      list.children[0].click();
-    }, 900);
+  function loadRates(){
+    var buyBtn = document.getElementById('btn-buy'), buyPrice = document.getElementById('buy-price');
+    selected = null; buyBtn.disabled = true; buyPrice.textContent = '—';
+    listEl.hidden = true; listEl.innerHTML = '';
+    fetchingEl.hidden = false;
+    chips.forEach(function(c){ c.classList.remove('ok'); });
+
+    // carriers "connect" one by one, then rates stream in
+    var order = chips.slice();
+    var i = 0;
+    function connectNext(){
+      if(i < order.length){ order[i].classList.add('ok'); i++; setTimeout(connectNext, reduce ? 0 : 190); }
+      else { setTimeout(renderRates, reduce ? 0 : 260); }
+    }
+    connectNext();
   }
 
-  // Step 2 -> payment
+  function renderRates(){
+    fetchingEl.hidden = true;
+    listEl.hidden = false;
+    listEl.innerHTML = '';
+    CATALOG.forEach(function(r, idx){
+      var el = document.createElement('div');
+      el.className = 'rate'; el.setAttribute('role','button'); el.setAttribute('tabindex','0');
+      el.setAttribute('data-key', r.key);
+      el.style.animationDelay = (reduce ? 0 : idx * 70) + 'ms';
+      var badge = r.fast ? '<span class="badge-fast">Fastest</span>' : (r.cheap ? '<span class="badge-cheap">Cheapest</span>' : '');
+      el.innerHTML =
+        '<span class="carrier '+CARRIERS[r.carrier]+'">'+r.carrier+'</span>'+
+        '<span class="svc"><span class="n">'+r.name+'</span><span class="d">'+r.days+' '+badge+'</span></span>'+
+        '<span class="price" data-price>'+fmt(priceOf(r))+'</span>'+
+        '<span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>';
+      function pick(){
+        selected = r;
+        Array.prototype.forEach.call(listEl.children, function(c){ c.classList.remove('sel'); });
+        el.classList.add('sel');
+        updateBuyPrice();
+      }
+      el.addEventListener('click', pick);
+      el.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); pick(); } });
+      listEl.appendChild(el);
+    });
+    // preselect cheapest
+    if(listEl.children[0]) listEl.children[0].click();
+  }
+
+  // reprice already-rendered rate rows (called when weight/size changes)
+  function repriceRates(flash){
+    if(listEl.hidden) return;
+    Array.prototype.forEach.call(listEl.children, function(el){
+      var key = el.getAttribute('data-key');
+      var item = CATALOG.filter(function(c){ return c.key === key; })[0];
+      if(!item) return;
+      var pEl = el.querySelector('[data-price]');
+      pEl.textContent = fmt(priceOf(item));
+      if(flash && !reduce){ pEl.classList.add('flash'); setTimeout(function(){ pEl.classList.remove('flash'); }, 400); }
+    });
+  }
+
+  function updateBuyPrice(){
+    var buyBtn = document.getElementById('btn-buy'), buyPrice = document.getElementById('buy-price');
+    if(selected){ buyBtn.disabled = false; buyPrice.textContent = fmt(priceOf(selected)); }
+  }
+
+  /* ---------- Step 2 -> payment ---------- */
   document.getElementById('btn-buy').addEventListener('click', function(){
     if(!selected) return;
-    document.getElementById('pay-amt').textContent = '$'+selected.price.toFixed(2);
+    document.getElementById('pay-amt').textContent = fmt(priceOf(selected));
     document.getElementById('card-form').hidden = false;
     document.getElementById('threeds-challenge').hidden = true;
+    resetOtp();
     goStep(3);
   });
 
-  // Step 3 -> 3DS challenge -> result
+  /* ---------- Step 3 -> 3DS challenge auto-plays ---------- */
+  var otpInputs = Array.prototype.slice.call(document.querySelectorAll('#otp-row input'));
+  var thBar = document.getElementById('th-bar');
+  var CODE = ['8','1','5','0'];
+  var otpTimers = [];
+  function clearOtpTimers(){ otpTimers.forEach(clearTimeout); otpTimers = []; }
+  function resetOtp(){
+    clearOtpTimers();
+    otpInputs.forEach(function(inp){ inp.value=''; inp.classList.remove('lit'); });
+    if(thBar) thBar.style.width = '0';
+    var b = document.getElementById('btn-otp'); b.disabled = false; b.textContent = 'Confirm identity';
+  }
+
   document.getElementById('btn-auth').addEventListener('click', function(){
     document.getElementById('card-form').hidden = true;
     document.getElementById('threeds-challenge').hidden = false;
+    resetOtp();
+    // the challenge "plays": digits arrive one-by-one, then auto-confirm
+    if(reduce){
+      otpInputs.forEach(function(inp, i){ inp.value = CODE[i]; inp.classList.add('lit'); });
+      confirmOtp();
+      return;
+    }
+    CODE.forEach(function(d, i){
+      otpTimers.push(setTimeout(function(){
+        otpInputs[i].value = d;
+        otpInputs[i].classList.add('lit');
+        if(i === CODE.length - 1){ otpTimers.push(setTimeout(confirmOtp, 520)); }
+      }, 360 + i * 300));
+    });
   });
+
   document.getElementById('btn-otp').addEventListener('click', function(){
+    clearOtpTimers();
+    otpInputs.forEach(function(inp, i){ if(!inp.value){ inp.value = CODE[i]; inp.classList.add('lit'); } });
+    confirmOtp();
+  });
+
+  function confirmOtp(){
     var b = document.getElementById('btn-otp');
     b.disabled = true; b.textContent = 'Authenticating…';
+    if(thBar){ requestAnimationFrame(function(){ thBar.style.width = '100%'; }); }
     setTimeout(function(){
       b.disabled = false; b.textContent = 'Confirm identity';
       buildResult(); goStep(4);
-    }, 900);
-  });
+    }, reduce ? 0 : 900);
+  }
 
   function buildResult(){
-    var r = selected || RATES[0];
-    document.getElementById('r-carrier').textContent = r.carrier === 'USPS' ? r.name : r.name;
-    document.getElementById('r-cost').textContent = '$'+r.price.toFixed(2);
+    var r = selected || CATALOG[0];
+    document.getElementById('r-carrier').textContent = r.name;
+    document.getElementById('r-cost').textContent = fmt(priceOf(r));
     document.getElementById('r-track').textContent = genTracking(r.carrier);
     document.getElementById('r-eta').textContent = r.fast ? 'Wed, Apr 3' : 'Fri, Apr 5';
-    document.getElementById('qr').innerHTML = qrSvg(r.carrier + r.price);
+    document.getElementById('qr').innerHTML = qrSvg(r.carrier + priceOf(r).toFixed(2));
   }
 
   function genTracking(carrier){
     function grp(n){ var s=''; for(var i=0;i<n;i++) s+=Math.floor(Math.random()*10); return s; }
     if(carrier==='UPS') return '1Z ' + grp(3)+' '+grp(3)+' '+grp(4);
     if(carrier==='FedEx') return grp(4)+' '+grp(4)+' '+grp(4);
+    if(carrier==='DHL') return grp(3)+' '+grp(4)+' '+grp(3);
     return '9405 ' + grp(4)+' '+grp(4)+' '+grp(4);
   }
 
@@ -1091,14 +1740,12 @@ kit.<span class="a">on</span>(<span class="s">'error'</span>, <span class="t">er
     var s=0; for(var i=0;i<seed.length;i++){ s=(s*31 + seed.charCodeAt(i))>>>0; }
     function rnd(){ s = (s*1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; }
     var n=13, cell=100/n, rects='';
-    // Three 3x3 finder patterns (top-left, top-right, bottom-left), like a real QR
     function finder(x,y){
       var lx=-1, ly=-1;
       if(x<3 && y<3){ lx=x; ly=y; }
       else if(x>=n-3 && y<3){ lx=x-(n-3); ly=y; }
       else if(x<3 && y>=n-3){ lx=x; ly=y-(n-3); }
-      if(lx<0) return null; // not in a finder
-      // filled ring: outer border + center dot
+      if(lx<0) return null;
       return (lx===0||lx===2||ly===0||ly===2||(lx===1&&ly===1));
     }
     for(var y=0;y<n;y++){ for(var x=0;x<n;x++){
@@ -1109,17 +1756,17 @@ kit.<span class="a">on</span>(<span class="s">'error'</span>, <span class="t">er
     return '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g fill="#0B0F14">'+rects+'</g></svg>';
   }
 
-  // Back buttons + reset
+  /* ---------- Back buttons + reset + OTP typing ---------- */
   Array.prototype.forEach.call(document.querySelectorAll('[data-back]'), function(b){
-    b.addEventListener('click', function(){ goStep(+b.getAttribute('data-back')); });
+    b.addEventListener('click', function(){ clearOtpTimers(); goStep(+b.getAttribute('data-back')); });
   });
-  document.getElementById('btn-reset').addEventListener('click', function(){ goStep(1); });
+  document.getElementById('btn-reset').addEventListener('click', function(){ clearOtpTimers(); goStep(1); });
 
-  // OTP auto-advance niceties
-  Array.prototype.forEach.call(document.querySelectorAll('.otp-row input'), function(inp, idx, all){
+  otpInputs.forEach(function(inp, idx){
     inp.addEventListener('input', function(){
       inp.value = inp.value.replace(/[^0-9]/g,'').slice(0,1);
-      if(inp.value && all[idx+1]) all[idx+1].focus();
+      if(inp.value){ inp.classList.add('lit'); if(otpInputs[idx+1]) otpInputs[idx+1].focus(); }
+      else inp.classList.remove('lit');
     });
   });
 })();

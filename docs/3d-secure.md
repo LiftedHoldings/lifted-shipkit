@@ -165,6 +165,41 @@ never buys a label off an ambiguous result.
 You do not implement any of this branching — the issuer and the hosted form handle it. Your
 code simply polls `GET /api/payment/status/{sessionId}` until the result is terminal.
 
+## Forced 3-D Secure vs. frictionless mode (account-gated)
+
+"Frictionless" means two different things here — don't confuse them:
+
+- **3DS2 frictionless _flow_** (the table above): the transaction is **still** 3-D Secure — the
+  issuer just authenticates silently for a low-risk payment. Liability still shifts. This is
+  always available and is exactly what self-host does.
+- **Frictionless _mode_** (this section): 3-D Secure is switched **off** for a faster checkout,
+  and the merchant may keep **saved cards on file** (a tokenized vault) for repeat / one-tap
+  charges. No authentication, no liability shift.
+
+Frictionless mode is a **paid-tier / enterprise capability, never the default**:
+
+- **Self-host and bring-your-own-payments run forced 3-D Secure and cannot disable it.**
+  ShipKit's charge path sends `3ds: true` unconditionally — there is no code path, config flag,
+  or widget option that turns it off. Forced 3DS is the fraud-and-chargeback pitch, and it is
+  non-negotiable in the open-source build.
+- Merchants on **Lifted Payments tier 2 or 3**, or an **enterprise custom build**, may opt into
+  frictionless mode plus saved-card tokenization. It is enabled **server-side, tied to your
+  account/tier** — never a client or widget toggle, and never available to bring-your-own-payments.
+
+| | Self-host / BYO payments | Frictionless on Lifted's rails · tier 2/3 · enterprise |
+|---|---|---|
+| 3-D Secure | **Forced — cannot be disabled** | Optional, per account |
+| Liability shift | Always (authenticated) | Off when 3DS is off — you own the fraud risk |
+| Saved cards on file | Not available | Tokenized customer vault — repeat / one-tap |
+| Where card tokens live | Payment side only, per charge | Payment-side vault — never in ShipKit or your servers |
+| How it's configured | n/a — always on | Server-side, by tier/account only |
+
+Frictionless mode trades the liability shift for speed, so it fits low-risk, repeat-customer
+flows — a deliberate, per-account decision made with Lifted, not a switch in the widget.
+
+**Enterprise or a custom build?** Tell us what you need:
+[support@liftedholdings.com](mailto:support@liftedholdings.com).
+
 ## Common questions
 
 **Does 3DS add friction to every checkout?**

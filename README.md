@@ -17,7 +17,9 @@ Add multi-carrier shipping-label buying to any store, with card payment locked d
 [![Secured by 3-D Secure](https://img.shields.io/badge/3--D%20Secure-required-19C7F5.svg)](docs/3d-secure.md)
 [![Lifted Payments](https://img.shields.io/badge/payments-Lifted%20Payments%203DS-2E6BFF.svg)](https://liftedholdings.com/payments)
 
-[Live demo](https://liftedholdings.com/shippingtool) · [Quickstart](docs/quickstart.md) · [Integration](docs/integration.md) · [Architecture](docs/architecture.md) · [3-D Secure](docs/3d-secure.md)
+[![Run in Postman](https://run.pstmn.io/button.svg)](https://god.gw.postman.com/run-collection/36630865-bd2412e8-cfe6-42e4-9fe6-e3ae9d025750?action=collection%2Ffork)
+
+[Live demo](https://liftedholdings.com/shippingtool) · [Quickstart](docs/quickstart.md) · [Integration](docs/integration.md) · [Architecture](docs/architecture.md) · [3-D Secure](docs/3d-secure.md) · [Open in Postman](https://god.gw.postman.com/run-collection/36630865-bd2412e8-cfe6-42e4-9fe6-e3ae9d025750?action=collection%2Ffork)
 
 </div>
 
@@ -47,10 +49,10 @@ ShipKit comes in three tiers — pick how much you want to run yourself. All thr
 | PCI scope for card data | Yours | Out of scope (hosted 3DS form) | Out of scope (hosted 3DS form) |
 | Cost | **Free** (MIT) | **3.75% + $0.15 / transaction + $25 / month** — the merchant account only¹ | **Free** — we earn on the shipping rate² |
 | Best for | Full control, heaviest dev work | Our processing, your choice of host | "Just make it work" |
-| Get started | [GitHub](https://github.com/Lifted-Holdings/shipkit) · [support@](mailto:support@liftedholdings.com) | [Apply → liftedholdings.com/payments](https://liftedholdings.com/payments) | [Get a managed key →](https://liftedholdings.com/payments) |
+| Get started | [GitHub](https://github.com/Lifted-Holdings/shipkit) · [support@](mailto:support@liftedholdings.com) | [Apply → liftedholdings.com/payments](https://liftedholdings.com/payments) | [Create free account → get the JS](https://liftedholdings.com/shipkit) |
 
 ¹ The **3.75% + 15¢** processing cost can be **surcharged to the buyer** with a built-in surcharge-framework toggle, so the per-transaction fee lands on the cardholder rather than on you. The **$25/month** is the standard merchant-account fee.
-² **Managed** runs on our 3DS account and our EasyPost with free hosting; we make our margin on a **configurable markup over the carrier's shipping rate** (set via `POST /api/config/markup`), shown at checkout before the buyer pays. Carrier rates, the code, the widget, and self-hosting stay free.
+² **Managed** needs **no merchant-account application** — you just create a free account (name, email, company) and instantly get your plug-and-play JS snippet and managed key. It runs on our 3DS account and our EasyPost with free hosting; we make our margin on a **configurable markup over the carrier's shipping rate** (set via `POST /api/config/markup`), shown at checkout before the buyer pays. Carrier rates, the code, the widget, and self-hosting stay free.
 
 Full side-by-side breakdown with the exact numbers: **[docs/tiers.md](docs/tiers.md)**.
 
@@ -91,7 +93,7 @@ Keys come in two scopes: the browser widget uses a **publishable** `pk_…` key 
 
 ### Managed (plug-and-play)
 
-No backend, no keys, no PCI scope. Add one tag with your managed key:
+No application, no infra — [create a free account](https://liftedholdings.com/shipkit), get your managed key, and add one tag:
 
 ```html
 <div id="ship"></div>
@@ -102,13 +104,41 @@ No backend, no keys, no PCI scope. Add one tag with your managed key:
   data-managed-key="pk_live_your_publishable_key"></script>
 ```
 
-That's the whole integration — the widget routes rates, labels, and 3-D Secure card payment through the managed Lifted endpoint. [Get a managed key →](https://liftedholdings.com/payments)
+That's the whole integration — the widget routes rates, labels, and 3-D Secure card payment through the managed Lifted endpoint. [Create your free account → get the JS](https://liftedholdings.com/shipkit)
 
 > **Placeholders:** the CDN host and the `integrity` hash above are placeholders until the first published release. A browser refuses to run a script whose SRI hash doesn't match, so the tag stays inert until you drop in the real values — get the live host and hash from your managed account or the [releases page](https://github.com/Lifted-Holdings/shipkit/releases). A non-loading tag before then is expected, not a mistake on your end.
 
 > Prefer JavaScript over markup? `ShipKit.init({ mount: '#ship', managedKey: 'pk_live_your_publishable_key' })` does the same thing.
 
 Full walkthrough for both tiers: **[docs/quickstart.md](docs/quickstart.md)**.
+
+---
+
+## Drop ShipKit into your own checkout
+
+The headline use case: keep your app and your checkout, and add ShipKit for the rate-compare → pay → print-label step. The widget is a **dependency-free UMD global** (`window.ShipKit`) — no build step, no framework, no lock-in. Mount a node, point it at your backend (or a managed key), wire three callbacks into your order flow. That's the entire integration surface.
+
+```html
+<div id="ship"></div>
+<script src="/js/shipkit.js"></script>
+<script>
+  ShipKit.init({
+    mount: '#ship',
+    endpoint: '/api',                          // your ShipKit backend (self-host)
+    apiKey: 'pk_live_your_publishable_key',    // publishable pk_… key — safe in the browser
+    onPurchase: ({ trackingCode, labelUrl }) => {
+      // hand the finished label back to your order flow
+    }
+  });
+</script>
+```
+
+- **React, Vue, or plain HTML** — copy-paste components in the [integration guide](docs/integration.md#framework-snippets).
+- **Full `init` config, callbacks, theming** — the complete reference: [docs/integration.md](docs/integration.md).
+- **Match your brand** — restyle every surface with the `--sk-*` CSS variables; no `!important`, no build.
+- **No backend to run?** Swap `endpoint` + `apiKey` for a single `managedKey` — [Managed](docs/managed.md).
+
+Fork it, read it, ship it — MIT, zero lock-in.
 
 ---
 
@@ -164,7 +194,19 @@ Shipping is a fraud magnet. Stolen cards are used to buy labels and move physica
 - **Compliance** — meets SCA / PSD2-style strong-customer-authentication expectations, with a frictionless path for low-risk payments.
 - **Better approval rates** — issuers approve authenticated transactions more often.
 
-To take live payments you need a 3-D Secure merchant account. Lifted Payments provides one, and it is the processor behind both ShipKit tiers.
+### Frictionless checkout & saved cards — on our rails only
+
+Forced 3-D Secure is the **default and the only self-host mode — self-host cannot turn 3DS off** (the charge path sends `3ds: true` unconditionally; there is no flag, config, or widget option to disable it). Merchants on a **Lifted Payments tier (2 or 3)** or an **enterprise build** can opt into **frictionless mode** — a faster `3ds`-off checkout plus **saved cards on file** (tokenized customer vault for repeat / one-tap charges). It is an account-level, **server-side** capability tied to your tier — never a client or widget toggle, and never available to bring-your-own-payments.
+
+| | Self-host / bring-your-own-payments | Frictionless on Lifted's rails · tier 2/3 · enterprise |
+|---|---|---|
+| 3-D Secure | **Forced — cannot be disabled** | Optional, per account (`3ds` off) |
+| Saved cards on file | Not available | Tokenized customer vault (repeat / one-tap) |
+| Where it's set | n/a — always on | Server-side, tied to the account/tier |
+
+Full breakdown: [forced 3-D Secure vs. frictionless mode](docs/3d-secure.md#forced-3-d-secure-vs-frictionless-mode-account-gated). Want frictionless + card-on-file, or a bespoke build? **[support@liftedholdings.com](mailto:support@liftedholdings.com)**.
+
+To take live payments on your own account you need a 3-D Secure merchant account. Lifted Payments provides one, and it is the processor behind every ShipKit tier — your own account on the [merchant-account tier](docs/tiers.md#tier-2--lifted-3-d-secure-merchant-account), and ours on the [fully-managed tier](docs/tiers.md#tier-3--fully-managed-plug--play).
 
 <div align="center">
 
@@ -195,8 +237,8 @@ A running server also serves an **interactive API reference at `/docs`** and the
 
 ## Import into Postman
 
-[![Run in Postman](https://run.pstmn.io/button.svg)](https://god.gw.postman.com/run-collection/36630865-bd2412e8-cfe6-42e4-9fe6-e3ae9d025750?action=collection%2Ffork)
-
+[![Run in Postman](https://run.pstmn.io/button.svg)](https://god.gw.postman.com/run-collection/36630865-bd2412e8-cfe6-42e4-9fe6-e3ae9d025750?action=collection%2Ffork)
+
 One click forks the live **ShipKit API** collection into your own Postman. Prefer to do it by hand?
 
 1. **Import the collection** — [`shipkit.postman_collection.json`](shipkit.postman_collection.json) (Postman Collection v2.1). In Postman, choose **Import → File** and pick the JSON, or drag it into the sidebar.

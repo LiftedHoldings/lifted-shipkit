@@ -164,6 +164,11 @@ private fun registerRoutes(
     app.get("/api/payment/status/{sessionId}") { h.paymentStatus(it) }
     app.post("/api/payment/purchase-label/{sessionId}") { h.purchaseLabelForSessionEndpoint(it) }
 
+    // Frictionless / card-on-file (SPEC_R3 §5) — account-gated (secret key +
+    // frictionlessAllowed); refused for self-host / BYO where forced 3DS is the only mode.
+    app.post("/api/payment/save-card") { h.saveCardOnFile(it) }
+    app.post("/api/payment/charge-saved-card") { h.chargeSavedCard(it) }
+
     // Tier + pricing model (honest three-tier story; publishable-key readable)
     app.get("/api/config/tier") { h.getTierConfig(it) }
 

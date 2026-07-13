@@ -94,7 +94,7 @@ No backend, no API keys, no PCI scope. Lifted runs the infrastructure and paymen
 
 ### 1. Get a managed key
 
-[Get a managed key → liftedholdings.com/payments](https://liftedholdings.com/payments). You'll receive a publishable key that looks like `pk_live_...` — safe to embed in the browser.
+[Create your free account → get the JS at liftedholdings.com/shipkit](https://liftedholdings.com/shipkit). No merchant-account application — just your name, email, and company. You'll receive a publishable managed key that looks like `pk_live_...` — safe to embed in the browser.
 
 ### 2. Drop in the script
 

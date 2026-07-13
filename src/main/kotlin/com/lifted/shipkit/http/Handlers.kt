@@ -660,6 +660,248 @@ class Handlers(
         )
     }
 
+    // ---- Frictionless / card-on-file (account-gated; SPEC_R3 §5) -------------
+
+    /**
+     * Save a card on file (Maverick customer vault) for one-tap repeat checkout.
+     * **Server-side and account-gated**: reachable only with a **secret** key
+     * (never a publishable/browser key — see [isPublishableSafe]) and only when the
+     * deployment's tier armed [ShipKitConfig.frictionlessAllowed]. A self-host / BYO
+     * deployment is refused with `403` here (and again in the client, defence in
+     * depth). Card data never reaches ShipKit: the body carries a Maverick Hosted
+     * Fields **card token**, not a PAN. Emits `{success, vault_id, card_token}`.
+     */
+    fun saveCardOnFile(ctx: Context) =
+        withPayments(ctx) { client ->
+            if (!requireFrictionless(ctx)) return@withPayments
+            val body = ctx.bodyMap()
+            val cardToken =
+                (body["card_token"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
+                    ?: return@withPayments fail(ctx, 400, "card_token is required")
+
+            @Suppress("UNCHECKED_CAST")
+            val billing = body["billing"] as? Map<String, Any?>
+            val saved =
+                try {
+                    client.saveCard(cardToken, billing)
+                } catch (e: IOException) {
+                    log.warn("Save-card failed: {}", e.message)
+                    return@withPayments fail(ctx, 502, "Could not save the card; please retry")
+                }
+            ctx.json(
+                mapOf(
+                    "success" to true,
+                    "vault_id" to saved.vaultId,
+                    "card_token" to saved.cardToken,
+                ),
+            )
+        }
+
+    /**
+     * One-tap purchase on a **saved card**: price the rate server-side, charge the
+     * saved card **frictionlessly** (`3ds:false`), and buy the label — the
+     * account-gated repeat-checkout path. Like [saveCardOnFile] it is secret-key +
+     * [ShipKitConfig.frictionlessAllowed] gated.
+     *
+     * The charge amount is computed on the server from `shipment_id` + `rate_id` +
+     * markup (a client-sent amount is ignored). **Idempotent** on a required
+     * `idempotency_key`: the charge and the label are taken at most once, and the
+     * card is charged before the label is bought — a buy that fails after a
+     * successful charge does NOT re-charge on retry (the recorded `approved` session
+     * short-circuits the charge, only the label buy is re-attempted).
+     * Emits `{label_url, qr_code_url, tracking_code, carrier, service, transaction_id, amount}`.
+     */
+    fun chargeSavedCard(ctx: Context) =
+        withPayments(ctx) { client ->
+            if (!requireFrictionless(ctx)) return@withPayments
+            val service =
+                easyPost
+                    ?: return@withPayments fail(
+                        ctx,
+                        503,
+                        "Shipping is not configured (set EASYPOST_API_KEY)",
+                    )
+            val body = ctx.bodyMap()
+            val vaultId =
+                (body["vault_id"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
+                    ?: return@withPayments fail(ctx, 400, "vault_id is required")
+            val shipmentId =
+                (body["shipment_id"] as? String)?.takeIf { it.isNotBlank() }
+                    ?: return@withPayments fail(ctx, 400, "shipment_id is required")
+            val rateId =
+                (body["rate_id"] as? String)?.takeIf { it.isNotBlank() }
+                    ?: return@withPayments fail(ctx, 400, "rate_id is required")
+            // A caller-supplied idempotency key makes the charge + buy at-most-once.
+            val idempotencyKey =
+                (body["idempotency_key"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
+                    ?: return@withPayments fail(ctx, 400, "idempotency_key is required")
+
+            @Suppress("UNCHECKED_CAST")
+            val billing = body["billing"] as? Map<String, Any?>
+            val sessionId = "saved-$idempotencyKey"
+
+            // Idempotent fast path: already bought → return the same label.
+            store.getPaymentSession(sessionId)?.let { existing ->
+                if (existing.labelUrl != null) {
+                    ctx.json(labelResponse(existing))
+                    return@withPayments
+                }
+            }
+
+            // Authoritative amount: rate + markup + tier surcharge; never the client's.
+            val quote =
+                try {
+                    service.priceRate(shipmentId, rateId, store.getMarkupConfig())
+                } catch (e: IllegalArgumentException) {
+                    return@withPayments fail(ctx, 400, e.message ?: "Invalid rate_id")
+                }
+            if (!quote.currency.equals("USD", ignoreCase = true)) {
+                return@withPayments fail(
+                    ctx,
+                    400,
+                    "Only USD rates can be charged (got ${quote.currency})",
+                )
+            }
+            val amount = config.surcharge.applyTo(BigDecimal(quote.amount))
+
+            // Serialize per idempotency key: exactly one caller charges + buys.
+            if (!store.claimLabelPurchase(sessionId)) {
+                val fresh = store.getPaymentSession(sessionId)
+                if (fresh?.labelUrl != null) {
+                    ctx.json(labelResponse(fresh))
+                    return@withPayments
+                }
+                return@withPayments fail(
+                    ctx,
+                    409,
+                    "A saved-card purchase is already in progress; retry shortly",
+                )
+            }
+
+            // Charge only if a prior attempt has not already done so. A recorded
+            // `approved` session means the card was charged but the label buy failed
+            // — retry the buy WITHOUT charging again.
+            val priorCharge = store.getPaymentSession(sessionId)
+            if (priorCharge?.status != "approved") {
+                val result =
+                    try {
+                        client.chargeSavedCard(amount, vaultId, billing)
+                    } catch (e: IOException) {
+                        store.releaseLabelPurchaseClaim(sessionId)
+                        log.warn("Saved-card charge failed for {}: {}", sessionId, e.message)
+                        return@withPayments fail(
+                            ctx,
+                            502,
+                            "Could not charge the saved card; please retry",
+                        )
+                    }
+                if (!result.approved) {
+                    store.releaseLabelPurchaseClaim(sessionId)
+                    return@withPayments fail(
+                        ctx,
+                        402,
+                        "Saved-card charge not approved (status=${result.status})",
+                    )
+                }
+                store.savePaymentSession(
+                    PaymentSession(
+                        sessionId = sessionId,
+                        amount = amount.toDouble(),
+                        description =
+                            body["description"] as? String ?: "Shipping Label Purchase (saved card)",
+                        externalId = result.transactionId.ifBlank { sessionId },
+                        createdAt = System.currentTimeMillis(),
+                        status = "approved",
+                        shipmentId = shipmentId,
+                        rateId = rateId,
+                        paidBaseRate = quote.baseRate.toDouble(),
+                        currency = "USD",
+                        endShipperId = body["end_shipper_id"] as? String,
+                    ),
+                )
+            }
+
+            val session = store.getPaymentSession(sessionId)
+            val bought =
+                try {
+                    service.buyLabel(
+                        shipmentId = shipmentId,
+                        originalRateId = rateId,
+                        endShipperId = session?.endShipperId ?: store.getEndShipperId(),
+                        maxBaseRate = quote.baseRate,
+                    )
+                } catch (e: Exception) {
+                    // The card is already charged; release the claim so a retry can
+                    // complete the buy (the recorded session skips the re-charge).
+                    store.releaseLabelPurchaseClaim(sessionId)
+                    log.warn("Saved-card label buy failed for {}: {}", sessionId, e.message)
+                    return@withPayments fail(
+                        ctx,
+                        502,
+                        e.message ?: "Label purchase failed; please retry",
+                    )
+                }
+
+            if (session != null) {
+                session.labelUrl = bought.labelUrl
+                session.qrCodeUrl = bought.qrCodeUrl
+                session.trackingCode = bought.trackingCode
+                store.savePaymentSession(session)
+                bought.labelUrl?.let { url ->
+                    val markup = store.getMarkupConfig()
+                    store.saveLabel(
+                        LabelRecord(
+                            id = UUID.randomUUID().toString(),
+                            sessionId = session.sessionId,
+                            labelUrl = url,
+                            qrCodeUrl = bought.qrCodeUrl,
+                            trackingCode = bought.trackingCode,
+                            carrier = bought.carrier,
+                            service = bought.service,
+                            amount = session.amount,
+                            baseRate = bought.baseRate,
+                            percentageMarkup = markup.percentageMarkup,
+                            fixedFeeCents = markup.fixedFeeCents,
+                            shipmentId = shipmentId,
+                            senderPhone = bought.senderPhone,
+                        ),
+                    )
+                }
+            }
+            ctx.json(
+                mapOf(
+                    "label_url" to bought.labelUrl,
+                    "qr_code_url" to bought.qrCodeUrl,
+                    "tracking_code" to bought.trackingCode,
+                    "carrier" to bought.carrier,
+                    "service" to bought.service,
+                    "transaction_id" to (session?.externalId ?: ""),
+                    "amount" to amount.toPlainString(),
+                ),
+            )
+        }
+
+    /**
+     * Gate the frictionless money paths. Writes a `403` and returns `false` unless
+     * [ShipKitConfig.frictionlessAllowed] — the account/tier capability — is armed.
+     * Forced 3-D Secure is the only mode for self-host / BYO, so those deployments
+     * are refused here.
+     */
+    private fun requireFrictionless(ctx: Context): Boolean {
+        if (!config.frictionlessAllowed) {
+            fail(
+                ctx,
+                403,
+                "Frictionless mode (3-D Secure off / card-on-file) is not enabled for this " +
+                    "account. Forced 3-D Secure is the only mode for self-host / " +
+                    "bring-your-own-payments. Frictionless is available on a Lifted " +
+                    "merchant/managed account or enterprise custom-dev (support@liftedholdings.com).",
+            )
+            return false
+        }
+        return true
+    }
+
     // ---- Tier + pricing model ------------------------------------------------
 
     /**
@@ -708,6 +950,15 @@ class Handlers(
                                 ?.name
                                 ?.lowercase()
                         ),
+                    ),
+                // The account-gated frictionless capability (SPEC_R3 §5). `allowed`
+                // (and `save_cards`, gated by the same capability) is FALSE by default
+                // and always false for self-host / BYO — forced 3-D Secure is their
+                // only mode. This is server-derived; it is never a client toggle.
+                "frictionless" to
+                    mapOf(
+                        "allowed" to config.frictionlessAllowed,
+                        "save_cards" to config.frictionlessAllowed,
                     ),
             ),
         )

@@ -1,9 +1,12 @@
 # Drop-in JavaScript shipping widget — integration guide
 
-`shipkit.js` is a dependency-free drop-in widget: address entry, live multi-carrier rate
-compare, a 3-D Secure card step, and a label/QR result — one script, no build step. It
-loads as a UMD global (`window.ShipKit`) via a plain `<script>` tag — no bundler and no ES
-`import` required.
+**Import ShipKit shipping into your own app or checkout.** `shipkit.js` is a dependency-free
+drop-in widget: address entry, live multi-carrier rate compare, a 3-D Secure card step, and a
+label/QR result — one script, no build step. It loads as a UMD global (`window.ShipKit`) via a
+plain `<script>` tag — no bundler and no ES `import` required. Keep your app, your checkout, and
+your stack; ShipKit owns only the rate → pay → label step, handing the finished label back
+through callbacks. Copy-paste [framework snippets](#framework-snippets) for React, Vue, and
+plain HTML are below.
 
 There are two ways to run it, one API:
 
@@ -34,8 +37,9 @@ browser. See [Authentication](authentication.md).
 
 The `integrity` and `crossorigin` attributes pin the script to a published, verified build —
 copy the exact Subresource Integrity hash for your version from the
-[releases page](https://github.com/Lifted-Holdings/shipkit/releases). Get a managed key at
-**[liftedholdings.com/payments](https://liftedholdings.com/payments)**.
+[releases page](https://github.com/Lifted-Holdings/shipkit/releases). Create a free account and
+get a managed key at **[liftedholdings.com/shipkit](https://liftedholdings.com/shipkit)** — no
+merchant-account application.
 
 ### Self-host (your backend)
 

@@ -1,5 +1,6 @@
 package com.lifted.shipkit.config
 
+import com.lifted.shipkit.model.FrictionlessGate
 import com.lifted.shipkit.model.SurchargeConfig
 import com.lifted.shipkit.model.TierMode
 import com.lifted.shipkit.payments.CardEntryMode
@@ -46,6 +47,16 @@ data class ShipKitConfig(
      * the card is charged, so the merchant nets the shipping price.
      */
     val surcharge: SurchargeConfig = SurchargeConfig.DISABLED,
+    /**
+     * The account-gated **frictionless / card-on-file** capability (SPEC_R3 §5),
+     * resolved once from the tier + `SHIPKIT_FRICTIONLESS_ENABLED` via
+     * [FrictionlessGate]. `false` by default and **always** `false` for self-host /
+     * bring-your-own-payments (forced 3-D Secure is their only mode). When `true`
+     * — a Lifted merchant/managed account that opted in — the server may charge
+     * with `3ds:false` and save/charge cards on file. This is the single
+     * server-side source of truth; it is never a client/widget toggle.
+     */
+    val frictionlessAllowed: Boolean = false,
 ) {
     val shippingEnabled: Boolean get() = easyPostApiKey != null
     val paymentsEnabled: Boolean get() = payments != null
@@ -69,6 +80,17 @@ data class ShipKitConfig(
             val easyPostApiKey = env["EASYPOST_API_KEY"]?.trim()?.takeIf { it.isNotEmpty() }
             val easyPostWebhookSecret =
                 env["EASYPOST_WEBHOOK_SECRET"]?.trim()?.takeIf { it.isNotEmpty() }
+
+            // Adoption tier drives the account-gated frictionless capability, so it
+            // must be resolved BEFORE the payments client is built. The gate throws
+            // ForcedThreeDsViolation when a self-host / BYO deployment tries to turn
+            // OFF forced 3-D Secure — a deliberate, fail-fast refusal at startup.
+            val tier = TierMode.fromString(env["SHIPKIT_TIER"])
+            val frictionlessAllowed =
+                FrictionlessGate.resolve(
+                    tier = tier,
+                    requested = env["SHIPKIT_FRICTIONLESS_ENABLED"].toBoolean(),
+                )
 
             // Lifted Payments 3-D Secure is enabled only when fully configured.
             val bearer = env["LIFTED_PAYMENTS_BEARER"]?.trim()?.takeIf { it.isNotEmpty() }
@@ -99,6 +121,10 @@ data class ShipKitConfig(
                                     .isNotEmpty()
                             }
                                 ?: LiftedPaymentsConfig.DEFAULT_HOSTED_FORM_PATH,
+                        // The frictionless capability is account-gated (tier-derived),
+                        // so the client that can charge 3ds:false / a saved card is only
+                        // armed here — never from a per-call or client-side flag.
+                        frictionlessAllowed = frictionlessAllowed,
                     )
                 } else {
                     null
@@ -141,10 +167,9 @@ data class ShipKitConfig(
                     null
                 }
 
-            // Adoption tier + buyer-surcharge toggle (tier 2). The surcharge rate is
-            // the fixed Lifted 3DS merchant-account cost (3.75% + $0.15); only the
-            // on/off toggle is environment-driven.
-            val tier = TierMode.fromString(env["SHIPKIT_TIER"])
+            // Buyer-surcharge toggle (tier 2). The surcharge rate is the fixed Lifted
+            // 3DS merchant-account cost (3.75% + $0.15); only the on/off toggle is
+            // environment-driven. (The adoption tier is resolved above.)
             val surcharge =
                 if (env["SHIPKIT_SURCHARGE_ENABLED"].toBoolean()) {
                     SurchargeConfig.STANDARD
@@ -165,6 +190,7 @@ data class ShipKitConfig(
                 db = db,
                 tier = tier,
                 surcharge = surcharge,
+                frictionlessAllowed = frictionlessAllowed,
             )
         }
 

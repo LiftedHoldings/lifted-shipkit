@@ -1,5 +1,6 @@
 package com.lifted.shipkit.config
 
+import com.lifted.shipkit.model.ForcedThreeDsViolation
 import com.lifted.shipkit.model.TierMode
 import com.lifted.shipkit.payments.CardEntryMode
 import com.lifted.shipkit.payments.PaymentsEnvironment
@@ -7,6 +8,7 @@ import com.lifted.shipkit.store.StoreBackend
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -35,6 +37,63 @@ class ShipKitConfigTest {
         // Tier defaults to the free self-host tier with the surcharge OFF.
         assertEquals(TierMode.SELF_HOST, config.tier)
         assertFalse(config.surcharge.enabled)
+        // Frictionless is OFF by default — forced 3-D Secure.
+        assertFalse(config.frictionlessAllowed)
+    }
+
+    @Test
+    fun `frictionless is allowed on a Lifted merchant or managed account that opts in`() {
+        val merchant =
+            ShipKitConfig.fromEnv(
+                env(
+                    mapOf(
+                        "SHIPKIT_TIER" to "merchant",
+                        "SHIPKIT_FRICTIONLESS_ENABLED" to "true",
+                        "LIFTED_PAYMENTS_BEARER" to "token",
+                        "LIFTED_PAYMENTS_TERMINAL_ID" to "1",
+                        "LIFTED_PAYMENTS_DBA_ID" to "2",
+                    ),
+                ),
+            )
+        assertTrue(merchant.frictionlessAllowed)
+        // The capability is threaded into the payments client, not just the config.
+        assertTrue(merchant.payments?.frictionlessAllowed == true)
+
+        val managed =
+            ShipKitConfig.fromEnv(
+                env(mapOf("SHIPKIT_TIER" to "managed", "SHIPKIT_FRICTIONLESS_ENABLED" to "true")),
+            )
+        assertTrue(managed.frictionlessAllowed)
+    }
+
+    @Test
+    fun `a self-host deployment that tries to disable 3DS is REFUSED at startup`() {
+        // Requesting frictionless on self-host / BYO must fail fast, not silently
+        // downgrade the deployment's forced-3DS security.
+        assertThrows(ForcedThreeDsViolation::class.java) {
+            ShipKitConfig.fromEnv(
+                env(
+                    mapOf(
+                        "SHIPKIT_TIER" to "selfhost",
+                        "SHIPKIT_FRICTIONLESS_ENABLED" to "true",
+                    ),
+                ),
+            )
+        }
+        // The tier defaults to self-host, so enabling frictionless with NO tier set
+        // is likewise refused.
+        assertThrows(ForcedThreeDsViolation::class.java) {
+            ShipKitConfig.fromEnv(env(mapOf("SHIPKIT_FRICTIONLESS_ENABLED" to "true")))
+        }
+    }
+
+    @Test
+    fun `a merchant tier that does NOT opt in stays forced-3DS`() {
+        val config = ShipKitConfig.fromEnv(env(mapOf("SHIPKIT_TIER" to "merchant")))
+        assertFalse(
+            config.frictionlessAllowed,
+            "eligible tier without the toggle is still forced-3DS",
+        )
     }
 
     @Test

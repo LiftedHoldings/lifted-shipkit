@@ -30,6 +30,19 @@ enum class TierMode(
     MANAGED("managed", "Fully managed (plug & play)"),
     ;
 
+    /**
+     * Whether this tier may opt into the account-gated **frictionless** capability
+     * (3-D Secure off + card-on-file / vault; see [FrictionlessGate]).
+     *
+     * Only merchants on Lifted's rails — [MERCHANT] (tier 2) or [MANAGED] (tier 3) —
+     * are eligible. [SELF_HOST] is **bring-your-own-payments** and can never
+     * disable 3-D Secure: forced 3-D Secure is its default and only mode. Enterprise
+     * custom-dev accounts are handled out of band (support@liftedholdings.com), not
+     * as a runtime tier.
+     */
+    val frictionlessEligible: Boolean
+        get() = this == MERCHANT || this == MANAGED
+
     companion object {
         /**
          * Parse the `SHIPKIT_TIER` value (case-insensitive; hyphens/underscores

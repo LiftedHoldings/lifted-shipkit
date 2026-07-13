@@ -19,7 +19,7 @@ happens without an authenticated, liability-shifted result.
 | Dev effort | Highest | Low — apply, plug in keys | Lowest — one tag |
 | **Cost** | **Free** (MIT) | **3.75% + $0.15 / transaction + $25 / month** — the merchant account only¹ | **Free** — we earn on the shipping rate² |
 | Best for | Full control | Our processing, your choice of host | "Just make it work" |
-| Get started | [GitHub](https://github.com/Lifted-Holdings/shipkit) | [Apply →](https://liftedholdings.com/payments) | [Get a managed key →](https://liftedholdings.com/payments) |
+| Get started | [GitHub](https://github.com/Lifted-Holdings/shipkit) | [Apply →](https://liftedholdings.com/payments) | [Create free account →](https://liftedholdings.com/shipkit) |
 
 ¹ Surchargeable — see [Tier 2](#tier-2--lifted-3-d-secure-merchant-account) below.
 ² Configurable shipping-rate markup — see [Tier 3](#tier-3--fully-managed-plug--play) below.
@@ -73,6 +73,11 @@ merchant account.
   neither adds a hosting charge. The merchant-account pricing above is the whole cost.
 - **Bring your own EasyPost.** Carrier rates settle to your EasyPost account; ShipKit adds no
   markup on the shipping rate in this tier.
+- **Frictionless + saved cards (optional).** On a Lifted merchant account you can opt into
+  **frictionless checkout** (3-D Secure off) and **saved cards on file** (a tokenized customer
+  vault for repeat / one-tap charges). It is a **server-side, account-level** capability —
+  never a widget toggle. Self-host can't disable 3DS; see
+  [forced 3-D Secure vs. frictionless mode](3d-secure.md#forced-3-d-secure-vs-frictionless-mode-account-gated).
 
 > **Get started:** [Apply → liftedholdings.com/payments](https://liftedholdings.com/payments).
 
@@ -80,10 +85,12 @@ merchant account.
 
 ## Tier 3 · Fully managed (plug & play)
 
-The turnkey option. Drop **one JavaScript snippet** on your page and everything runs on our
-rails — **our 3-D Secure merchant account and our EasyPost account.** Zero infrastructure,
-free hosting, no API keys on your servers, no PCI scope for card data. Best for teams that
-just want it to work.
+The turnkey option — **no merchant-account application.** You just **create a free account**
+(name, email, company) and instantly get your **plug-and-play JS snippet and managed key**.
+Drop that **one JavaScript snippet** on your page and everything runs on our rails — **our
+3-D Secure merchant account and our EasyPost account.** Zero infrastructure, free hosting, no
+API keys on your servers, no PCI scope for card data. No application, no infra — sign up, drop
+in one script tag, done.
 
 ```html
 <div id="ship"></div>
@@ -104,17 +111,23 @@ checkout **before** the buyer pays — nothing hidden.
 - Our 3-D Secure account + our EasyPost, fully managed.
 - Free hosting, free tooling, free updates.
 - We earn only when a label ships, on the shipping-rate markup.
+- **Frictionless + saved cards (optional).** On our managed rails you can opt into
+  **frictionless checkout** (3-D Secure off) and **saved cards on file** (tokenized customer
+  vault) for repeat / one-tap charges — a **server-side, account-level** capability, never a
+  widget toggle. Self-host stays forced-3DS; see
+  [forced 3-D Secure vs. frictionless mode](3d-secure.md#forced-3-d-secure-vs-frictionless-mode-account-gated).
 
 See **[managed.md](managed.md)** for the full managed walkthrough.
 
-> **Get started:** [Get a managed key → liftedholdings.com/payments](https://liftedholdings.com/payments).
+> **Get started:** [Create your free account → get the JS at liftedholdings.com/shipkit](https://liftedholdings.com/shipkit).
 
 ---
 
 ## Custom integration & software development
 
 Want ShipKit woven into your own framework, a bespoke checkout, or a custom build on top of
-the API? We do that. Tell us what you're building and we'll scope it.
+the API? We do that. Tell us what you're building and we'll scope it — including enterprise
+**frictionless checkout and saved-cards-on-file** (tokenized vault) tied to your account.
 
 > **Talk to us:** **[support@liftedholdings.com](mailto:support@liftedholdings.com)**.
 

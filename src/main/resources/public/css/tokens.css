@@ -9,10 +9,9 @@
  *
  * Dark is the primary theme; set data-theme="light" on <html> (or any subtree)
  * to flip the neutral spine. Fonts: Sora (display), Inter (body), JetBrains Mono
- * (data/IDs) — imported here for the hosted frontend. The self-contained demo
- * inlines equivalents and relies on system fallbacks (no CDN).
+ * (data/IDs). Named first in each stack with strong system fallbacks — the site
+ * is fully self-contained (no external font host / CDN), matching the demo.
  */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 :root {
   /* ---- Neutrals: the Lifted ink spine (shared by every product) --------- */
