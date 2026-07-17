@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`verifyPayment()` externalId lookup route** now follows the gateway
+  contract: `GET {gateway}/payments?filter[externalId]=…` (URL-encoded, Bearer
+  auth) instead of the non-existent `/api/transaction?externalId=…` path. The
+  reply is the standard `{items, _meta{totalCount}}` list envelope and the item
+  is trusted **only when `_meta.totalCount == 1`** — a missing/malformed filter
+  silently returns the full unfiltered transaction list, so any other count maps
+  to `pending` (not-found semantics), with the exact-match `externalId` guard
+  kept as defense-in-depth.
+- **`capture()` partial shape** — a partial capture now sends a **top-level**
+  `amount` (the old `partial:{amount}` object is rejected by the gateway), and
+  split-shipment captures additionally send `partial:{sequence,total}` via the
+  new `capture(transactionId, amount, sequence, total)` signature (`sequence`
+  validated in `1..total`; `sequence`/`total` must come together with an
+  `amount`).
+- **Gateway error messages surfaced** — a non-2xx money-call reply now parses
+  the gateway's `{name,message,code,status}` error envelope and includes its
+  `message` in the thrown `IOException` (e.g. a 422 decline or
+  duplicate-suspected reason) instead of the bare status code.
+
+### Changed
+
+- **Hosted-form path verified** — `/api/gateway/hosted-form` is now the
+  verified default creation path per the gateway contract; the `UNVERIFIED`
+  markers were removed from the client, docs, and `.env.example`, and the path
+  remains overridable via `LIFTED_PAYMENTS_HOSTED_FORM_PATH`.
+- **`LiftedPaymentsClient` KDoc** documents two gateway-contract behaviors:
+  declines surface as HTTP 422 with no transaction id (record your own attempt
+  row keyed by `externalId` before charging), and repeat same-card/same-amount
+  attempts may 422 as duplicate-suspected — resolve via the externalId lookup
+  before re-charging.
+
 ### Added
 
 - **Managed-deployment hooks** — two optional, env-driven features for operators

@@ -107,12 +107,10 @@ The bearer token, terminal id, and DBA id come from `LIFTED_PAYMENTS_BEARER`,
   resulting card token is charged server-side with 3-D Secure required. This is the
   Launchpad-proven default.
 - **Hosted Form / hosted payment page.** The buyer is sent to a Maverick-hosted payment page
-  that captures the card and runs 3-D Secure — even less card data in scope. The **exact
-  hosted-form-creation endpoint lives only in Maverick's developer portal**, so ShipKit
-  treats the hosted-form base and path as a **configuration value** rather than hardcoding a
-  guess. `// UNVERIFIED:` confirm the exact path in
-  [developers.maverickpayments.com](https://developers.maverickpayments.com) when wiring your
-  account.
+  that captures the card and runs 3-D Secure — even less card data in scope. The
+  hosted-form-creation path defaults to the **verified** `/api/gateway/hosted-form` (on the
+  dashboard host) per the gateway contract, and stays a **configuration value**
+  (`LIFTED_PAYMENTS_HOSTED_FORM_PATH`) so a differently provisioned account can override it.
 
 ### The charge contract
 
@@ -141,9 +139,10 @@ Amounts are decimal strings with two places, rounded half-up. The follow-on oper
 
 | Operation | Call | Body |
 |---|---|---|
-| Capture an auth | `POST {gateway}/payment/{txnId}/capture` | `{ "terminal": { "id": … } }` |
+| Capture an auth | `POST {gateway}/payment/{txnId}/capture` | `{ "terminal": { "id": … } }` (+ top-level `amount` for a partial capture; a split-shipment capture also sends `partial: { "sequence": n, "total": m }`) |
 | Refund / void¹ | `POST {gateway}/payment/{txnId}/refund` | `{ "terminal": { "id": … } }` (+ `amount` for a partial refund) |
 | Read a transaction | `GET {gateway}/payment/{txnId}` | — |
+| Look up by reference | `GET {gateway}/payments?filter[externalId]=…` (URL-encoded) | — (returns `{items, _meta}`; trust the item only when `_meta.totalCount == 1` — a missing/malformed filter silently returns the **full** transaction list) |
 
 ¹ There is **no separate `/void`** — a refund covers both. A transaction is treated as
 approved when its status is one of `approved`, `approval`, `success`, `succeeded`, or

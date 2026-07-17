@@ -107,25 +107,40 @@ class LiftedPaymentsClientHttpTest {
     }
 
     @Test
-    fun `verifyPayment reads approval + liability shift from the transaction list envelope`() {
+    fun `verifyPayment reads approval + liability shift from the filtered list envelope`() {
+        val reqSlot = slot<Request>()
         val body =
             """
-            {"items":[{"id":"txn_1","status":{"status":"Approved"},
-                       "threeds":{"eci":"05","cavv":"cavv3ds01"}}]}
+            {"items":[{"id":"txn_1","externalId":"shipkit-1","status":{"status":"Approved"},
+                       "threeds":{"eci":"05","cavv":"cavv3ds01"}}],
+             "_meta":{"totalCount":1}}
             """.trimIndent()
-        val client = LiftedPaymentsClient(config, http(200, body))
+        val client = LiftedPaymentsClient(config, capturing(200, body, reqSlot))
 
         val v = client.verifyPayment("shipkit-1")
         assertEquals("approved", v.status)
         assertTrue(v.liabilityShift)
         assertEquals("05", v.eci)
         assertEquals("cavv3ds01", v.cavv)
+        // The lookup route is GET {gateway}/payments?filter[externalId]=... with
+        // the brackets and value URL-encoded, on the GATEWAY host with Bearer auth.
+        assertEquals(
+            "https://gateway.maverickpayments.com/payments?filter%5BexternalId%5D=shipkit-1",
+            reqSlot.captured.url
+                .toString(),
+        )
+        assertEquals("GET", reqSlot.captured.method)
+        assertEquals("Bearer test-bearer", reqSlot.captured.header("Authorization"))
     }
 
     @Test
     fun `verifyPayment maps an approved-but-unshifted transaction to declined (forced 3DS)`() {
         val body =
-            """{"items":[{"id":"txn_2","status":{"status":"Approved"},"threeds":{"eci":"07"}}]}"""
+            """
+            {"items":[{"id":"txn_2","externalId":"shipkit-2","status":{"status":"Approved"},
+                       "threeds":{"eci":"07"}}],
+             "_meta":{"totalCount":1}}
+            """.trimIndent()
         val client = LiftedPaymentsClient(config, http(200, body))
 
         val v = client.verifyPayment("shipkit-2")
@@ -135,8 +150,70 @@ class LiftedPaymentsClientHttpTest {
 
     @Test
     fun `verifyPayment returns pending when no transaction exists yet`() {
-        val client = LiftedPaymentsClient(config, http(200, """{"items":[]}"""))
+        val client =
+            LiftedPaymentsClient(config, http(200, """{"items":[],"_meta":{"totalCount":0}}"""))
         assertEquals("pending", client.verifyPayment("nope").status)
+    }
+
+    @Test
+    fun `verifyPayment refuses a multi-item reply (unfiltered-list hazard) as pending`() {
+        // A missing/malformed filter param makes the gateway silently return the
+        // FULL transaction list. totalCount != 1 must map to pending — never to
+        // "trust the first item", which would verify someone else's payment. The
+        // FIRST item deliberately carries OUR externalId so only the totalCount
+        // gate (not the exact-match guard) can produce the pending outcome here.
+        val body =
+            """
+            {"items":[{"id":"txn_a","externalId":"shipkit-1","status":{"status":"Approved"},
+                       "threeds":{"eci":"05","cavv":"c1"}},
+                      {"id":"txn_b","externalId":"other-1","status":{"status":"Approved"},
+                       "threeds":{"eci":"05","cavv":"c2"}}],
+             "_meta":{"totalCount":2}}
+            """.trimIndent()
+        val client = LiftedPaymentsClient(config, http(200, body))
+        assertEquals("pending", client.verifyPayment("shipkit-1").status)
+    }
+
+    @Test
+    fun `verifyPayment refuses totalCount 1 with empty items as pending`() {
+        val body = """{"items":[],"_meta":{"totalCount":1}}"""
+        val client = LiftedPaymentsClient(config, http(200, body))
+        assertEquals("pending", client.verifyPayment("shipkit-1").status)
+    }
+
+    @Test
+    fun `verifyPayment requires the returned record to carry the exact externalId`() {
+        // Positive match required: a record MISSING its externalId is refused —
+        // any record matched by a working filter necessarily carries the field.
+        val body =
+            """
+            {"items":[{"id":"txn_9","status":{"status":"Approved"},
+                       "threeds":{"eci":"05","cavv":"c"}}],
+             "_meta":{"totalCount":1}}
+            """.trimIndent()
+        val client = LiftedPaymentsClient(config, http(200, body))
+        assertEquals("pending", client.verifyPayment("shipkit-1").status)
+    }
+
+    @Test
+    fun `verifyPayment refuses an envelope without _meta as pending`() {
+        // No _meta.totalCount = no proof the filter applied; never trust the items.
+        val body = """{"items":[{"id":"txn_1","status":{"status":"Approved"}}]}"""
+        val client = LiftedPaymentsClient(config, http(200, body))
+        assertEquals("pending", client.verifyPayment("shipkit-1").status)
+    }
+
+    @Test
+    fun `verifyPayment ignores a single record whose externalId does not match`() {
+        // Exact-match guard stays as defense-in-depth beneath the totalCount check.
+        val body =
+            """
+            {"items":[{"id":"txn_9","externalId":"someone-else","status":{"status":"Approved"},
+                       "threeds":{"eci":"05","cavv":"c"}}],
+             "_meta":{"totalCount":1}}
+            """.trimIndent()
+        val client = LiftedPaymentsClient(config, http(200, body))
+        assertEquals("pending", client.verifyPayment("shipkit-1").status)
     }
 
     @Test
@@ -237,6 +314,22 @@ class LiftedPaymentsClientHttpTest {
     }
 
     @Test
+    fun `sale surfaces the gateway message from a 422 error envelope`() {
+        // Declines come back as HTTP 422 with a {name,message,code,status}
+        // envelope and NO transaction id — the message is the only reason given.
+        val body =
+            """{"name":"Unprocessable entity","message":"Suspected duplicate.",
+                "code":0,"status":422}"""
+        val client = LiftedPaymentsClient(config, http(422, body))
+        val ex =
+            assertThrows(IOException::class.java) {
+                client.sale(BigDecimal("9.22"), cardToken = "tok_abc")
+            }
+        assertTrue(ex.message!!.contains("HTTP 422"), ex.message)
+        assertTrue(ex.message!!.contains("Suspected duplicate."), ex.message)
+    }
+
+    @Test
     fun `the amount guard rejects a non-positive or absurd charge before any HTTP call`() {
         val http = mockk<OkHttpClient>()
         val client = LiftedPaymentsClient(config, http)
@@ -257,7 +350,7 @@ class LiftedPaymentsClientHttpTest {
     }
 
     @Test
-    fun `capture posts terminal plus a partial amount and approves without a shift`() {
+    fun `capture posts a partial amount TOP-LEVEL and approves without a shift`() {
         val slot = slot<Request>()
         val http = capturing(200, """{"id":"txn_9","status":{"status":"captured"}}""", slot)
         val result = LiftedPaymentsClient(config, http).capture("txn_9", BigDecimal("5.00"))
@@ -269,10 +362,65 @@ class LiftedPaymentsClientHttpTest {
         )
         val sent = bodyOf(slot.captured)
         assertTrue(sent.contains(""""terminal":{"id":3}"""), sent)
-        assertTrue(
-            sent.contains(""""partial":{"amount":"5.00"}"""),
-            "partial capture amount: $sent",
+        // Per the gateway contract a partial capture is a TOP-LEVEL amount; the
+        // old partial:{amount} shape is rejected by the gateway.
+        assertTrue(sent.contains(""""amount":"5.00""""), "top-level amount: $sent")
+        assertFalse(
+            sent.contains(""""partial""""),
+            "no partial object without sequence/total: $sent",
         )
+    }
+
+    @Test
+    fun `full capture sends terminal only — no amount field at all`() {
+        val slot = slot<Request>()
+        val http = capturing(200, """{"id":"txn_9","status":{"status":"captured"}}""", slot)
+        LiftedPaymentsClient(config, http).capture("txn_9")
+
+        val sent = bodyOf(slot.captured)
+        assertTrue(sent.contains(""""terminal":{"id":3}"""), sent)
+        assertFalse(sent.contains(""""amount""""), "full capture has no amount: $sent")
+        assertFalse(sent.contains(""""partial""""), sent)
+    }
+
+    @Test
+    fun `multi-partial capture sends top-level amount plus partial sequence and total`() {
+        val slot = slot<Request>()
+        val http = capturing(200, """{"id":"txn_9","status":{"status":"captured"}}""", slot)
+        LiftedPaymentsClient(config, http)
+            .capture("txn_9", BigDecimal("5.00"), sequence = 1, total = 2)
+
+        val sent = bodyOf(slot.captured)
+        assertTrue(sent.contains(""""amount":"5.00""""), "top-level amount: $sent")
+        assertTrue(
+            sent.contains(""""partial":{"sequence":1,"total":2}"""),
+            "split-shipment slot: $sent",
+        )
+    }
+
+    @Test
+    fun `capture validates the multi-partial arguments before any HTTP call`() {
+        val http = mockk<OkHttpClient>()
+        val client = LiftedPaymentsClient(config, http)
+        // sequence/total must come together...
+        assertThrows(IOException::class.java) {
+            client.capture("txn_9", BigDecimal("5.00"), sequence = 1)
+        }
+        assertThrows(IOException::class.java) {
+            client.capture("txn_9", BigDecimal("5.00"), total = 2)
+        }
+        // ...with sequence in 1..total...
+        assertThrows(IOException::class.java) {
+            client.capture("txn_9", BigDecimal("5.00"), sequence = 0, total = 2)
+        }
+        assertThrows(IOException::class.java) {
+            client.capture("txn_9", BigDecimal("5.00"), sequence = 3, total = 2)
+        }
+        // ...and an amount is required for a multi-partial capture.
+        assertThrows(IOException::class.java) {
+            client.capture("txn_9", sequence = 1, total = 2)
+        }
+        verify(exactly = 0) { http.newCall(any()) }
     }
 
     @Test
