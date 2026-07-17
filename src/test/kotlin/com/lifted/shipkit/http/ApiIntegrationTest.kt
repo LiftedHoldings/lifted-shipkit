@@ -6,6 +6,7 @@ import com.lifted.shipkit.model.BoughtLabel
 import com.lifted.shipkit.model.PaymentSession
 import com.lifted.shipkit.model.SurchargeConfig
 import com.lifted.shipkit.model.TierMode
+import com.lifted.shipkit.model.TrackingRecord
 import com.lifted.shipkit.payments.GatewayResult
 import com.lifted.shipkit.payments.HostedPaymentResult
 import com.lifted.shipkit.payments.LiftedPaymentsClient
@@ -378,6 +379,85 @@ class ApiIntegrationTest {
         JavalinTest.test(w.app) { _, client ->
             webhook(client.origin, "hmac-sha256-hex=deadbeef", "{}").use {
                 assertEquals(503, it.code)
+            }
+        }
+    }
+
+    @Test
+    fun `a verified tracker webhook is persisted and retrievable while unmatched and forged events do not persist`() {
+        val secret = "whsec_track_2026"
+        val w = wire(config = config(webhookSecret = secret))
+        // A realistic EasyPost tracker.updated envelope: the Tracker rides in `result`.
+        val body =
+            """
+            {"description":"tracker.updated","object":"Event","created_at":"2026-07-15T10:00:00Z",
+             "result":{"object":"Tracker","tracking_code":"EZ1000000001","status":"in_transit",
+             "status_detail":"arrived_at_facility","carrier":"USPS",
+             "est_delivery_date":"2026-07-18T00:00:00Z","shipment_id":"shp_abc",
+             "updated_at":"2026-07-15T10:00:01Z"}}
+            """.trimIndent()
+
+        JavalinTest.test(w.app) { _, client ->
+            // Verified event -> 200 and persisted.
+            webhook(client.origin, sign(secret, body), body).use {
+                assertEquals(200, it.code, "verified tracker event accepted")
+            }
+            // Retrievable by tracking code (secret-key gated read).
+            get(client.origin, "/api/tracking/EZ1000000001", w.key).use {
+                assertEquals(200, it.code, "tracking status retrievable")
+                val json = it.body!!.string()
+                assertTrue(json.contains(""""status":"in_transit""""), "status persisted: $json")
+                assertTrue(json.contains(""""carrier":"USPS""""), "carrier persisted: $json")
+                assertTrue(
+                    json.contains(""""est_delivery_date":"2026-07-18T00:00:00Z""""),
+                    "est_delivery_date persisted: $json",
+                )
+                assertTrue(
+                    json.contains(""""status_detail":"arrived_at_facility""""),
+                    "status_detail persisted: $json",
+                )
+            }
+
+            // Unmatched event (no tracking_code) -> graceful no-op, still 200, nothing stored.
+            val unmatched =
+                """{"description":"tracker.created","result":{"object":"Tracker","status":"unknown"}}"""
+            webhook(client.origin, sign(secret, unmatched), unmatched).use {
+                assertEquals(200, it.code, "unmatched event is a graceful 200 no-op")
+            }
+
+            // Forged event for a NEW code with a bad signature -> rejected AND not persisted.
+            val forged =
+                """{"description":"tracker.updated","result":{"tracking_code":"EZ_FORGED","status":"delivered"}}"""
+            webhook(client.origin, "hmac-sha256-hex=deadbeef", forged).use {
+                assertEquals(401, it.code, "forged signature rejected")
+            }
+            get(client.origin, "/api/tracking/EZ_FORGED", w.key).use {
+                assertEquals(404, it.code, "forged event never reached the store")
+            }
+        }
+    }
+
+    @Test
+    fun `a persistence failure surfaces as 5xx so EasyPost retries instead of dropping the event`() {
+        val secret = "whsec_track_fail"
+        // A store that verifies fine but throws while persisting the tracking update.
+        val delegate = InMemoryLabelStore()
+        val failing =
+            object : LabelStore by delegate {
+                override fun saveTrackingUpdate(record: TrackingRecord): Unit =
+                    error("simulated store outage")
+            }
+        val w = wire(config = config(webhookSecret = secret), store = failing)
+        val body =
+            """{"description":"tracker.updated","result":{"object":"Tracker",""" +
+                """"tracking_code":"EZ_FAIL","status":"in_transit","updated_at":"2026-07-15T10:00:00Z"}}"""
+        JavalinTest.test(w.app) { _, client ->
+            // Verified event, but the store throws -> must NOT be a data-losing 200.
+            webhook(client.origin, sign(secret, body), body).use {
+                assertTrue(
+                    it.code >= 500,
+                    "a persistence failure must return 5xx so EasyPost retries, got ${it.code}",
+                )
             }
         }
     }

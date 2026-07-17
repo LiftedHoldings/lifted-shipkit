@@ -3,7 +3,11 @@
 # Values come from your .env file (copy .env.example -> .env). This file
 # contains only placeholders and variable references — NO real secrets.
 # Start (in-memory store):  docker compose up --build
-# Start with PostgreSQL:     docker compose --profile postgres up --build
+# Start with PostgreSQL:     docker compose --profile postgres -f docker-compose.yml -f docker-compose.postgres.yml up --build
+#   (`--profile postgres` starts the db service; the override flips the app to
+#    SHIPKIT_STORE=postgres and points it at db. A profile alone cannot change the
+#    app's env, so `--profile postgres` WITHOUT the override starts Postgres while
+#    the app stays in-memory and ignores it — the override is what makes it real.)
 # ---------------------------------------------------------------------------
 
 services:
@@ -49,7 +53,10 @@ services:
       SHIPKIT_ADMIN_PHONES: "${SHIPKIT_ADMIN_PHONES:-}"
 
   # Optional PostgreSQL label store. Off by default (ShipKit uses in-memory).
-  # Enable with:  docker compose --profile postgres up
+  # The `postgres` profile keeps this service out of the plain `docker compose up`
+  # path. To actually run the app ON Postgres, layer the override so the app's
+  # SHIPKIT_STORE is flipped too (a profile cannot change another service's env):
+  #   docker compose --profile postgres -f docker-compose.yml -f docker-compose.postgres.yml up --build
   # Production points SHIPKIT_DATABASE_URL at a managed Postgres with sslmode=require.
   db:
     image: postgres:16

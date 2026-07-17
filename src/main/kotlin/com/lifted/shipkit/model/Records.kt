@@ -67,6 +67,28 @@ data class PaymentSession(
     val approved: Boolean get() = status == "approved" && liabilityShift
 }
 
+/**
+ * The latest carrier tracking state for a shipment, persisted from a
+ * signature-verified EasyPost `tracker.*` webhook. Keyed by [trackingCode] (the
+ * carrier tracking number, unique per label) so a merchant can query a shipment's
+ * current lifecycle without holding the original payment session.
+ *
+ * All provider-supplied fields are optional: EasyPost omits `status_detail`,
+ * `carrier`, or `est_delivery_date` on some events, and this record simply
+ * mirrors whatever the last event carried. [eventAt] is the provider's own event
+ * timestamp (opaque ISO string); [updatedAt] is when ShipKit persisted it.
+ */
+data class TrackingRecord(
+    val trackingCode: String,
+    val status: String? = null,
+    val statusDetail: String? = null,
+    val carrier: String? = null,
+    val estDeliveryDate: String? = null,
+    val shipmentId: String? = null,
+    val eventAt: String? = null,
+    val updatedAt: String? = null,
+)
+
 /** A short-lived SMS phone-verification session (optional history/admin auth). */
 data class VerificationSession(
     val sessionId: String,

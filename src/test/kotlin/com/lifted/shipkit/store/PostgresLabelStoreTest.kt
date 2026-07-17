@@ -3,6 +3,7 @@ package com.lifted.shipkit.store
 import com.lifted.shipkit.model.LabelRecord
 import com.lifted.shipkit.model.MarkupConfig
 import com.lifted.shipkit.model.PaymentSession
+import com.lifted.shipkit.model.TrackingRecord
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -53,6 +54,67 @@ class PostgresLabelStoreTest {
         assertEquals(99, store.getMarkupConfig().fixedFeeCents)
         // Restore so other tests see the default.
         store.updateMarkupConfig(MarkupConfig.DEFAULT)
+    }
+
+    @Test
+    fun `tracking update upserts and is retrievable by code`() {
+        assertNull(store.getTracking("EZ_PG_1"))
+        store.saveTrackingUpdate(
+            TrackingRecord(
+                trackingCode = "EZ_PG_1",
+                status = "in_transit",
+                statusDetail = "arrived_at_facility",
+                carrier = "USPS",
+                estDeliveryDate = "2026-07-18T00:00:00Z",
+                shipmentId = "shp_pg",
+                eventAt = "2026-07-15T10:00:00Z",
+            ),
+        )
+        val first = store.getTracking("EZ_PG_1")
+        assertNotNull(first)
+        assertEquals("in_transit", first!!.status)
+        assertEquals("USPS", first.carrier)
+        assertEquals("shp_pg", first.shipmentId)
+        assertNotNull(first.updatedAt)
+
+        // Upsert on the same code updates status; COALESCE keeps a prior shipment id.
+        store.saveTrackingUpdate(TrackingRecord(trackingCode = "EZ_PG_1", status = "delivered"))
+        val second = store.getTracking("EZ_PG_1")!!
+        assertEquals("delivered", second.status)
+        assertEquals("shp_pg", second.shipmentId, "COALESCE preserves the known shipment id")
+    }
+
+    @Test
+    fun `a late-arriving older tracking event does not regress the stored status`() {
+        store.saveTrackingUpdate(
+            TrackingRecord(
+                trackingCode = "EZ_PG_2",
+                status = "delivered",
+                eventAt = "2026-07-16T09:00:00Z",
+            ),
+        )
+        // An older in_transit event (T1 < T2) arrives late — the upsert WHERE guard skips it.
+        store.saveTrackingUpdate(
+            TrackingRecord(
+                trackingCode = "EZ_PG_2",
+                status = "in_transit",
+                eventAt = "2026-07-15T10:00:00Z",
+            ),
+        )
+        assertEquals(
+            "delivered",
+            store.getTracking("EZ_PG_2")!!.status,
+            "an older event must not overwrite a newer status",
+        )
+        // A newer event (T3 > T2) still updates.
+        store.saveTrackingUpdate(
+            TrackingRecord(
+                trackingCode = "EZ_PG_2",
+                status = "returned",
+                eventAt = "2026-07-17T08:00:00Z",
+            ),
+        )
+        assertEquals("returned", store.getTracking("EZ_PG_2")!!.status, "a newer event still wins")
     }
 
     @Test

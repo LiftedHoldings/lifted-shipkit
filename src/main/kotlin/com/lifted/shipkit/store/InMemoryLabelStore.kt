@@ -3,6 +3,7 @@ package com.lifted.shipkit.store
 import com.lifted.shipkit.model.LabelRecord
 import com.lifted.shipkit.model.MarkupConfig
 import com.lifted.shipkit.model.PaymentSession
+import com.lifted.shipkit.model.TrackingRecord
 import com.lifted.shipkit.model.VerificationSession
 import com.lifted.shipkit.util.PhoneNumbers
 import java.time.Instant
@@ -28,6 +29,7 @@ class InMemoryLabelStore : LabelStore {
     private val labels = ConcurrentHashMap<String, Expiring<LabelRecord>>()
     private val paymentSessions = ConcurrentHashMap<String, Expiring<PaymentSession>>()
     private val verifications = ConcurrentHashMap<String, Expiring<VerificationSession>>()
+    private val tracking = ConcurrentHashMap<String, TrackingRecord>()
 
     // Idempotency guard: a session id present here has an in-flight (or completed)
     // label purchase, so no second caller may buy again.
@@ -85,6 +87,36 @@ class InMemoryLabelStore : LabelStore {
     }
 
     override fun cleanupExpiredLabels(): Int = removeExpired(labels)
+
+    override fun saveTrackingUpdate(record: TrackingRecord) {
+        // Upsert keyed on the tracking code; `compute` applies atomically per key.
+        // EasyPost delivers webhooks out of order and retries old events, so an event
+        // strictly older than the stored one (by provider event time — ISO-8601 UTC,
+        // lexically comparable) is ignored to avoid regressing e.g. delivered → in_transit.
+        // A missing event time can't be ordered, so it falls back to last-write-wins.
+        // A known shipment id is preserved when a later event omits it (mirrors the
+        // Postgres COALESCE upsert), and we stamp our own persist time.
+        tracking.compute(record.trackingCode) { _, existing ->
+            if (existing != null && isOlderEvent(record.eventAt, existing.eventAt)) {
+                existing
+            } else {
+                record.copy(
+                    shipmentId = record.shipmentId ?: existing?.shipmentId,
+                    updatedAt = Instant.now().toString(),
+                )
+            }
+        }
+    }
+
+    // True only when [incoming] is strictly older than [stored] by provider event
+    // time. Both must be present to order; a missing timestamp is treated as
+    // not-older so it still wins (last-write-wins).
+    private fun isOlderEvent(
+        incoming: String?,
+        stored: String?,
+    ): Boolean = incoming != null && stored != null && incoming < stored
+
+    override fun getTracking(trackingCode: String): TrackingRecord? = tracking[trackingCode]
 
     override fun savePaymentSession(session: PaymentSession) {
         // Never regress a bought label back to null. A loser thread racing the

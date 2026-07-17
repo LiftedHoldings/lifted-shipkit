@@ -5,6 +5,7 @@ import com.lifted.shipkit.config.ShipKitConfig
 import com.lifted.shipkit.model.LabelRecord
 import com.lifted.shipkit.model.MarkupConfig
 import com.lifted.shipkit.model.PaymentSession
+import com.lifted.shipkit.model.TrackingRecord
 import com.lifted.shipkit.payments.LiftedPaymentsClient
 import com.lifted.shipkit.security.ApiKeyStore
 import com.lifted.shipkit.security.KeyGenerator
@@ -336,6 +337,14 @@ class Handlers(
      * trusting anything: `hmac-sha256-hex=` + hex HMAC-SHA256 over the RAW request
      * bytes, keyed by the NFKD-normalized webhook secret, compared in constant
      * time. An unverifiable or forged event is rejected — never processed.
+     *
+     * Once verified, a `tracker.*` event's latest state (status, status_detail,
+     * carrier, est_delivery_date, event timestamp) is persisted keyed by tracking
+     * code so `/api/tracking/{trackingCode}` can surface the current lifecycle. A
+     * malformed body or a non-tracking / unmatched event is a graceful no-op that
+     * still returns `200` (the provider treats any 2xx as delivered and will not
+     * retry); a persistence failure is NOT swallowed — it propagates to a `5xx` so
+     * EasyPost retries rather than silently dropping the event.
      */
     fun webhook(ctx: Context) {
         val secret =
@@ -349,13 +358,64 @@ class Handlers(
             fail(ctx, 401, "Invalid webhook signature")
             return
         }
+        // Parse defensively: a malformed body must not crash the endpoint (still
+        // 200, as the provider expects). A store failure inside persistTracking,
+        // however, deliberately propagates so the event is retried, not lost.
         runCatching { ctx.bodyMap() }.onSuccess { event ->
             log.info(
                 "Verified tracking webhook: {}",
                 event["description"] ?: event["object"] ?: "event",
             )
+            persistTracking(event)
         }
         ctx.status(200).result("Event received")
+    }
+
+    /**
+     * Persist the tracking state carried by a verified EasyPost tracker event. The
+     * Tracker object rides in the top-level `result`; a `tracking_code` is required
+     * to key the row. An event without one (a non-tracking event, or a payload that
+     * simply does not carry a tracker) is ignored — a safe no-op, not an error.
+     */
+    private fun persistTracking(event: Map<String, Any?>) {
+        @Suppress("UNCHECKED_CAST")
+        val result = event["result"] as? Map<String, Any?> ?: return
+        val trackingCode =
+            (result["tracking_code"] as? String)?.takeIf { it.isNotBlank() } ?: return
+        val record =
+            TrackingRecord(
+                trackingCode = trackingCode,
+                status = result["status"] as? String,
+                statusDetail = result["status_detail"] as? String,
+                carrier = result["carrier"] as? String,
+                estDeliveryDate = result["est_delivery_date"] as? String,
+                shipmentId = result["shipment_id"] as? String,
+                // Provider event timestamp: the tracker's own updated_at, else the
+                // envelope's created_at. Opaque ISO string, stored as-is.
+                eventAt = (result["updated_at"] as? String) ?: (event["created_at"] as? String),
+            )
+        store.saveTrackingUpdate(record)
+        log.info(
+            "Persisted tracking update {} status={} carrier={}",
+            trackingCode,
+            record.status,
+            record.carrier,
+        )
+    }
+
+    /**
+     * Report the latest stored carrier tracking state for a tracking code,
+     * persisted from verified EasyPost tracker webhooks. `404` when no event has
+     * been received yet. Secret-key only (not in the publishable allowlist) — a
+     * merchant read, not part of the browser widget flow.
+     */
+    fun getTracking(ctx: Context) {
+        val record = store.getTracking(ctx.pathParam("trackingCode"))
+        if (record != null) {
+            ctx.json(mapOf("success" to true, "tracking" to record.toMap()))
+        } else {
+            ctx.status(404).json(error("No tracking status recorded for this code yet"))
+        }
     }
 
     private fun hmacMatches(
@@ -1410,6 +1470,19 @@ class Handlers(
                 "profit" to profit,
             )
     }
+
+    /** snake_case tracking view for the `/api/tracking` read endpoint. */
+    private fun TrackingRecord.toMap(): Map<String, Any?> =
+        mapOf(
+            "tracking_code" to trackingCode,
+            "status" to status,
+            "status_detail" to statusDetail,
+            "carrier" to carrier,
+            "est_delivery_date" to estDeliveryDate,
+            "shipment_id" to shipmentId,
+            "event_at" to eventAt,
+            "updated_at" to updatedAt,
+        )
 
     private companion object {
         /** Statuses at which a payment session is considered finished. */

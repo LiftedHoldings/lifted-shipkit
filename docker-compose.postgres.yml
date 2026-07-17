@@ -1,0 +1,37 @@
+# ShipKit — Postgres override (local / self-host)
+# ---------------------------------------------------------------------------
+# Layer this on top of docker-compose.yml to actually run ShipKit on the
+# bundled PostgreSQL, with ONE command:
+#
+#   docker compose --profile postgres -f docker-compose.yml -f docker-compose.postgres.yml up --build
+#
+# Why an override file: the `postgres` profile in docker-compose.yml starts the
+# `db` service, but a profile CANNOT change the app service's environment — so
+# `docker compose --profile postgres up` alone boots Postgres while the app stays
+# on SHIPKIT_STORE=memory and silently ignores it. This override flips the app to
+# the Postgres store, points it at the bundled `db`, and waits for `db` to be
+# healthy before the app starts. `--profile postgres` activates `db`; the override
+# makes the app actually use it. Plain YAML — no custom tags, any Compose version.
+#
+# LOCAL ONLY: the bundled postgres:16 container has no TLS, so the JDBC URL below
+# uses sslmode=disable over the private Compose network. PRODUCTION must instead
+# point SHIPKIT_DATABASE_URL at a managed Postgres with sslmode=require (that is
+# the default in docker-compose.yml and .env.example) — never ship cleartext DB
+# traffic across a real network. The DB password defaults to `shipkit` on both
+# the app and the db service, so they match out of the box; override both by
+# exporting SHIPKIT_DB_PASSWORD (or setting it in .env).
+# ---------------------------------------------------------------------------
+
+services:
+  shipkit:
+    environment:
+      # Flip the app to the Postgres label store (the whole point of this file).
+      SHIPKIT_STORE: "postgres"
+      # Talk to the bundled `db` service over the private Compose network.
+      SHIPKIT_DATABASE_URL: "${SHIPKIT_DATABASE_URL:-jdbc:postgresql://db:5432/shipkit?sslmode=disable}"
+      SHIPKIT_DB_USER: "${SHIPKIT_DB_USER:-shipkit}"
+      SHIPKIT_DB_PASSWORD: "${SHIPKIT_DB_PASSWORD:-shipkit}"
+    # Don't start the app until Postgres passes its healthcheck.
+    depends_on:
+      db:
+        condition: service_healthy

@@ -100,8 +100,16 @@ Every `/api/*` route requires a `ShipKit-Api-Key` header, so mint a key before e
 widget — see [Authentication](authentication.md) for details. Prefer containers:
 
 ```bash
-docker compose up
+docker compose up                                                          # in-memory store (default)
 ```
+
+To run on the bundled PostgreSQL instead, layer the Postgres override — one command starts the database, waits for it to be healthy, and boots the app with `SHIPKIT_STORE=postgres`:
+
+```bash
+docker compose --profile postgres -f docker-compose.yml -f docker-compose.postgres.yml up --build
+```
+
+> A Compose *profile* alone can't do this: `docker compose --profile postgres up` starts Postgres but leaves the app on the in-memory store (a profile can't change another service's environment), so it silently ignores the database. The override flips the app's store env — that's why both the `--profile postgres` flag (starts the db) and the override file (points the app at it) are needed. For production, point `SHIPKIT_DATABASE_URL` at a managed Postgres with `sslmode=require` rather than the bundled container.
 
 ### 3. Embed the widget
 

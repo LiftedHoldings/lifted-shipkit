@@ -63,3 +63,6 @@ desktop.ini
 docker-compose.override.yml
 _reference/
 .eztk
+
+# Local agent worktrees / tooling
+.claude/

@@ -89,6 +89,7 @@ object PgTestSupport {
                     "shipkit_labels",
                     "shipkit_payment_sessions",
                     "shipkit_verification_sessions",
+                    "shipkit_tracking",
                     "shipkit_settings",
                     "shipkit_api_keys",
                 )

@@ -181,6 +181,9 @@ private fun registerRoutes(
     app.get("/api/label/session/{sessionId}") { h.getLabelBySession(it) }
     app.delete("/api/label/session/{sessionId}/shred") { h.shredLabel(it) }
 
+    // Tracking status (persisted from verified EasyPost tracker webhooks)
+    app.get("/api/tracking/{trackingCode}") { h.getTracking(it) }
+
     // Maintenance
     app.post("/api/admin/cleanup") { h.cleanupExpired(it) }
 

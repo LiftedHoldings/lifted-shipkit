@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.lifted.shipkit.model.LabelRecord
 import com.lifted.shipkit.model.MarkupConfig
 import com.lifted.shipkit.model.PaymentSession
+import com.lifted.shipkit.model.TrackingRecord
 import com.lifted.shipkit.model.VerificationSession
 import com.lifted.shipkit.util.PhoneNumbers
 import com.zaxxer.hikari.HikariConfig
@@ -138,6 +139,24 @@ class PostgresLabelStore(
                         expires_at TIMESTAMPTZ NOT NULL
                     )
                     """.trimIndent(),
+                )
+                stmt.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS shipkit_tracking (
+                        tracking_code TEXT PRIMARY KEY,
+                        status TEXT,
+                        status_detail TEXT,
+                        carrier TEXT,
+                        est_delivery_date TEXT,
+                        shipment_id TEXT,
+                        event_at TEXT,
+                        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                    )
+                    """.trimIndent(),
+                )
+                stmt.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_tracking_shipment " +
+                        "ON shipkit_tracking (shipment_id)",
                 )
                 stmt.execute(
                     """
@@ -320,6 +339,69 @@ class PostgresLabelStore(
             createdAt = getTimestamp("created_at")?.toInstant()?.toString(),
             expiresAt = getTimestamp("expires_at")?.toInstant()?.toString(),
         )
+
+    // ---- Tracking status -----------------------------------------------------
+
+    override fun saveTrackingUpdate(record: TrackingRecord) {
+        withConnection { conn ->
+            conn
+                .prepareStatement(
+                    """
+                    INSERT INTO shipkit_tracking
+                        (tracking_code, status, status_detail, carrier, est_delivery_date,
+                         shipment_id, event_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, now())
+                    ON CONFLICT (tracking_code) DO UPDATE SET
+                        status = EXCLUDED.status,
+                        status_detail = EXCLUDED.status_detail,
+                        carrier = EXCLUDED.carrier,
+                        est_delivery_date = EXCLUDED.est_delivery_date,
+                        -- Keep a known shipment id if a later event omits it.
+                        shipment_id =
+                            COALESCE(EXCLUDED.shipment_id, shipkit_tracking.shipment_id),
+                        event_at = EXCLUDED.event_at,
+                        updated_at = now()
+                    -- EasyPost retries/reorders events; ignore one strictly older than
+                    -- the stored one (by provider event time). A missing timestamp on
+                    -- either side can't be ordered, so it falls back to last-write-wins.
+                    WHERE EXCLUDED.event_at IS NULL
+                       OR shipkit_tracking.event_at IS NULL
+                       OR EXCLUDED.event_at >= shipkit_tracking.event_at
+                    """.trimIndent(),
+                ).use { stmt ->
+                    stmt.setString(1, record.trackingCode)
+                    stmt.setNullableString(2, record.status)
+                    stmt.setNullableString(3, record.statusDetail)
+                    stmt.setNullableString(4, record.carrier)
+                    stmt.setNullableString(5, record.estDeliveryDate)
+                    stmt.setNullableString(6, record.shipmentId)
+                    stmt.setNullableString(7, record.eventAt)
+                    stmt.executeUpdate()
+                }
+        }
+    }
+
+    override fun getTracking(trackingCode: String): TrackingRecord? =
+        withConnection { conn ->
+            conn
+                .prepareStatement("SELECT * FROM shipkit_tracking WHERE tracking_code = ?")
+                .use { stmt ->
+                    stmt.setString(1, trackingCode)
+                    stmt.executeQuery().use { rs ->
+                        if (!rs.next()) return@withConnection null
+                        TrackingRecord(
+                            trackingCode = rs.getString("tracking_code"),
+                            status = rs.getString("status"),
+                            statusDetail = rs.getString("status_detail"),
+                            carrier = rs.getString("carrier"),
+                            estDeliveryDate = rs.getString("est_delivery_date"),
+                            shipmentId = rs.getString("shipment_id"),
+                            eventAt = rs.getString("event_at"),
+                            updatedAt = rs.getTimestamp("updated_at")?.toInstant()?.toString(),
+                        )
+                    }
+                }
+        }
 
     // ---- Payment sessions ----------------------------------------------------
 

@@ -3,6 +3,7 @@ package com.lifted.shipkit.store
 import com.lifted.shipkit.model.LabelRecord
 import com.lifted.shipkit.model.MarkupConfig
 import com.lifted.shipkit.model.PaymentSession
+import com.lifted.shipkit.model.TrackingRecord
 import com.lifted.shipkit.model.VerificationSession
 
 /** Which persistence backend to use. */
@@ -48,6 +49,21 @@ interface LabelStore : AutoCloseable {
     fun deleteLabelBySession(sessionId: String): Boolean
 
     fun cleanupExpiredLabels(): Int
+
+    // Tracking status (persisted from signature-verified EasyPost tracker webhooks)
+
+    /**
+     * Upsert the carrier tracking state for [TrackingRecord.trackingCode].
+     * Idempotent keyed on the tracking code, so replaying the same webhook is safe.
+     * EasyPost delivers events out of order and retries old ones, so an event
+     * strictly older than the stored one (by provider event time) is ignored;
+     * otherwise the newest event wins. A missing event time falls back to
+     * last-write-wins.
+     */
+    fun saveTrackingUpdate(record: TrackingRecord)
+
+    /** The latest stored tracking state for [trackingCode], or `null` if none yet. */
+    fun getTracking(trackingCode: String): TrackingRecord?
 
     // Payment sessions
     fun savePaymentSession(session: PaymentSession)
