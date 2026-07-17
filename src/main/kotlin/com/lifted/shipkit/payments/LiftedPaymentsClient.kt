@@ -36,9 +36,9 @@ enum class PaymentsEnvironment {
  *    token; the server charges it with [LiftedPaymentsClient.sale] and forced
  *    3-D Secure. Card data never touches this page or the merchant's server.
  *  - [HOSTED_FORM]: the buyer is redirected to a Maverick-hosted payment page.
- *    PCI-reducing, but the exact hosted-form-creation endpoint lives only in
- *    Maverick's developer-portal SPA, so its path is a **config value** and
- *    marked UNVERIFIED (see [LiftedPaymentsConfig.hostedFormPath]).
+ *    PCI-reducing. The creation path defaults to the verified
+ *    [LiftedPaymentsConfig.DEFAULT_HOSTED_FORM_PATH] and remains
+ *    config-overridable (see [LiftedPaymentsConfig.hostedFormPath]).
  */
 enum class CardEntryMode {
     HOSTED_FIELDS,
@@ -82,7 +82,7 @@ enum class CardEntryMode {
  * @param cardEntryMode    Hosted Fields (primary) vs hosted form for browser entry.
  * @param gatewayBaseUrl   Processing host (safe, non-secret default per [environment]).
  * @param dashboardBaseUrl Hosted-assets / vault host (safe, non-secret default).
- * @param hostedFormPath   Hosted-form creation path — UNVERIFIED; see [hostedFormPath].
+ * @param hostedFormPath   Hosted-form creation path (verified default; overridable).
  * @param frictionlessAllowed Whether this deployment's account/tier is permitted to
  *                         run **frictionless** money paths — charge with `3ds:false`
  *                         and save/charge cards on file. **Account-gated, server-side
@@ -104,14 +104,12 @@ data class LiftedPaymentsConfig(
     val frictionlessAllowed: Boolean = false,
     /**
      * Hosted-form (hosted payment page) creation path on the dashboard host.
-     * The concrete endpoint is only documented in Maverick's developer-portal
-     * SPA (not machine-readable), so it is exposed here as a config value.
+     * [DEFAULT_HOSTED_FORM_PATH] is the verified default per the gateway
+     * contract; it stays a config value so a deployment can override it if its
+     * account is provisioned differently.
      *
-     * `// UNVERIFIED — confirm the exact hosted-form path in
-     * developers.maverickpayments.com when wiring the merchant account.`
-     *
-     * The Hosted Fields flow ([CardEntryMode.HOSTED_FIELDS]) is the primary,
-     * verified path and needs no hosted-form endpoint.
+     * The Hosted Fields flow ([CardEntryMode.HOSTED_FIELDS]) is the primary
+     * path and needs no hosted-form endpoint.
      */
     val hostedFormPath: String = DEFAULT_HOSTED_FORM_PATH,
 ) {
@@ -121,8 +119,8 @@ data class LiftedPaymentsConfig(
         const val SANDBOX_GATEWAY_BASE_URL = "https://sandbox-gateway.maverickpayments.com"
         const val SANDBOX_DASHBOARD_BASE_URL = "https://sandbox-dashboard.maverickpayments.com"
 
-        // UNVERIFIED — confirm the exact hosted-form path in
-        // developers.maverickpayments.com before enabling CardEntryMode.HOSTED_FORM.
+        // Verified default hosted-form creation path per the gateway contract;
+        // overridable via LiftedPaymentsConfig.hostedFormPath.
         const val DEFAULT_HOSTED_FORM_PATH = "/api/gateway/hosted-form"
 
         /** Live vs sandbox gateway (processing) base for [environment]. */
@@ -243,10 +241,19 @@ data class PaymentVerification(
  * **3-D Secure required**. It speaks the real Maverick contract:
  *
  *  - Charge:  `POST /payment/sale`  `{terminal:{id}, amount, card:{token}, "3ds":true, billing}`
- *  - Capture: `POST /payment/{id}/capture` `{terminal:{id}[, partial:{amount}]}`
+ *  - Capture: `POST /payment/{id}/capture` `{terminal:{id}[, amount][, partial:{sequence,total}]}`
  *  - Refund:  `POST /payment/{id}/refund`  `{terminal:{id}[, amount]}` (Maverick has NO /void)
  *  - Get:     `GET  /payment/{id}`
+ *  - Lookup:  `GET  /payments?filter[externalId]=...` (list envelope `{items,_meta}`)
  *  - Bearer auth on every call; every money call carries `terminal.id`.
+ *
+ * Gateway-contract notes for integrators:
+ *  - A decline surfaces as **HTTP 422 with no transaction id** — record your own
+ *    attempt row keyed by `externalId` *before* charging, or a declined attempt
+ *    leaves no trace to reconcile against.
+ *  - A repeat same-card + same-amount attempt may 422 as **duplicate-suspected**;
+ *    resolve the prior attempt via the `externalId` lookup ([verifyPayment])
+ *    before re-charging.
  *
  * The gateway authenticates the cardholder (biometric / OTP / risk-based) before
  * authorization, which shifts fraud chargeback liability to the issuer and lifts
@@ -348,22 +355,48 @@ class LiftedPaymentsClient(
     }
 
     /**
-     * Capture a previously authorized transaction — `POST /payment/{id}/capture`
-     * `{terminal:{id}}`. A partial capture (an [amount] below the original auth)
-     * is expressed as a `partial:{amount}` object per the gateway spec; a full
-     * capture sends no amount. The transaction is already 3-D Secure authenticated
+     * Capture a previously authorized transaction — `POST /payment/{id}/capture`.
+     * Per the gateway contract:
+     *
+     *  - Full capture: `{terminal:{id}}` — no amount field at all ([amount] null).
+     *  - Partial capture: a **top-level** `amount` below the original auth —
+     *    `{terminal:{id}, amount}`.
+     *  - Multi-partial (split-shipment) capture: the top-level `amount` **plus**
+     *    `partial:{sequence,total}`, where [sequence] is which capture this is
+     *    (1-based) out of [total] planned captures.
+     *
+     * [sequence] and [total] must be given together, with `sequence in 1..total`,
+     * and require an [amount]. The transaction is already 3-D Secure authenticated
      * from the sale, so approval here is not shift-gated.
      */
     @Throws(IOException::class)
     fun capture(
         transactionId: String,
         amount: BigDecimal? = null,
+        sequence: Int? = null,
+        total: Int? = null,
     ): GatewayResult {
         val id = requireTxnId(transactionId)
+        if ((sequence == null) != (total == null)) {
+            throw IOException("capture sequence and total must be supplied together")
+        }
+        if (sequence != null && total != null) {
+            if (amount == null) {
+                throw IOException("a multi-partial capture requires an amount")
+            }
+            if (total < 1 || sequence !in 1..total) {
+                throw IOException("capture sequence must be within 1..total")
+            }
+        }
         val body =
             buildMap<String, Any?> {
                 put("terminal", mapOf("id" to config.terminalId))
-                amount?.let { put("partial", mapOf("amount" to amount2dp(it))) }
+                // Partial capture = TOP-LEVEL amount; a full capture sends none.
+                amount?.let { put("amount", amount2dp(it)) }
+                // Multi-partial (split-shipment) captures also declare their slot.
+                if (sequence != null && total != null) {
+                    put("partial", mapOf("sequence" to sequence, "total" to total))
+                }
             }
         val json = postJson("${config.gatewayBaseUrl}/payment/$id/capture", body)
         return toGatewayResult(json, requireShift = false)
@@ -647,7 +680,7 @@ class LiftedPaymentsClient(
         }
     }
 
-    // ---- Hosted form (config-driven; exact path UNVERIFIED) ------------------
+    // ---- Hosted form (verified default path; config-overridable) -------------
 
     /**
      * Create a **hosted 3-D Secure payment form** for [amount] and return its URL
@@ -656,10 +689,11 @@ class LiftedPaymentsClient(
      *
      * 3-D Secure is requested `Required` unconditionally — there is no flag to
      * disable it. The creation path is [LiftedPaymentsConfig.hostedFormPath],
-     * which is a **config value** because the exact endpoint is documented only in
-     * Maverick's developer-portal SPA (marked UNVERIFIED). The primary integration
-     * is Hosted Fields ([hostedFieldsToken] + [sale]); this path exists for
-     * deployments that prefer a redirect model.
+     * whose default ([LiftedPaymentsConfig.DEFAULT_HOSTED_FORM_PATH]) is verified
+     * against the gateway contract and stays overridable for differently
+     * provisioned accounts. The primary integration is Hosted Fields
+     * ([hostedFieldsToken] + [sale]); this path exists for deployments that
+     * prefer a redirect model.
      *
      * @param amount     server-computed charge amount in dollars.
      * @param externalId caller-supplied idempotency/reference id for the charge
@@ -695,8 +729,8 @@ class LiftedPaymentsClient(
         val request =
             Request
                 .Builder()
-                // Hosted assets live on the dashboard host; the path is config-driven
-                // (UNVERIFIED — confirm in developers.maverickpayments.com).
+                // Hosted assets live on the dashboard host; the path defaults to
+                // the verified hosted-form endpoint and is config-overridable.
                 .url("${config.dashboardBaseUrl}${config.hostedFormPath}")
                 .header("Authorization", "Bearer ${config.bearerToken}")
                 .post(gson.toJson(payload).toRequestBody(jsonMedia))
@@ -706,7 +740,15 @@ class LiftedPaymentsClient(
             val body = response.body?.string().orEmpty()
             if (!response.isSuccessful) {
                 log.warn("Lifted Payments hosted-form request failed (HTTP {})", response.code)
-                throw IOException("Failed to create hosted payment form (HTTP ${response.code})")
+                // Surface the gateway's own {name,message,code,status} reason.
+                val reason =
+                    (parseJsonObject(body)?.get("message") as? String)
+                        ?.trim()
+                        ?.takeIf { it.isNotEmpty() }
+                throw IOException(
+                    "Failed to create hosted payment form (HTTP ${response.code})" +
+                        (reason?.let { ": $it" } ?: ""),
+                )
             }
 
             val json =
@@ -723,27 +765,39 @@ class LiftedPaymentsClient(
 
     /**
      * Verify a charge **server-side** by looking the transaction up on the
-     * processing host by its [externalId]. Used by the hosted-form flow, where the
+     * processing host by its [externalId] —
+     * `GET /payments?filter[externalId]=...` (Bearer merchant token; the brackets
+     * and value are URL-encoded). Used by the hosted-form flow, where the
      * transaction id is not known up front. The only trusted source of payment
      * truth: return-URL query params are attacker-controllable and are never used
      * to decide whether a label may be bought. (Hosted Fields sales verify by
      * transaction id via [getPayment].)
+     *
+     * The reply is the standard list envelope `{items, _meta:{totalCount,...}}`.
+     * `_meta.totalCount` MUST be exactly 1 before the item is trusted: per the
+     * gateway contract a missing/malformed filter param silently returns the FULL
+     * unfiltered transaction list, so any other count — zero, many, or absent —
+     * maps to `pending` (not-found semantics), never to "take the first item".
      *
      * Returns a [PaymentVerification]; a transaction not yet present (the
      * cardholder has not finished the hosted flow) maps to `pending`.
      */
     @Throws(IOException::class)
     fun verifyPayment(externalId: String): PaymentVerification {
-        // URL-encode the reference before it goes on the query string. The id is
-        // server-generated today (so this is defense-in-depth), but a lookup key
-        // must never be able to smuggle extra query params or a filter operator.
-        val encodedId = java.net.URLEncoder.encode(externalId, Charsets.UTF_8.name())
+        // URL-encode the filter key (its brackets) and the reference value. The id
+        // is server-generated today (so this is defense-in-depth), but a lookup
+        // key must never be able to smuggle extra query params or a filter
+        // operator — and an unencoded/malformed filter degrades to the FULL
+        // unfiltered list on the gateway side.
+        val charset = Charsets.UTF_8.name()
+        val encodedKey = java.net.URLEncoder.encode("filter[externalId]", charset)
+        val encodedId = java.net.URLEncoder.encode(externalId, charset)
         val request =
             Request
                 .Builder()
                 // Processing/transaction data lives on the gateway host. externalId
                 // is a filterable field on the transaction list endpoint.
-                .url("${config.gatewayBaseUrl}/api/transaction?externalId=$encodedId")
+                .url("${config.gatewayBaseUrl}/payments?$encodedKey=$encodedId")
                 .header("Authorization", "Bearer ${config.bearerToken}")
                 .get()
                 .build()
@@ -754,13 +808,15 @@ class LiftedPaymentsClient(
                 log.warn("Lifted Payments transaction lookup failed (HTTP {})", response.code)
                 throw IOException("Failed to verify payment (HTTP ${response.code})")
             }
-            val txn = firstTransaction(body) ?: return PaymentVerification(status = "pending")
-            // Exact-match guard: the transaction-list filter may be a prefix/`-like`
-            // match, so confirm the returned record actually carries OUR externalId
-            // before trusting it. A mismatch means the gateway returned someone
-            // else's txn — treat it as not-yet-present.
+            val txn =
+                singleFilteredTransaction(body) ?: return PaymentVerification(status = "pending")
+            // Exact-match guard (defense-in-depth beneath the totalCount check):
+            // the returned record must POSITIVELY carry our externalId — any
+            // record matched by a working filter necessarily does. A mismatch or
+            // a missing field means this is not our txn — treat it as
+            // not-yet-present.
             val returnedId = (txn["externalId"] as? String)?.trim()
-            if (!returnedId.isNullOrEmpty() && returnedId != externalId) {
+            if (returnedId != externalId) {
                 log.warn("Transaction externalId mismatch on lookup; ignoring the returned record")
                 return PaymentVerification(status = "pending")
             }
@@ -768,15 +824,31 @@ class LiftedPaymentsClient(
         }
     }
 
-    /** Extract the first transaction from either a list envelope or a bare object. */
-    private fun firstTransaction(body: String): Map<*, *>? {
+    /**
+     * Extract THE transaction from a filtered list envelope, or `null` (pending
+     * semantics) unless the envelope proves the filter applied:
+     * `_meta.totalCount == 1` and exactly one item. Anything else — including a
+     * multi-item reply, which is the signature of the gateway ignoring a
+     * missing/malformed filter and returning the full unfiltered list — is never
+     * trusted.
+     */
+    private fun singleFilteredTransaction(body: String): Map<*, *>? {
         val json = parseJsonObject(body) ?: return null
-        val items = json["items"] as? List<*>
-        return when {
-            items != null -> items.firstOrNull() as? Map<*, *>
-            json.containsKey("status") || json.containsKey("id") -> json
-            else -> null
+        val meta = json["_meta"] as? Map<*, *> ?: return null
+        val totalCount = (meta["totalCount"] as? Number)?.toInt() ?: return null
+        val items = (json["items"] as? List<*>).orEmpty()
+        if (totalCount != 1 || items.size != 1) {
+            if (totalCount > 1 || items.size > 1) {
+                log.warn(
+                    "Transaction lookup returned {} records (items={}) — filter did not " +
+                        "apply; refusing to trust the list",
+                    totalCount,
+                    items.size,
+                )
+            }
+            return null
         }
+        return items[0] as? Map<*, *>
     }
 
     /**
@@ -927,7 +999,17 @@ class LiftedPaymentsClient(
                     url.substringAfterLast('/'),
                     response.code,
                 )
-                throw IOException("Lifted Payments gateway error (HTTP ${response.code})")
+                // Error replies carry a {name,message,code,status} envelope; surface
+                // the gateway's own `message` (e.g. a 422 decline/duplicate reason)
+                // so callers see WHY, not just the status code.
+                val reason =
+                    (parseJsonObject(raw)?.get("message") as? String)
+                        ?.trim()
+                        ?.takeIf { it.isNotEmpty() }
+                throw IOException(
+                    "Lifted Payments gateway error (HTTP ${response.code})" +
+                        (reason?.let { ": $it" } ?: ""),
+                )
             }
             return parseJsonObject(raw)
                 ?: throw IOException("Invalid JSON response from Lifted Payments gateway")
