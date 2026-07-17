@@ -1,6 +1,7 @@
 package com.lifted.shipkit
 
 import com.lifted.shipkit.config.ShipKitConfig
+import com.lifted.shipkit.events.UsageEventEmitter
 import com.lifted.shipkit.http.ApiKeyRejected
 import com.lifted.shipkit.http.Handlers
 import com.lifted.shipkit.payments.LiftedPaymentsClient
@@ -29,24 +30,27 @@ fun main() {
     val easyPost = config.easyPostApiKey?.let { EasyPostService(it) }
     val payments = config.payments?.let { LiftedPaymentsClient(it) }
     val sms = SmsVerifier.create(config.sms)
-    val handlers = Handlers(config, store, easyPost, payments, sms, apiKeys)
+    val events = UsageEventEmitter(config.usageEvents)
+    val handlers = Handlers(config, store, easyPost, payments, sms, apiKeys, events)
 
     val app = buildApp(config, handlers).start(config.port)
 
     Runtime.getRuntime().addShutdownHook(
         Thread {
+            events.close()
             store.close()
             apiKeys.close()
         },
     )
 
     log.info(
-        "ShipKit started on port {} (shipping={}, payments={}, sms={}, store={})",
+        "ShipKit started on port {} (shipping={}, payments={}, sms={}, store={}, events={})",
         config.port,
         if (config.shippingEnabled) "on" else "off",
         if (config.paymentsEnabled) "on" else "off",
         if (sms.enabled) "on" else "off",
         config.storeBackend,
+        if (events.enabled) "on" else "off",
     )
 }
 

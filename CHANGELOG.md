@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Managed-deployment hooks** — two optional, env-driven features for operators
+  hosting ShipKit instances from a control plane; both OFF by default:
+  - **Remote markup config**: `POST /api/config/markup` now also accepts a
+    `{markup_pct, fixed_fee, card_fee_pct?}` percent-and-dollars body (bounds:
+    0–100% / $0–$1000; `card_fee_pct` validated + echoed, not persisted) and,
+    when `SHIPKIT_MANAGED_CONFIG_TOKEN` is set, an
+    `Authorization: Bearer <token>` alternative to the `sk_` key — constant-time
+    compare, scoped to that single endpoint, disabled (fail closed) when the
+    variable is unset.
+  - **Usage-event webhook** (`events/UsageEvents.kt`): when
+    `SHIPKIT_EVENTS_WEBHOOK_URL` is set, every successful label purchase — the
+    3-D Secure session path and the saved-card path — POSTs a `label.purchased`
+    v1 envelope (money in integer cents; tenant identified by the caller's
+    non-secret key prefix; no card data) with an optional
+    `Authorization: Bearer $SHIPKIT_EVENTS_WEBHOOK_TOKEN`. Fire-and-forget on a
+    background daemon thread with one retry; can never block or fail a
+    purchase. Documented in `.env.example` and the README managed section.
+
 - **Framework examples** in `src/main/resources/public/examples/`: Next.js
   (App Router, via `next/script`), Svelte, React + TypeScript (`ShipWidget.tsx`),
   a managed-CDN page (`cdn.html`), and a server-side Node/Express example

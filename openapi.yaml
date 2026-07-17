@@ -601,20 +601,76 @@ paths:
     post:
       tags: [Configuration]
       summary: Update the merchant markup.
+      description: |
+        Accepts either body shape; both land in the same stored markup:
+
+        - **Native** — `{percentage_markup, fixed_fee_cents}`, the shape the
+          `GET` reports.
+        - **Managed** — `{markup_pct, fixed_fee, card_fee_pct?}` as percent +
+          **dollars**, the shape a hosting control plane typically holds.
+          Bounds: `markup_pct` 0–100, `fixed_fee` $0–$1000. The optional
+          `card_fee_pct` (0–100, accepted with either shape) is validated and
+          echoed for forward compatibility but **not persisted** — the buyer
+          card surcharge is a fixed, environment-driven toggle
+          (`SHIPKIT_SURCHARGE_ENABLED`). Mixing the two shapes in one body is
+          rejected with `400`.
+
+        Authenticate with a secret `sk_…` key, **or** — when the deployment sets
+        `SHIPKIT_MANAGED_CONFIG_TOKEN` — with that value as a bearer token
+        (`Authorization: Bearer <token>`). The bearer alternative is scoped to
+        this endpoint only and is disabled (fail closed) when the variable is
+        unset.
       operationId: updateMarkup
+      security:
+        - ShipKitApiKey: []
+        - ManagedConfigToken: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [percentage_markup, fixed_fee_cents]
-              properties:
-                percentage_markup: { type: number, examples: [12.0] }
-                fixed_fee_cents: { type: integer, examples: [50] }
+              oneOf:
+                - type: object
+                  title: Native
+                  required: [percentage_markup, fixed_fee_cents]
+                  properties:
+                    percentage_markup: { type: number, examples: [12.0] }
+                    fixed_fee_cents: { type: integer, examples: [50] }
+                    card_fee_pct:
+                      type: number
+                      minimum: 0
+                      maximum: 100
+                      description: Optional; validated and echoed; not persisted.
+                - type: object
+                  title: Managed
+                  required: [markup_pct, fixed_fee]
+                  properties:
+                    markup_pct:
+                      type: number
+                      minimum: 0
+                      maximum: 100
+                      description: Percentage markup on the carrier rate.
+                      examples: [10.0]
+                    fixed_fee:
+                      type: number
+                      minimum: 0
+                      maximum: 1000
+                      description: Flat add-on in **dollars** (stored as cents).
+                      examples: [0.75]
+                    card_fee_pct:
+                      type: number
+                      minimum: 0
+                      maximum: 100
+                      description: Validated and echoed; not persisted.
+                      examples: [3.75]
+            examples:
+              native:
+                value: { percentage_markup: 12.0, fixed_fee_cents: 50 }
+              managed:
+                value: { markup_pct: 10.0, fixed_fee: 0.75, card_fee_pct: 3.75 }
       responses:
         "200":
-          description: The updated markup.
+          description: The updated markup (always reported in the native shape).
           content:
             application/json:
               schema: { type: object, additionalProperties: true }
@@ -812,6 +868,15 @@ components:
       description: |
         A ShipKit API key (`sk_live_…` or `sk_test_…`). Required on every `/api/*`
         route except `GET /api/health` and the HMAC-verified EasyPost webhook.
+    ManagedConfigToken:
+      type: http
+      scheme: bearer
+      description: |
+        Optional managed-deployment alternative, valid **only** on
+        `POST /api/config/markup`: the `SHIPKIT_MANAGED_CONFIG_TOKEN` environment
+        value, sent as `Authorization: Bearer <token>` and compared in constant
+        time. When the environment variable is unset this scheme is disabled
+        (fail closed) and the endpoint requires a secret API key.
 
   parameters:
     SessionIdCamel:
