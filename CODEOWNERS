@@ -5,25 +5,25 @@
 # Listed owners are requested for review automatically on matching changes.
 
 # Default owner for everything in the repo.
-*                           @Lifted-Holdings/maintainers
+*                           @LiftedHoldings/maintainers
 
 # Build, CI, and tooling.
-/.github/                   @Lifted-Holdings/maintainers
-/build.gradle.kts           @Lifted-Holdings/maintainers
-/settings.gradle.kts        @Lifted-Holdings/maintainers
-/Dockerfile                 @Lifted-Holdings/maintainers
-/docker-compose.yml         @Lifted-Holdings/maintainers
+/.github/                   @LiftedHoldings/maintainers
+/build.gradle.kts           @LiftedHoldings/maintainers
+/settings.gradle.kts        @LiftedHoldings/maintainers
+/Dockerfile                 @LiftedHoldings/maintainers
+/docker-compose.yml         @LiftedHoldings/maintainers
 
 # Backend service.
-/src/main/kotlin/           @Lifted-Holdings/maintainers
+/src/main/kotlin/           @LiftedHoldings/maintainers
 
 # Payments layer — reviewed by the payments team.
-/src/main/kotlin/com/lifted/shipkit/payments/   @Lifted-Holdings/payments
+/src/main/kotlin/com/lifted/shipkit/payments/   @LiftedHoldings/payments
 
 # Frontend widget and demo.
-/src/main/resources/public/ @Lifted-Holdings/maintainers
-/demo/                      @Lifted-Holdings/maintainers
+/src/main/resources/public/ @LiftedHoldings/maintainers
+/demo/                      @LiftedHoldings/maintainers
 
 # Documentation.
-/docs/                      @Lifted-Holdings/maintainers
-*.md                        @Lifted-Holdings/maintainers
+/docs/                      @LiftedHoldings/maintainers
+*.md                        @LiftedHoldings/maintainers

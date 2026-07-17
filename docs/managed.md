@@ -64,7 +64,7 @@ The managed key is a **publishable** `pk_live_…` key — safe to embed in page
 the backend confines it to the customer flow (it returns `403` on any secret-only action).
 The `integrity` and `crossorigin` attributes pin the script to a published, verified build.
 Copy the exact Subresource Integrity hash for your version from the
-[releases page](https://github.com/Lifted-Holdings/shipkit/releases).
+[releases page](https://github.com/LiftedHoldings/lifted-shipkit/releases).
 
 > **Placeholders:** the CDN host and `integrity` hash shown here are placeholders until the
 > first published release. A browser refuses to run a script whose SRI hash doesn't match, so

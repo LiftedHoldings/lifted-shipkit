@@ -99,5 +99,5 @@ Lifted Payments 3-D Secure.
 - Continuous integration: `./gradlew build` (build + tests) on every push and
   pull request.
 
-[Unreleased]: https://github.com/Lifted-Holdings/shipkit/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/Lifted-Holdings/shipkit/releases/tag/v1.0.0
+[Unreleased]: https://github.com/LiftedHoldings/lifted-shipkit/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/LiftedHoldings/lifted-shipkit/releases/tag/v1.0.0

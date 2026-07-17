@@ -1,0 +1,44 @@
+# Keep the build context small and reproducible. The Dockerfile runs the full
+# Gradle shadowJar build inside the image, so only source + build config are
+# needed — everything below is either regenerated, host-specific, or irrelevant.
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Gradle / build outputs (rebuilt inside the image)
+.gradle
+build
+**/build
+.kotlin
+
+# Node / JS test tooling (not used by the container build)
+node_modules
+package-lock.json
+
+# Test + CI artifacts
+artifacts
+test-results
+playwright-report
+
+# Local reference material and docs
+_reference
+docs
+
+# IDE / editor
+.idea
+*.iml
+.vscode
+
+# Local env and container config (never bake secrets into the image)
+.env
+.env.*
+!.env.example
+docker-compose.yml
+.dockerignore
+Dockerfile
+
+# OS cruft
+.DS_Store
+Thumbs.db

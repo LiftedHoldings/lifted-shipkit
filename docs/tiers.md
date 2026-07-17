@@ -19,7 +19,7 @@ happens without an authenticated, liability-shifted result.
 | Dev effort | Highest | Low — apply, plug in keys | Lowest — one tag |
 | **Cost** | **Free** (MIT) | **3.75% + $0.15 / transaction + $25 / month** — the merchant account only¹ | **Free** — we earn on the shipping rate² |
 | Best for | Full control | Our processing, your choice of host | "Just make it work" |
-| Get started | [GitHub](https://github.com/Lifted-Holdings/shipkit) | [Apply →](https://liftedholdings.com/payments) | [Create free account →](https://liftedholdings.com/shipkit/start) |
+| Get started | [GitHub](https://github.com/LiftedHoldings/lifted-shipkit) | [Apply →](https://liftedholdings.com/payments) | [Create free account →](https://liftedholdings.com/shipkit/start) |
 
 ¹ Surchargeable — see [Tier 2](#tier-2--lifted-3-d-secure-merchant-account) below.
 ² Configurable shipping-rate markup — see [Tier 3](#tier-3--fully-managed-plug--play) below.
@@ -37,7 +37,7 @@ account. You get full control of every layer — and you do the most work.
 - **You run:** the backend, the database (optional), and the deployment.
 
 ```bash
-git clone https://github.com/Lifted-Holdings/shipkit.git
+git clone https://github.com/LiftedHoldings/lifted-shipkit.git
 cd shipkit
 cp .env.example .env      # add EASYPOST_API_KEY + your own Lifted Payments 3DS keys
 ./gradlew run
@@ -45,7 +45,7 @@ cp .env.example .env      # add EASYPOST_API_KEY + your own Lifted Payments 3DS 
 
 Full walkthrough: **[quickstart.md](quickstart.md)**.
 
-> **Get started:** [GitHub](https://github.com/Lifted-Holdings/shipkit) · need a hand?
+> **Get started:** [GitHub](https://github.com/LiftedHoldings/lifted-shipkit) · need a hand?
 > [support@liftedholdings.com](mailto:support@liftedholdings.com).
 
 ---

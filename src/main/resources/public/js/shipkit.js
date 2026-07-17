@@ -25,7 +25,7 @@
  * handler)` (events: quote|purchase|error) and `.destroy()`.
  *
  * License: MIT © 2026 Daniel Wilson Kemp / Lifted Holdings.
- * Docs: https://github.com/Lifted-Holdings/shipkit  ·  support@liftedholdings.com
+ * Docs: https://github.com/LiftedHoldings/lifted-shipkit  ·  support@liftedholdings.com
  */
 (function (root, factory) {
   'use strict';

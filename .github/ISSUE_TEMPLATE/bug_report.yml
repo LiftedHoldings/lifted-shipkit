@@ -12,7 +12,7 @@ body:
         **Do not include secrets.** Never paste API keys, tokens, merchant IDs,
         database credentials, or `.env` contents. For security vulnerabilities,
         do not open an issue — follow our
-        [Security Policy](https://github.com/Lifted-Holdings/shipkit/blob/main/SECURITY.md).
+        [Security Policy](https://github.com/LiftedHoldings/lifted-shipkit/blob/main/SECURITY.md).
 
   - type: checkboxes
     id: preflight

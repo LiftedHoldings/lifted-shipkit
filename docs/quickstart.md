@@ -9,7 +9,7 @@ Want to see the whole flow before you configure anything? Open the
 no external calls. Clone (or download) the repo and open it in a browser:
 
 ```bash
-git clone https://github.com/Lifted-Holdings/shipkit.git
+git clone https://github.com/LiftedHoldings/lifted-shipkit.git
 # then just open demo/index.html — double-click it, or:
 #   macOS:   open   demo/index.html
 #   Linux:   xdg-open demo/index.html
@@ -23,7 +23,27 @@ labels, pick a path below.
 
 ---
 
+## One-command demo (Docker)
+
+Already have Docker and just want the server up? Pull and run the published image — no clone, no JDK, no build:
+
+```bash
+docker run --rm -e SHIPKIT_PORT=8080 -p 8080:8080 ghcr.io/liftedholdings/lifted-shipkit
+```
+
+Then open **http://localhost:8080**. CI builds and pushes this image to the GitHub Container Registry (`ghcr.io/liftedholdings/lifted-shipkit`) on every release tag and every push to `main`, tagged `latest`, `sha-<commit>`, and the semver of tagged releases. It comes up with the widget and demo pages served immediately; shipping and payments respond `503` until you pass real credentials (`-e EASYPOST_API_KEY=…`, `-e LIFTED_PAYMENTS_BEARER=…`, etc. — the same variables as the [self-host env table](#1-clone-and-configure)).
+
+> **Make the package public after the first CI publish.** GitHub Container Registry packages are **private by default**, so an anonymous `docker pull` (and the command above) will fail with `denied`/`unauthorized` until a maintainer flips the package to public. This is a **one-time** step, done once after the first successful `docker-publish` workflow run:
+>
+> 1. Open the repo on GitHub → **Packages** (right sidebar) → the **`shipkit`** container package.
+> 2. **Package settings** → **Danger Zone** → **Change visibility** → **Public** → confirm.
+>
+> After that, `docker pull ghcr.io/liftedholdings/lifted-shipkit` works for anyone with no login. Until then, an authenticated pull still works: `echo $GITHUB_TOKEN | docker login ghcr.io -u <your-username> --password-stdin`.
+
+---
+
 - [Try it now — no keys](#try-it-now--no-keys-no-account)
+- [One-command demo (Docker)](#one-command-demo-docker)
 - [Self-host (free, MIT)](#self-host-free-mit)
 - [Managed (plug-and-play)](#managed-plug-and-play)
 - [Verify it works](#verify-it-works)
@@ -44,7 +64,7 @@ Run the Kotlin backend on your own infrastructure. You bring an EasyPost key and
 ### 1. Clone and configure
 
 ```bash
-git clone https://github.com/Lifted-Holdings/shipkit.git
+git clone https://github.com/LiftedHoldings/lifted-shipkit.git
 cd shipkit
 cp .env.example .env
 ```
@@ -129,7 +149,7 @@ No backend, no API keys, no PCI scope. Lifted runs the infrastructure and paymen
   data-managed-key="pk_live_your_publishable_key"></script>
 ```
 
-The `integrity` and `crossorigin` attributes pin the script to a published, verified build. Copy the exact Subresource Integrity hash for your version from the [releases page](https://github.com/Lifted-Holdings/shipkit/releases).
+The `integrity` and `crossorigin` attributes pin the script to a published, verified build. Copy the exact Subresource Integrity hash for your version from the [releases page](https://github.com/LiftedHoldings/lifted-shipkit/releases).
 
 > **Placeholders:** the CDN host and `integrity` hash above are placeholders until the first published release. A browser will not run a script whose SRI hash doesn't match, so the tag stays inert until you drop in the real host and hash from your managed account. That is expected before launch — not an error on your end.
 

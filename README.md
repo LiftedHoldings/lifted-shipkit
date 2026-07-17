@@ -8,11 +8,11 @@
 
 Add multi-carrier shipping-label buying to any store, with card payment locked down by mandatory 3-D Secure — because shipping is where card fraud goes to cash out. Free, MIT, production-grade.
 
-[![ShipKit drop-in widget — live multi-carrier rate compare and a 3-D Secure card payment step](docs/images/demo-selfcontained.png)](https://liftedholdings.com/shippingtool)
+<a href="https://liftedholdings.com/shippingtool"><img src="docs/images/demo.gif" alt="Lifted ShipKit — compare multi-carrier rates, pay with a 3-D Secure card step, and buy a shipping label" width="100%"></a>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-2E6BFF.svg)](LICENSE)
-[![CI](https://github.com/Lifted-Holdings/shipkit/actions/workflows/ci.yml/badge.svg)](https://github.com/Lifted-Holdings/shipkit/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/Lifted-Holdings/shipkit/branch/main/graph/badge.svg)](https://codecov.io/gh/Lifted-Holdings/shipkit)
+[![CI](https://github.com/LiftedHoldings/lifted-shipkit/actions/workflows/ci.yml/badge.svg)](https://github.com/LiftedHoldings/lifted-shipkit/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/LiftedHoldings/lifted-shipkit/branch/main/graph/badge.svg)](https://codecov.io/gh/LiftedHoldings/lifted-shipkit)
 [![Version](https://img.shields.io/badge/version-1.0.0-2E6BFF.svg)](CHANGELOG.md)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-00E18C.svg)](CONTRIBUTING.md)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-2E6BFF.svg)](build.gradle.kts)
@@ -75,7 +75,7 @@ ShipKit comes in three tiers — pick how much you want to run yourself. All thr
 | PCI scope for card data | Yours | Out of scope (hosted 3DS form) | Out of scope (hosted 3DS form) |
 | Cost | **Free** (MIT) | **3.75% + $0.15 / transaction + $25 / month** — the merchant account only¹ | **Free** — we earn on the shipping rate² |
 | Best for | Full control, heaviest dev work | Our processing, your choice of host | "Just make it work" |
-| Get started | [GitHub](https://github.com/Lifted-Holdings/shipkit) · [support@](mailto:support@liftedholdings.com) | [Apply → liftedholdings.com/payments](https://liftedholdings.com/payments) | [Create free account → get the JS](https://liftedholdings.com/shipkit/start) |
+| Get started | [GitHub](https://github.com/LiftedHoldings/lifted-shipkit) · [support@](mailto:support@liftedholdings.com) | [Apply → liftedholdings.com/payments](https://liftedholdings.com/payments) | [Create free account → get the JS](https://liftedholdings.com/shipkit/start) |
 
 ¹ The **3.75% + 15¢** processing cost can be **surcharged to the buyer** with a built-in surcharge-framework toggle, so the per-transaction fee lands on the cardholder rather than on you. The **$25/month** is the standard merchant-account fee.
 ² **Managed** needs **no merchant-account application** — you just create a free account (name, email, company) and instantly get your plug-and-play JS snippet and managed key. It runs on our 3DS account and our EasyPost with free hosting; we make our margin on a **configurable markup over the carrier's shipping rate** (set via `POST /api/config/markup`), shown at checkout before the buyer pays. Carrier rates, the code, the widget, and self-hosting stay free.
@@ -92,10 +92,22 @@ Want ShipKit woven into your own framework, or a bespoke build on top of it? We 
 
 ## 60-second Quickstart
 
+### One-command demo (Docker)
+
+Already have Docker? Pull and run the published image — no clone, no build:
+
+```bash
+docker run --rm -e SHIPKIT_PORT=8080 -p 8080:8080 ghcr.io/liftedholdings/lifted-shipkit
+```
+
+Then open **http://localhost:8080**. The image is built and pushed to the GitHub Container Registry by CI on each release (and every push to `main`). Shipping and payment features stay in `503` until you supply an EasyPost key and Lifted Payments 3DS credentials as `-e` vars — see the self-host env table below — but the widget and demo pages come up immediately.
+
+> **First publish:** GHCR packages default to private. After the first CI publish, set the `shipkit` package to **Public** in the repo's package settings so `docker pull` works without a login. One-time step — see [docs/quickstart.md](docs/quickstart.md#one-command-demo-docker).
+
 ### Self-host (free, MIT)
 
 ```bash
-git clone https://github.com/Lifted-Holdings/shipkit.git
+git clone https://github.com/LiftedHoldings/lifted-shipkit.git
 cd shipkit
 cp .env.example .env                     # fill in EASYPOST_API_KEY + your Lifted Payments 3DS keys
 ./gradlew build                          # Kotlin 2.0.21, JVM 17
@@ -134,7 +146,7 @@ No application, no infra — [create a free account](https://liftedholdings.com/
 
 That's the whole integration — the widget routes rates, labels, and 3-D Secure card payment through the managed Lifted endpoint. [Create your free account → get the JS](https://liftedholdings.com/shipkit/start)
 
-> **Placeholders:** the CDN host and the `integrity` hash above are placeholders until the first published release. A browser refuses to run a script whose SRI hash doesn't match, so the tag stays inert until you drop in the real values — get the live host and hash from your managed account or the [releases page](https://github.com/Lifted-Holdings/shipkit/releases). A non-loading tag before then is expected, not a mistake on your end.
+> **Placeholders:** the CDN host and the `integrity` hash above are placeholders until the first published release. A browser refuses to run a script whose SRI hash doesn't match, so the tag stays inert until you drop in the real values — get the live host and hash from your managed account or the [releases page](https://github.com/LiftedHoldings/lifted-shipkit/releases). A non-loading tag before then is expected, not a mistake on your end.
 
 > Prefer JavaScript over markup? `ShipKit.init({ mount: '#ship', managedKey: 'pk_live_your_publishable_key' })` does the same thing.
 
@@ -301,7 +313,7 @@ Searching GitHub for a shipping library? These are the topics this repo is filed
 
 ## Author & license
 
-**Author / maintainer:** Daniel Wilson Kemp — Lifted Holdings ([@LiftedHoldings](https://github.com/Lifted-Holdings)).
+**Author / maintainer:** Daniel Wilson Kemp — Lifted Holdings ([@LiftedHoldings](https://github.com/LiftedHoldings)).
 
 MIT © 2026 Daniel Wilson Kemp / Lifted Holdings. See [LICENSE](LICENSE).
 
