@@ -33,7 +33,12 @@ Clone the repository and run the Kotlin backend on your own infrastructure. You 
 account. You get full control of every layer — and you do the most work.
 
 - **Cost:** free. MIT licensed. You pay only your own carrier and processing costs.
-- **You bring:** an EasyPost API key and a 3-D Secure merchant account.
+- **The markup is yours.** You own the payments account, so you own the margin: set a
+  **percentage markup and/or a fixed fee per label** (`percentage_markup` +
+  `fixed_fee_cents`, applied server-side and shown at checkout) and buyers pay carrier
+  rate + your markup straight into your account. Lifted takes nothing.
+- **You bring:** an EasyPost API key and a 3-D Secure merchant account (don't have one?
+  [apply at liftedholdings.com/payments](https://liftedholdings.com/payments)).
 - **You run:** the backend, the database (optional), and the deployment.
 
 ```bash
@@ -71,8 +76,10 @@ merchant account.
   instead of eating into your margin. Turn it off and absorb it yourself — your call.
 - **Your choice of host, free either way.** Self-host the backend, or let Lifted host it —
   neither adds a hosting charge. The merchant-account pricing above is the whole cost.
-- **Bring your own EasyPost.** Carrier rates settle to your EasyPost account; ShipKit adds no
-  markup on the shipping rate in this tier.
+- **Bring your own EasyPost — and keep the markup.** Carrier rates settle to your EasyPost
+  account and **Lifted adds no markup in this tier**. The markup engine works for *you*
+  instead: as the payments-account holder you can price labels at carrier rate + your own
+  percentage and fixed fee, and that margin lands in your merchant account with every sale.
 - **Frictionless + saved cards (optional).** On a Lifted merchant account you can opt into
   **frictionless checkout** (3-D Secure off) and **saved cards on file** (a tokenized customer
   vault for repeat / one-tap charges). It is a **server-side, account-level** capability —

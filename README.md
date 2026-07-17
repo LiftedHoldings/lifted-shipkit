@@ -38,6 +38,7 @@ Add multi-carrier shipping-label buying to any store, with card payment locked d
 Buying a shipping label should be a few lines of code, not a project. Lifted ShipKit gives you a real multi-carrier backend (EasyPost) and a drop-in payment step, so a customer can compare rates, pay, and get a label without you stitching together three vendors and a PCI audit.
 
 - **Real carriers, real rates.** Address verification, live multi-carrier rate compare, SmartRates, label purchase, batch, scan forms, customs, tracking webhooks.
+- **Shipping is a profit center, not a pass-through.** Whoever owns the payments account owns the markup: price every label at carrier rate **plus your own percentage and fixed fee** (`percentage_markup` + `fixed_fee_cents`, applied server-side, shown at checkout). Self-host or run on a Lifted 3-D Secure merchant account — [apply at liftedholdings.com/payments](https://liftedholdings.com/payments) — and that margin is 100% yours on every label; on the managed tier the markup is how we earn instead, which is what keeps managed free.
 - **Built for shipping's fraud problem.** Labels bought with stolen cards are a top chargeback category — real goods, shipped fast, disputed weeks later. ShipKit forces **Lifted Payments 3-D Secure** on every card charge, so the issuer authenticates the buyer before the label prints and fraud-and-chargeback liability shifts off you.
 - **Three ways to run it.** Self-host it all, put your checkout on our 3-D Secure merchant account, or drop in one managed `<script>` tag. Same widget, same API.
 - **No lock-in.** MIT licensed, dependency-free frontend, clean modular backend. Read it, fork it, ship it.
@@ -74,6 +75,7 @@ ShipKit comes in three tiers — pick how much you want to run yourself. All thr
 | Hosting | You host | **You host _or_ we host — both free** | We host — free |
 | PCI scope for card data | Yours | Out of scope (hosted 3DS form) | Out of scope (hosted 3DS form) |
 | Cost | **Free** (MIT) | **3.75% + $0.15 / transaction + $25 / month** — the merchant account only¹ | **Free** — we earn on the shipping rate² |
+| Shipping-rate markup | **Yours** — % + fixed fee per label, keep 100% | **Yours** — % + fixed fee per label, keep 100% | Ours — it's what funds the free tier |
 | Best for | Full control, heaviest dev work | Our processing, your choice of host | "Just make it work" |
 | Get started | [GitHub](https://github.com/LiftedHoldings/lifted-shipkit) · [support@](mailto:support@liftedholdings.com) | [Apply → liftedholdings.com/payments](https://liftedholdings.com/payments) | [Create free account → get the JS](https://liftedholdings.com/shipkit/start) |
 
