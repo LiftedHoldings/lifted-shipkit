@@ -269,4 +269,49 @@ class ShipKitConfigTest {
             )
         assertEquals(5432, config.db?.port)
     }
+
+    @Test
+    fun `managed-deployment hooks are OFF unless their env is set`() {
+        val off = ShipKitConfig.fromEnv(env(emptyMap()))
+        assertNull(off.managedConfigToken, "no token env -> managed config path disabled")
+        assertNull(off.usageEvents, "no webhook env -> usage events disabled")
+
+        // Blank values are treated as unset — a stray empty var never arms a hook.
+        val blank =
+            ShipKitConfig.fromEnv(
+                env(
+                    mapOf(
+                        "SHIPKIT_MANAGED_CONFIG_TOKEN" to "  ",
+                        "SHIPKIT_EVENTS_WEBHOOK_URL" to "",
+                    ),
+                ),
+            )
+        assertNull(blank.managedConfigToken)
+        assertNull(blank.usageEvents)
+    }
+
+    @Test
+    fun `managed-deployment hooks read the canonical env names`() {
+        val config =
+            ShipKitConfig.fromEnv(
+                env(
+                    mapOf(
+                        "SHIPKIT_MANAGED_CONFIG_TOKEN" to "mct_1",
+                        "SHIPKIT_EVENTS_WEBHOOK_URL" to "https://platform.example/hooks/shipkit",
+                        "SHIPKIT_EVENTS_WEBHOOK_TOKEN" to "whsec_1",
+                    ),
+                ),
+            )
+        assertEquals("mct_1", config.managedConfigToken)
+        assertEquals("https://platform.example/hooks/shipkit", config.usageEvents?.webhookUrl)
+        assertEquals("whsec_1", config.usageEvents?.bearerToken)
+
+        // A webhook URL without a token is valid — the Authorization header is
+        // simply omitted.
+        val noToken =
+            ShipKitConfig.fromEnv(
+                env(mapOf("SHIPKIT_EVENTS_WEBHOOK_URL" to "https://platform.example/h")),
+            )
+        assertNull(noToken.usageEvents?.bearerToken)
+    }
 }

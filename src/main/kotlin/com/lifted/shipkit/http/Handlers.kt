@@ -2,6 +2,9 @@ package com.lifted.shipkit.http
 
 import com.easypost.exception.EasyPostException
 import com.lifted.shipkit.config.ShipKitConfig
+import com.lifted.shipkit.events.LabelPurchasedEvent
+import com.lifted.shipkit.events.UsageEventEmitter
+import com.lifted.shipkit.model.BoughtLabel
 import com.lifted.shipkit.model.LabelRecord
 import com.lifted.shipkit.model.MarkupConfig
 import com.lifted.shipkit.model.PaymentSession
@@ -43,6 +46,7 @@ class Handlers(
     private val payments: LiftedPaymentsClient?,
     private val sms: SmsVerifier,
     private val apiKeys: ApiKeyStore,
+    private val events: UsageEventEmitter = UsageEventEmitter.DISABLED,
 ) {
     private val log = LoggerFactory.getLogger(Handlers::class.java)
 
@@ -88,6 +92,18 @@ class Handlers(
         val path = ctx.path()
         if (path == "/api/health" || path == "/api/webhook/easypost") return
 
+        // Managed-deployment alternative for the markup write ONLY: a hosting
+        // control plane may authenticate with the SHIPKIT_MANAGED_CONFIG_TOKEN
+        // bearer token instead of an API key. Fail closed: when the env is unset
+        // the bearer path does not exist and the request falls through to the
+        // normal API-key requirement (401 without a key).
+        if (path == "/api/config/markup" &&
+            ctx.method() == io.javalin.http.HandlerType.POST &&
+            managedConfigTokenAccepted(ctx)
+        ) {
+            return
+        }
+
         val presented = ctx.header(API_KEY_HEADER)?.trim()
         if (presented.isNullOrEmpty()) {
             throw ApiKeyRejected(401, "Missing API key. Send it in the '$API_KEY_HEADER' header.")
@@ -99,6 +115,10 @@ class Handlers(
             throw ApiKeyRejected(401, "Invalid or revoked API key.")
         }
         apiKeys.touchLastUsed(record.id)
+
+        // Non-secret display prefix (e.g. `pk_live_abc123`) identifying the caller
+        // for usage events and logs — NEVER the full key.
+        ctx.attribute(API_KEY_PREFIX_ATTR, record.prefix)
 
         // Scope gate: a browser-publishable key may only drive the customer flow.
         if (record.scope == KeyGenerator.Scope.PUBLISHABLE &&
@@ -182,6 +202,28 @@ class Handlers(
                 false
             }
         }
+
+    /**
+     * True iff the request carries `Authorization: Bearer <token>` matching the
+     * configured [ShipKitConfig.managedConfigToken]. Compared in constant time
+     * (SHA-256 digests via [MessageDigest.isEqual], as API keys are). When no
+     * token is configured this is **always** false — the bearer path is
+     * disabled, never open.
+     */
+    private fun managedConfigTokenAccepted(ctx: Context): Boolean {
+        val expected = config.managedConfigToken ?: return false
+        val header = ctx.header("Authorization") ?: return false
+        // RFC 7235: the auth scheme name is case-insensitive.
+        if (!header.regionMatches(0, BEARER_PREFIX, 0, BEARER_PREFIX.length, ignoreCase = true)) {
+            return false
+        }
+        val presented = header.substring(BEARER_PREFIX.length).trim()
+        if (presented.isEmpty()) return false
+        return MessageDigest.isEqual(
+            KeyGenerator.sha256Hex(presented).toByteArray(Charsets.US_ASCII),
+            KeyGenerator.sha256Hex(expected).toByteArray(Charsets.US_ASCII),
+        )
+    }
 
     // ---- Shipping ------------------------------------------------------------
 
@@ -695,6 +737,7 @@ class Handlers(
                         senderPhone = bought.senderPhone,
                     ),
                 )
+                emitLabelPurchased(ctx, session, bought, markup, rail = "card_3ds")
             }
             ctx.json(
                 mapOf(
@@ -706,6 +749,42 @@ class Handlers(
                 ),
             )
         }
+
+    /**
+     * Report a successful label purchase to the (optional) usage-event webhook.
+     * Fire-and-forget: enqueues on a background worker and can never block or
+     * fail the purchase — even event *construction* errors are swallowed here.
+     */
+    private fun emitLabelPurchased(
+        ctx: Context,
+        session: PaymentSession,
+        bought: BoughtLabel,
+        markup: MarkupConfig,
+        rail: String,
+    ) {
+        if (!events.enabled) return
+        try {
+            events.emitLabelPurchased(
+                LabelPurchasedEvent(
+                    tenantKey = ctx.attribute(API_KEY_PREFIX_ATTR),
+                    sessionId = session.sessionId,
+                    carrier = bought.carrier,
+                    service = bought.service,
+                    carrierCostCents =
+                        bought.baseRate?.let { LabelPurchasedEvent.dollarsToCents(it) },
+                    markupPct = markup.percentageMarkup,
+                    fixedFeeCents = markup.fixedFeeCents,
+                    buyerChargeCents = LabelPurchasedEvent.dollarsToCents(session.amount),
+                    currency = session.currency,
+                    easyPostShipmentId = session.shipmentId,
+                    paymentTxnId = session.externalId,
+                    paymentRail = rail,
+                ),
+            )
+        } catch (e: Exception) {
+            log.debug("Usage event not emitted: {}", e.message)
+        }
+    }
 
     private fun labelResponse(session: PaymentSession): Map<String, Any?> {
         val label = store.getLabelBySession(session.sessionId)
@@ -928,6 +1007,7 @@ class Handlers(
                             senderPhone = bought.senderPhone,
                         ),
                     )
+                    emitLabelPurchased(ctx, session, bought, markup, rail = "card_saved")
                 }
             }
             ctx.json(
@@ -1039,26 +1119,106 @@ class Handlers(
         )
     }
 
+    /**
+     * Update the shipping markup. Two accepted body shapes:
+     *
+     *  - **Native**: `{percentage_markup, fixed_fee_cents}` — the shape
+     *    `GET /api/config/markup` reports.
+     *  - **Managed**: `{markup_pct, fixed_fee, card_fee_pct?}` — percent +
+     *    **dollars**, the shape a hosting control plane typically holds. Bounds:
+     *    `markup_pct` 0–100, `fixed_fee` $0–$1000. The optional `card_fee_pct`
+     *    (0–100) is validated and echoed for forward compatibility but not
+     *    persisted — the buyer card surcharge is a fixed, env-driven toggle
+     *    (`SHIPKIT_SURCHARGE_ENABLED`), not a stored setting.
+     *
+     * Both shapes land in the same [MarkupConfig] store write; auth is a secret
+     * `sk_` key or (when configured) the managed bearer token.
+     */
     fun updateMarkupConfig(ctx: Context) {
         val body = ctx.bodyMap()
-        val percentage = (body["percentage_markup"] as? Number)?.toDouble()
-        val fixedFeeCents = (body["fixed_fee_cents"] as? Number)?.toInt()
-        if (percentage == null || fixedFeeCents == null) {
-            ctx.status(400).json(error("percentage_markup and fixed_fee_cents are required"))
+        val managedShape = "markup_pct" in body || "fixed_fee" in body
+        val nativeShape = "percentage_markup" in body || "fixed_fee_cents" in body
+        // A body mixing both shapes is ambiguous for a pricing write — refuse it
+        // rather than silently preferring one set of numbers over the other.
+        if (managedShape && nativeShape) {
+            fail(
+                ctx,
+                400,
+                "Send either {markup_pct, fixed_fee} or " +
+                    "{percentage_markup, fixed_fee_cents}, not a mix of both",
+            )
             return
         }
+        val cardFeePct = (body["card_fee_pct"] as? Number)?.toDouble()
+        if (cardFeePct != null &&
+            (!cardFeePct.isFinite() || cardFeePct < 0.0 || cardFeePct > MANAGED_MAX_MARKUP_PCT)
+        ) {
+            fail(ctx, 400, "card_fee_pct must be between 0 and ${MANAGED_MAX_MARKUP_PCT.toInt()}")
+            return
+        }
+        val markup =
+            if (managedShape) {
+                parseManagedMarkup(ctx, body) ?: return
+            } else {
+                val percentage = (body["percentage_markup"] as? Number)?.toDouble()
+                val fixedFeeCents = (body["fixed_fee_cents"] as? Number)?.toInt()
+                if (percentage == null || fixedFeeCents == null) {
+                    ctx.status(400).json(
+                        error("percentage_markup and fixed_fee_cents are required"),
+                    )
+                    return
+                }
+                percentage to fixedFeeCents
+            }
         try {
-            store.updateMarkupConfig(MarkupConfig(percentage, fixedFeeCents))
-            ctx.json(
-                mapOf(
+            store.updateMarkupConfig(MarkupConfig(markup.first, markup.second))
+            val response =
+                mutableMapOf<String, Any?>(
                     "success" to true,
-                    "percentage_markup" to percentage,
-                    "fixed_fee_cents" to fixedFeeCents,
-                ),
-            )
+                    "percentage_markup" to markup.first,
+                    "fixed_fee_cents" to markup.second,
+                )
+            if (cardFeePct != null) response["card_fee_pct"] = cardFeePct
+            ctx.json(response)
         } catch (e: IllegalArgumentException) {
             ctx.status(400).json(error(e.message ?: "Invalid markup"))
         }
+    }
+
+    /**
+     * Parse + validate the managed `{markup_pct, fixed_fee}` shape into
+     * `(percentageMarkup, fixedFeeCents)`. Writes a `400` and returns `null` on
+     * any invalid field. (`card_fee_pct` is validated by the caller for both
+     * body shapes.)
+     */
+    private fun parseManagedMarkup(
+        ctx: Context,
+        body: Map<String, Any?>,
+    ): Pair<Double, Int>? {
+        val markupPct = (body["markup_pct"] as? Number)?.toDouble()
+        val fixedFeeDollars = (body["fixed_fee"] as? Number)?.toDouble()
+        if (markupPct == null || fixedFeeDollars == null) {
+            fail(ctx, 400, "markup_pct and fixed_fee are required")
+            return null
+        }
+        if (!markupPct.isFinite() || markupPct < 0.0 || markupPct > MANAGED_MAX_MARKUP_PCT) {
+            fail(ctx, 400, "markup_pct must be between 0 and ${MANAGED_MAX_MARKUP_PCT.toInt()}")
+            return null
+        }
+        val maxFixedDollars = MarkupConfig.MAX_FIXED_FEE_CENTS / 100
+        if (!fixedFeeDollars.isFinite() || fixedFeeDollars < 0.0 ||
+            fixedFeeDollars > maxFixedDollars
+        ) {
+            fail(ctx, 400, "fixed_fee must be between 0 and $maxFixedDollars dollars")
+            return null
+        }
+        val fixedFeeCents =
+            BigDecimal
+                .valueOf(fixedFeeDollars)
+                .movePointRight(2)
+                .setScale(0, RoundingMode.HALF_UP)
+                .intValueExact()
+        return markupPct to fixedFeeCents
     }
 
     // ---- Labels --------------------------------------------------------------
@@ -1417,6 +1577,23 @@ class Handlers(
 
         /** Canonical header carrying the caller's `sk_live_…`/`sk_test_…` API key. */
         private const val API_KEY_HEADER = "ShipKit-Api-Key"
+
+        /**
+         * Request attribute holding the authenticated key's non-secret display
+         * prefix (`pk_live_abc123`) — the tenant identity for usage events/logs.
+         */
+        private const val API_KEY_PREFIX_ATTR = "shipkit.api_key_prefix"
+
+        /** `Authorization` scheme prefix for the managed config token. */
+        private const val BEARER_PREFIX = "Bearer "
+
+        /**
+         * Upper bound for the managed markup shape's percentage fields. Tighter
+         * than [MarkupConfig.MAX_PERCENTAGE_MARKUP] because a control plane sets
+         * these remotely — a >100% shipping markup there is a fat-finger, not a
+         * pricing strategy.
+         */
+        private const val MANAGED_MAX_MARKUP_PCT = 100.0
 
         /**
          * The tier-2 Lifted 3-D Secure merchant-account monthly fee (USD),

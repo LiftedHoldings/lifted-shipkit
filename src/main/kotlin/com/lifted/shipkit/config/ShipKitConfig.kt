@@ -1,5 +1,6 @@
 package com.lifted.shipkit.config
 
+import com.lifted.shipkit.events.UsageEventsConfig
 import com.lifted.shipkit.model.FrictionlessGate
 import com.lifted.shipkit.model.SurchargeConfig
 import com.lifted.shipkit.model.TierMode
@@ -68,6 +69,20 @@ data class ShipKitConfig(
      * limiting. Defaults to a generous [DEFAULT_RATE_LIMIT_PER_MINUTE].
      */
     val rateLimitPerMinute: Int = DEFAULT_RATE_LIMIT_PER_MINUTE,
+    /**
+     * Optional bearer token (`SHIPKIT_MANAGED_CONFIG_TOKEN`) that lets a hosting
+     * control plane update the shipping markup (`POST /api/config/markup` with
+     * `Authorization: Bearer <token>`) without holding a ShipKit `sk_` key.
+     * `null` (the default) **disables** the bearer path entirely — fail closed;
+     * only `sk_` keys may write markup.
+     */
+    val managedConfigToken: String? = null,
+    /**
+     * Optional usage-event webhook ([UsageEventsConfig]) — report every
+     * successful label purchase to an external platform. `null` (the default,
+     * env unset) sends nothing.
+     */
+    val usageEvents: UsageEventsConfig? = null,
 ) {
     val shippingEnabled: Boolean get() = easyPostApiKey != null
     val paymentsEnabled: Boolean get() = payments != null
@@ -200,6 +215,18 @@ data class ShipKitConfig(
                     SurchargeConfig.DISABLED
                 }
 
+            // Managed-deployment hooks: both OFF unless their env is set.
+            val managedConfigToken =
+                env["SHIPKIT_MANAGED_CONFIG_TOKEN"]?.trim()?.takeIf { it.isNotEmpty() }
+            val usageEvents =
+                env["SHIPKIT_EVENTS_WEBHOOK_URL"]?.trim()?.takeIf { it.isNotEmpty() }?.let { url ->
+                    UsageEventsConfig(
+                        webhookUrl = url,
+                        bearerToken =
+                            env["SHIPKIT_EVENTS_WEBHOOK_TOKEN"]?.trim()?.takeIf { it.isNotEmpty() },
+                    )
+                }
+
             return ShipKitConfig(
                 port = port,
                 baseUrl = baseUrl,
@@ -215,6 +242,8 @@ data class ShipKitConfig(
                 surcharge = surcharge,
                 frictionlessAllowed = frictionlessAllowed,
                 rateLimitPerMinute = rateLimitPerMinute,
+                managedConfigToken = managedConfigToken,
+                usageEvents = usageEvents,
             )
         }
 
