@@ -7,7 +7,7 @@
 # ---------------------------------------------------------------------------
 
 # --- Build stage ------------------------------------------------------------
-FROM gradle:8.10-jdk17 AS build
+FROM gradle:9.0.0-jdk17 AS build
 WORKDIR /home/gradle/src
 
 # Cache dependencies first for faster incremental builds.
