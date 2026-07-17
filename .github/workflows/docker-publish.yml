@@ -55,7 +55,11 @@ jobs:
           file: ./Dockerfile
           push: true
           provenance: false
-          platforms: linux/amd64,linux/arm64
+          # amd64 only: the image does a full gradle shadowJar build, which is
+          # pathologically slow to emulate under QEMU for arm64. Apple Silicon
+          # runs the amd64 image fine via Docker's emulation. Add arm64 later on
+          # a native arm runner if a native image is needed.
+          platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
