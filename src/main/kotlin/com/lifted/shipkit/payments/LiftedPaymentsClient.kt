@@ -533,9 +533,7 @@ class LiftedPaymentsClient(
             }
         val customer = postJson("${config.dashboardBaseUrl}/api/customer-vault", customerBody)
         val customerId =
-            (customer["id"] ?: customer["customerId"])?.toString()?.trim()?.takeIf {
-                it.isNotEmpty()
-            }
+            (idString(customer["id"]) ?: idString(customer["customerId"]))
                 ?: throw IOException("vault customer was not created")
 
         // Billing record is REQUIRED before a card (the card-add references its id);
@@ -550,8 +548,7 @@ class LiftedPaymentsClient(
             }
         val added =
             postJson("${config.dashboardBaseUrl}/api/customer-vault/$customerId/card", cardBody)
-        val cardId =
-            (added["id"] ?: added["cardId"])?.toString()?.trim()?.takeIf { it.isNotEmpty() }
+        val cardId = idString(added["id"]) ?: idString(added["cardId"])
         if (cardId == null) {
             // Fail closed: an id-less card-add is unchargeable. Best-effort delete the
             // orphan customer so nothing phantom is left in the merchant's vault.
@@ -649,7 +646,7 @@ class LiftedPaymentsClient(
                 "${config.dashboardBaseUrl}/api/customer-vault/$customerId/billing-information",
                 body,
             )
-        return (rec["id"])?.toString()?.trim()?.takeIf { it.isNotEmpty() }
+        return idString(rec["id"])
     }
 
     /** Copy `billing[srcKey]` (a non-blank string) into this map under [dstKey], capped at 120 chars. */
@@ -922,11 +919,7 @@ class LiftedPaymentsClient(
             cavv = cavv,
             liabilityShift = shift,
             amount = parseTxnAmount(txn),
-            authCode =
-                (txn["authCode"] ?: txn["auth_code"])?.toString()?.trim()?.takeIf {
-                    it
-                        .isNotEmpty()
-                },
+            authCode = idString(txn["authCode"]) ?: idString(txn["auth_code"]),
             message =
                 (txn["message"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
                     ?: gatewayStatus,
@@ -948,6 +941,16 @@ class LiftedPaymentsClient(
 
             is String -> {
                 raw.trim().takeIf { it.isNotEmpty() }
+            }
+
+            // Integral types render directly — this must stay ahead of the Double
+            // branch so a future switch of the JSON parser to LONG_OR_DOUBLE does
+            // not round-trip a large Long through Double and lose precision.
+            // (With the current default Gson parser, every JSON number arrives as
+            // Double, so ids beyond 2^53 are corrupted at parse time regardless —
+            // live gateway ids are 6 digits, ~10 orders of magnitude of headroom.)
+            is Long, is Int, is Short, is Byte -> {
+                raw.toString()
             }
 
             is Number -> {
