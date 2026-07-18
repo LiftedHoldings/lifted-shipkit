@@ -231,15 +231,26 @@ class PostgresLabelStoreTest {
                 sessionId = "fresh_pg",
                 amount = 8.55,
                 description = "saved-card purchase",
-                externalId = "txn-1",
+                externalId = "txn-real-123",
                 createdAt = System.currentTimeMillis(),
                 status = "approved",
+                shipmentId = "shp_fresh",
+                rateId = "rate_fresh",
+                paidBaseRate = 6.91,
             ),
         )
+        // The upsert onto the placeholder must carry EVERY money field — a
+        // dropped amount or transaction id corrupts billing events and breaks
+        // refund reconciliation (and an empty external_id re-opens a
+        // double-charge path via the pk-reachable status endpoints).
         val loaded = store.getPaymentSession("fresh_pg")
         assertNotNull(loaded)
         assertEquals("approved", loaded!!.status)
         assertEquals(8.55, loaded.amount, 1e-9)
+        assertEquals("txn-real-123", loaded.externalId, "gateway transaction id must survive")
+        assertEquals("shp_fresh", loaded.shipmentId)
+        assertEquals("rate_fresh", loaded.rateId)
+        assertEquals(6.91, loaded.paidBaseRate!!, 1e-9)
         assertFalse(store.claimLabelPurchase("fresh_pg"), "claim must survive the session upsert")
     }
 
