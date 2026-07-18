@@ -42,7 +42,11 @@ import java.util.concurrent.TimeUnit
  *  - the `SHIPKIT_MANAGED_CONFIG_TOKEN` bearer alternative on
  *    `POST /api/config/markup` (fail-closed when unset, constant-time compare,
  *    scoped to that one route), including the `{markup_pct, fixed_fee}`
- *    percent+dollars body shape and its validation/mapping; and
+ *    percent+dollars body shape and its validation/mapping;
+ *  - the managed key-provisioning surface (`POST`/`GET /api/config/keys`,
+ *    `DELETE /api/config/keys/{id}`) — bearer-only, fail-closed when unset,
+ *    minted keys really authenticate, listings never leak secrets, revoke is
+ *    idempotent; and
  *  - the `label.purchased` usage-event webhook fired by both purchase paths.
  */
 class ManagedOpsIntegrationTest {
@@ -97,6 +101,7 @@ class ManagedOpsIntegrationTest {
         val b = Request.Builder().url(origin + path)
         when (method) {
             "POST" -> b.post((body ?: "{}").toRequestBody(jsonMedia))
+            "DELETE" -> b.delete()
             else -> b.get()
         }
         if (apiKey != null) b.header("ShipKit-Api-Key", apiKey)
@@ -263,6 +268,273 @@ class ManagedOpsIntegrationTest {
         // Defaults untouched after every rejected write.
         assertEquals(12.0, w.store.getMarkupConfig().percentageMarkup)
         assertEquals(50, w.store.getMarkupConfig().fixedFeeCents)
+    }
+
+    // ---- Managed key-provisioning endpoints ----------------------------------
+
+    @Test
+    fun `key provisioning is fail-closed when the managed token env is unset`() {
+        val w = wire(config(managedToken = null))
+        JavalinTest.test(w.app) { _, client ->
+            request(
+                client.origin,
+                "/api/config/keys",
+                body = """{"label":"x"}""",
+                bearer = "anything",
+            ).use { assertEquals(401, it.code, "unset env -> mint disabled") }
+            request(
+                client.origin,
+                "/api/config/keys",
+                method = "GET",
+                body = null,
+                bearer = "anything",
+            ).use { assertEquals(401, it.code, "unset env -> list disabled") }
+            request(
+                client.origin,
+                "/api/config/keys/some-id",
+                method = "DELETE",
+                body = null,
+                bearer = "anything",
+            ).use { assertEquals(401, it.code, "unset env -> revoke disabled") }
+            // Even a valid secret API key cannot reach the managed surface: with
+            // the env unset the endpoints are disabled outright, and key minting
+            // for key holders stays behind the admin-gated /api/keys routes.
+            request(client.origin, "/api/config/keys", body = """{"label":"x"}""", apiKey = w.key)
+                .use { assertEquals(401, it.code, "sk_ key alone never provisions managed keys") }
+        }
+    }
+
+    @Test
+    fun `a wrong bearer token cannot provision keys`() {
+        val w = wire(config(managedToken = "mct_secret_1"))
+        JavalinTest.test(w.app) { _, client ->
+            request(
+                client.origin,
+                "/api/config/keys",
+                body = """{"label":"x"}""",
+                bearer = "mct_WRONG",
+            ).use { assertEquals(401, it.code, "wrong token -> 401") }
+            request(
+                client.origin,
+                "/api/config/keys",
+                method = "GET",
+                body = null,
+                bearer = "mct_WRONG",
+            ).use { assertEquals(401, it.code, "wrong token -> list refused") }
+            // A valid sk_ key passes the /api gate but the managed surface still
+            // demands the bearer — 401, not a silent widening of sk_ reach.
+            request(client.origin, "/api/config/keys", body = """{"label":"x"}""", apiKey = w.key)
+                .use { assertEquals(401, it.code, "sk_ without bearer refused") }
+        }
+    }
+
+    @Test
+    fun `the managed bearer mints an sk key that really authenticates the api`() {
+        val w = wire(config(managedToken = "mct_secret_1"))
+        JavalinTest.test(w.app) { _, client ->
+            val minted =
+                request(
+                    client.origin,
+                    "/api/config/keys",
+                    body = """{"label":"cp-live"}""",
+                    bearer = "mct_secret_1",
+                ).use {
+                    val body = it.body!!.string()
+                    assertEquals(201, it.code, body)
+                    JsonParser.parseString(body).asJsonObject
+                }
+            assertEquals("cp-live", minted["label"].asString)
+            assertEquals("sk", minted["scope"].asString, "scope defaults to sk")
+            assertEquals("live", minted["mode"].asString, "mode defaults to live")
+            assertEquals(false, minted["revoked"].asBoolean)
+            val plaintext = minted["api_key"].asString
+            assertTrue(plaintext.startsWith("sk_live_"), plaintext)
+            assertTrue(minted["prefix"].asString.startsWith("sk_live_"))
+
+            // The minted secret key authenticates a real, secret-only /api route.
+            request(
+                client.origin,
+                "/api/config/markup",
+                method = "GET",
+                body = null,
+                apiKey = plaintext,
+            ).use { assertEquals(200, it.code, "minted sk key reads markup") }
+        }
+    }
+
+    @Test
+    fun `a managed pk key is minted scope-limited to the customer flow`() {
+        val w = wire(config(managedToken = "mct_secret_1"))
+        JavalinTest.test(w.app) { _, client ->
+            val minted =
+                request(
+                    client.origin,
+                    "/api/config/keys",
+                    body = """{"label":"widget","scope":"pk","mode":"test"}""",
+                    bearer = "mct_secret_1",
+                ).use {
+                    val body = it.body!!.string()
+                    assertEquals(201, it.code, body)
+                    JsonParser.parseString(body).asJsonObject
+                }
+            assertEquals("pk", minted["scope"].asString)
+            assertEquals("test", minted["mode"].asString)
+            val plaintext = minted["api_key"].asString
+            assertTrue(plaintext.startsWith("pk_test_"), plaintext)
+
+            // The pk key authenticates the customer-safe surface...
+            request(
+                client.origin,
+                "/api/config/tier",
+                method = "GET",
+                body = null,
+                apiKey = plaintext,
+            ).use { assertEquals(200, it.code, "pk key reads the tier config") }
+            // ...but is scope-limited: secret-only routes refuse it with 403.
+            request(
+                client.origin,
+                "/api/config/markup",
+                method = "GET",
+                body = null,
+                apiKey = plaintext,
+            ).use { assertEquals(403, it.code, "pk key is confined to the customer flow") }
+        }
+    }
+
+    @Test
+    fun `the managed key list exposes metadata only - never plaintext or hashes`() {
+        val w = wire(config(managedToken = "mct_secret_1"))
+        JavalinTest.test(w.app) { _, client ->
+            val plaintext =
+                request(
+                    client.origin,
+                    "/api/config/keys",
+                    body = """{"label":"cp-live"}""",
+                    bearer = "mct_secret_1",
+                ).use {
+                    JsonParser
+                        .parseString(
+                            it.body!!.string(),
+                        ).asJsonObject["api_key"]
+                        .asString
+                }
+            request(
+                client.origin,
+                "/api/config/keys",
+                method = "GET",
+                body = null,
+                bearer = "mct_secret_1",
+            ).use {
+                val body = it.body!!.string()
+                assertEquals(200, it.code, body)
+                val root = JsonParser.parseString(body).asJsonObject
+                assertEquals(2, root["count"].asInt, "the wire()-seeded key + the minted one")
+                assertTrue(body.contains(""""label":"cp-live""""), body)
+                // Never the minted plaintext, the seeded plaintext, their hashes,
+                // or any hash field at all.
+                assertTrue(!body.contains(plaintext), "plaintext key never leaves")
+                assertTrue(!body.contains(w.key), "seeded plaintext never leaves")
+                assertTrue(!body.contains(KeyGenerator.sha256Hex(plaintext)), "hash never leaves")
+                assertTrue(
+                    !body.contains(KeyGenerator.sha256Hex(w.key)),
+                    "seeded hash never leaves",
+                )
+                assertTrue(!body.contains("\"hash\""), "no hash field is serialized")
+            }
+        }
+    }
+
+    @Test
+    fun `a managed revoke kills the key and is idempotent`() {
+        val w = wire(config(managedToken = "mct_secret_1"))
+        JavalinTest.test(w.app) { _, client ->
+            val minted =
+                request(
+                    client.origin,
+                    "/api/config/keys",
+                    body = """{"label":"doomed"}""",
+                    bearer = "mct_secret_1",
+                ).use { JsonParser.parseString(it.body!!.string()).asJsonObject }
+            val id = minted["id"].asString
+            val plaintext = minted["api_key"].asString
+            request(
+                client.origin,
+                "/api/config/markup",
+                method = "GET",
+                body = null,
+                apiKey = plaintext,
+            ).use { assertEquals(200, it.code, "key works before revoke") }
+
+            request(
+                client.origin,
+                "/api/config/keys/$id",
+                method = "DELETE",
+                body = null,
+                bearer = "mct_secret_1",
+            ).use {
+                val body = it.body!!.string()
+                assertEquals(200, it.code, body)
+                val root = JsonParser.parseString(body).asJsonObject
+                assertEquals(true, root["revoked"].asBoolean)
+                assertEquals(false, root["already_revoked"].asBoolean)
+            }
+            request(
+                client.origin,
+                "/api/config/markup",
+                method = "GET",
+                body = null,
+                apiKey = plaintext,
+            ).use { assertEquals(401, it.code, "revoked key no longer authenticates") }
+
+            // Idempotent: revoking again is 200 with already_revoked flagged...
+            request(
+                client.origin,
+                "/api/config/keys/$id",
+                method = "DELETE",
+                body = null,
+                bearer = "mct_secret_1",
+            ).use {
+                val root = JsonParser.parseString(it.body!!.string()).asJsonObject
+                assertEquals(200, it.code)
+                assertEquals(true, root["already_revoked"].asBoolean)
+            }
+            // ...and an unknown id is a 404.
+            request(
+                client.origin,
+                "/api/config/keys/nope",
+                method = "DELETE",
+                body = null,
+                bearer = "mct_secret_1",
+            ).use { assertEquals(404, it.code) }
+        }
+    }
+
+    @Test
+    fun `managed mint validation rejects bad labels scopes and modes`() {
+        val w = wire(config(managedToken = "mct_secret_1"))
+        val longLabel = "x".repeat(121)
+        val bad =
+            listOf(
+                """{}""" to "missing label",
+                """{"label":"   "}""" to "blank label",
+                """{"label":"$longLabel"}""" to "label over 120 chars",
+                """{"label":"x","scope":"admin"}""" to "unknown scope",
+                """{"label":"x","scope":123}""" to "non-string scope",
+                """{"label":"x","mode":"sandbox"}""" to "unknown mode",
+            )
+        JavalinTest.test(w.app) { _, client ->
+            bad.forEach { (body, why) ->
+                request(client.origin, "/api/config/keys", body = body, bearer = "mct_secret_1")
+                    .use { assertEquals(400, it.code, why) }
+            }
+            // Boundary: exactly 120 chars is accepted.
+            request(
+                client.origin,
+                "/api/config/keys",
+                body = """{"label":"${"y".repeat(120)}"}""",
+                bearer = "mct_secret_1",
+            ).use { assertEquals(201, it.code) }
+        }
     }
 
     // ---- Usage-event emission from the purchase paths ------------------------

@@ -51,6 +51,9 @@ widget calls it under a configurable `endpoint` (default `/api`).
 | `POST` | `/api/keys` | Mint an API key (admin-gated; key shown once). |
 | `GET` | `/api/keys` | List API keys (metadata only). Admin-gated. |
 | `DELETE` | `/api/keys/{id}` | Revoke an API key. Admin-gated. |
+| `POST` | `/api/config/keys` | Mint an API key from the hosting control plane (managed bearer only; key shown once). |
+| `GET` | `/api/config/keys` | List key metadata for control-plane reconciliation (managed bearer only). |
+| `DELETE` | `/api/config/keys/{id}` | Revoke a key from the control plane (managed bearer only; idempotent). |
 | `GET` | `/api/admin/labels` | List all stored labels (admin-gated). |
 | `POST` | `/api/admin/cleanup` | Purge expired sessions + labels. |
 | `GET` | `/api/health` | Liveness/readiness probe (no key required). |

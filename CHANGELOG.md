@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Managed key provisioning** (2026-07-17) — a hosting control plane can now
+  mint, list, and revoke tenant API keys remotely instead of requiring an SMS
+  admin session: `POST /api/config/keys` (`{label ≤ 120 chars, scope: "pk"|"sk"
+  (default sk), mode: "live"|"test" (default live)}`, `201` with the one-time
+  `api_key` plaintext), `GET /api/config/keys` (metadata only — never plaintext
+  or hashes), and `DELETE /api/config/keys/{id}` (idempotent; `404` for unknown
+  ids, `already_revoked` flagged on repeats). Authenticated exclusively by the
+  existing `SHIPKIT_MANAGED_CONFIG_TOKEN` bearer scheme (constant-time compare);
+  when the variable is unset the surface is disabled — fail closed — and even a
+  valid secret API key is refused, so in-band minting stays behind the
+  admin-gated `/api/keys` routes.
+
 ### Fixed
 
 - **Postgres purchase claim for not-yet-persisted sessions** — the saved-card

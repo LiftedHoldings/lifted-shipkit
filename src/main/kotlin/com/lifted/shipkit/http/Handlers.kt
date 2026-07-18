@@ -93,15 +93,14 @@ class Handlers(
         val path = ctx.path()
         if (path == "/api/health" || path == "/api/webhook/easypost") return
 
-        // Managed-deployment alternative for the markup write ONLY: a hosting
-        // control plane may authenticate with the SHIPKIT_MANAGED_CONFIG_TOKEN
-        // bearer token instead of an API key. Fail closed: when the env is unset
-        // the bearer path does not exist and the request falls through to the
-        // normal API-key requirement (401 without a key).
-        if (path == "/api/config/markup" &&
-            ctx.method() == io.javalin.http.HandlerType.POST &&
-            managedConfigTokenAccepted(ctx)
-        ) {
+        // Managed-deployment alternative for the control-plane surface ONLY
+        // (the markup write + the /api/config/keys provisioning routes): a
+        // hosting control plane may authenticate with the
+        // SHIPKIT_MANAGED_CONFIG_TOKEN bearer token instead of an API key.
+        // Fail closed: when the env is unset the bearer path does not exist and
+        // the request falls through to the normal API-key requirement (401
+        // without a key).
+        if (isManagedBearerRoute(ctx.method(), path) && managedConfigTokenAccepted(ctx)) {
             return
         }
 
@@ -197,6 +196,34 @@ class Handlers(
                     path.startsWith("/api/payment/return/") ||
                     // Non-secret pricing/tier config — safe for the browser widget.
                     path == "/api/config/tier"
+            }
+
+            else -> {
+                false
+            }
+        }
+
+    /**
+     * The routes on which the managed control-plane bearer token
+     * (`SHIPKIT_MANAGED_CONFIG_TOKEN`) is accepted as an alternative to an API
+     * key: the markup write plus the `/api/config/keys` provisioning surface.
+     * Every other `/api` route ignores the bearer token entirely.
+     */
+    private fun isManagedBearerRoute(
+        method: io.javalin.http.HandlerType,
+        path: String,
+    ): Boolean =
+        when (method) {
+            io.javalin.http.HandlerType.POST -> {
+                path == "/api/config/markup" || path == "/api/config/keys"
+            }
+
+            io.javalin.http.HandlerType.GET -> {
+                path == "/api/config/keys"
+            }
+
+            io.javalin.http.HandlerType.DELETE -> {
+                path.startsWith("/api/config/keys/")
             }
 
             else -> {
@@ -1447,7 +1474,147 @@ class Handlers(
                 ?: return fail(ctx, 400, "label is required")
         val mode = KeyGenerator.Mode.fromString(body["mode"] as? String)
         val scope = KeyGenerator.Scope.fromString(body["scope"] as? String)
+        mintKeyAndRespond(ctx, label, mode, scope)
+    }
 
+    /** List all API keys (metadata only; never the key or its hash). Admin-gated. */
+    fun listApiKeys(ctx: Context) {
+        if (!requireAdmin(ctx)) return
+        respondKeyList(ctx)
+    }
+
+    /** Revoke an API key by id. Idempotent; `404` if unknown. Admin-gated. */
+    fun revokeApiKey(ctx: Context) {
+        if (!requireAdmin(ctx)) return
+        revokeKeyAndRespond(ctx)
+    }
+
+    // ---- Managed key provisioning (control-plane bearer) ---------------------
+
+    /**
+     * Mint a new API key on behalf of the hosting control plane. Authenticated
+     * **exclusively** by the managed bearer token — the same
+     * `SHIPKIT_MANAGED_CONFIG_TOKEN` scheme as the managed markup write
+     * ([managedConfigTokenAccepted]): constant-time compare, and when the
+     * variable is unset the endpoint is disabled (fail closed) — even a valid
+     * secret API key is refused, so the admin-gated `/api/keys` surface remains
+     * the only in-band way for a key holder to mint keys.
+     *
+     * Body: `{label (required, ≤ 120 chars), scope: "pk"|"sk" (default "sk"),
+     * mode: "live"|"test" (default "live")}`. Emits [createApiKey]'s `201`
+     * response shape: the record's public map plus the one-time `api_key`
+     * plaintext.
+     */
+    fun managedCreateApiKey(ctx: Context) {
+        if (!requireManagedBearer(ctx)) return
+        val body = ctx.bodyMap()
+        val label =
+            (body["label"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
+                ?: return fail(ctx, 400, "label is required")
+        if (label.length > MANAGED_KEY_LABEL_MAX) {
+            return fail(ctx, 400, "label must be at most $MANAGED_KEY_LABEL_MAX characters")
+        }
+        val scope =
+            parseManagedScope(body["scope"])
+                ?: return fail(ctx, 400, "scope must be \"pk\" or \"sk\"")
+        val mode =
+            parseManagedMode(body["mode"])
+                ?: return fail(ctx, 400, "mode must be \"live\" or \"test\"")
+        mintKeyAndRespond(ctx, label, mode, scope)
+    }
+
+    /**
+     * List key records for control-plane reconciliation. Managed-bearer-only,
+     * like [managedCreateApiKey]. Public maps only — never a plaintext key or a
+     * stored hash.
+     */
+    fun managedListApiKeys(ctx: Context) {
+        if (!requireManagedBearer(ctx)) return
+        respondKeyList(ctx)
+    }
+
+    /**
+     * Revoke a key by id for the control plane. Managed-bearer-only, like
+     * [managedCreateApiKey]. Same idempotent semantics as [revokeApiKey]:
+     * `404` for an unknown id; `200` otherwise, with `already_revoked: true`
+     * when the key had been revoked before this call.
+     */
+    fun managedRevokeApiKey(ctx: Context) {
+        if (!requireManagedBearer(ctx)) return
+        revokeKeyAndRespond(ctx)
+    }
+
+    /**
+     * Gate for the managed `/api/config/keys` surface: the request must carry
+     * the managed bearer token. The `/api` before-filter already admits the
+     * bearer on these routes; this second check refuses callers that arrived
+     * with an ordinary API key instead, and (with the env unset) disables the
+     * surface entirely. Writes the `401` itself; returns `false` when refused.
+     */
+    private fun requireManagedBearer(ctx: Context): Boolean {
+        if (managedConfigTokenAccepted(ctx)) return true
+        fail(
+            ctx,
+            401,
+            "This endpoint is reserved for the hosting control plane: authenticate with " +
+                "'Authorization: Bearer <token>' matching SHIPKIT_MANAGED_CONFIG_TOKEN. " +
+                "It is disabled when that variable is unset.",
+        )
+        return false
+    }
+
+    /**
+     * Strict scope parser for the managed surface: absent → [KeyGenerator.Scope.SECRET];
+     * `"sk"`/`"secret"` → SECRET; `"pk"`/`"publishable"` → PUBLISHABLE; anything
+     * else → `null` (rejected with `400`, unlike [KeyGenerator.Scope.fromString]'s
+     * lenient default, so a control-plane typo cannot silently mint the wrong scope).
+     */
+    private fun parseManagedScope(raw: Any?): KeyGenerator.Scope? =
+        when {
+            raw == null -> {
+                KeyGenerator.Scope.SECRET
+            }
+
+            raw !is String -> {
+                null
+            }
+
+            else -> {
+                when (raw.trim().lowercase()) {
+                    "", "sk", "secret" -> KeyGenerator.Scope.SECRET
+                    "pk", "publishable" -> KeyGenerator.Scope.PUBLISHABLE
+                    else -> null
+                }
+            }
+        }
+
+    /** Strict mode parser: absent → LIVE; `"live"`/`"test"` only; else `null` → `400`. */
+    private fun parseManagedMode(raw: Any?): KeyGenerator.Mode? =
+        when {
+            raw == null -> {
+                KeyGenerator.Mode.LIVE
+            }
+
+            raw !is String -> {
+                null
+            }
+
+            else -> {
+                when (raw.trim().lowercase()) {
+                    "", "live" -> KeyGenerator.Mode.LIVE
+                    "test" -> KeyGenerator.Mode.TEST
+                    else -> null
+                }
+            }
+        }
+
+    /** Shared mint + `201` response for [createApiKey] and [managedCreateApiKey]. */
+    private fun mintKeyAndRespond(
+        ctx: Context,
+        label: String,
+        mode: KeyGenerator.Mode,
+        scope: KeyGenerator.Scope,
+    ) {
         val minted = KeyGenerator.mint(label, mode, scope)
         apiKeys.add(minted.record)
         // Log the id/prefix only — never the full key.
@@ -1465,16 +1632,14 @@ class Handlers(
         )
     }
 
-    /** List all API keys (metadata only; never the key or its hash). Admin-gated. */
-    fun listApiKeys(ctx: Context) {
-        if (!requireAdmin(ctx)) return
+    /** Shared key listing (public maps only) for both list surfaces. */
+    private fun respondKeyList(ctx: Context) {
         val keys = apiKeys.listAll()
         ctx.json(mapOf("count" to keys.size, "keys" to keys.map { it.toPublicMap() }))
     }
 
-    /** Revoke an API key by id. Idempotent; `404` if unknown. Admin-gated. */
-    fun revokeApiKey(ctx: Context) {
-        if (!requireAdmin(ctx)) return
+    /** Shared idempotent revoke-by-`{id}` for both revoke surfaces. */
+    private fun revokeKeyAndRespond(ctx: Context) {
         val id = ctx.pathParam("id")
         if (apiKeys.get(id) == null) {
             return fail(ctx, 404, "API key not found")
@@ -1687,6 +1852,9 @@ class Handlers(
 
         /** `Authorization` scheme prefix for the managed config token. */
         private const val BEARER_PREFIX = "Bearer "
+
+        /** Longest `label` accepted by the managed key-provisioning mint. */
+        private const val MANAGED_KEY_LABEL_MAX = 120
 
         /**
          * Upper bound for the managed markup shape's percentage fields. Tighter

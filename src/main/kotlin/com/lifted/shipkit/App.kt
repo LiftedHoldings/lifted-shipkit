@@ -180,6 +180,12 @@ private fun registerRoutes(
     app.get("/api/config/markup") { h.getMarkupConfig(it) }
     app.post("/api/config/markup") { h.updateMarkupConfig(it) }
 
+    // Managed key provisioning — control-plane bearer token ONLY
+    // (SHIPKIT_MANAGED_CONFIG_TOKEN; disabled/fail-closed when unset)
+    app.post("/api/config/keys") { h.managedCreateApiKey(it) }
+    app.get("/api/config/keys") { h.managedListApiKeys(it) }
+    app.delete("/api/config/keys/{id}") { h.managedRevokeApiKey(it) }
+
     // Labels
     app.get("/api/label/{labelId}") { h.getLabel(it) }
     app.get("/api/label/session/{sessionId}") { h.getLabelBySession(it) }

@@ -23,8 +23,10 @@ info:
     verify, rate, payment session/status, purchase-label) — any secret-only action
     returns `403`. The mode token is `_live_` (production) or `_test_`. Mint keys with
     the `shipkitKeygen` Gradle task / `com.lifted.shipkit.KeygenKt` CLI (`--publishable`
-    for a `pk_…` key), or via the admin-gated `/api/keys` endpoints (`"scope"`:
-    `"secret"` default or `"publishable"`). Only a SHA-256 hash of each key is stored;
+    for a `pk_…` key), via the admin-gated `/api/keys` endpoints (`"scope"`:
+    `"secret"` default or `"publishable"`), or — for managed deployments — via the
+    control-plane-only `/api/config/keys` routes (Bearer
+    `SHIPKIT_MANAGED_CONFIG_TOKEN`). Only a SHA-256 hash of each key is stored;
     the full key is shown once at creation and can never be retrieved again.
 
     ## Money
@@ -837,6 +839,99 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /api/config/keys:
+    post:
+      tags: [API keys]
+      summary: Mint an API key from the hosting control plane (managed bearer only).
+      description: |
+        Managed-deployment key provisioning. Authenticated **exclusively** by the
+        `SHIPKIT_MANAGED_CONFIG_TOKEN` bearer token (constant-time compare) —
+        the same scheme as the managed markup write. When the variable is unset
+        the endpoint is disabled (fail closed); even a valid secret API key is
+        refused, keeping in-band minting behind the admin-gated `/api/keys`
+        surface. The returned `api_key` is the only time the full secret is
+        exposed — store it immediately.
+      operationId: managedCreateApiKey
+      security:
+        - ManagedConfigToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [label]
+              properties:
+                label: { type: string, maxLength: 120, examples: ["tenant-42-server"] }
+                scope:
+                  type: string
+                  enum: [pk, sk]
+                  default: sk
+                  description: |
+                    `sk` mints a full server key; `pk` mints a browser-embeddable
+                    widget key confined to the customer rating + 3-D Secure
+                    payment flow. Unknown values are rejected with `400`.
+                mode:
+                  type: string
+                  enum: [live, test]
+                  default: live
+                  description: Unknown values are rejected with `400`.
+      responses:
+        "201":
+          description: The minted key (with the one-time `api_key`).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiKeyCreated" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    get:
+      tags: [API keys]
+      summary: List key records for control-plane reconciliation (managed bearer only).
+      description: |
+        Metadata only — never a plaintext key or a stored hash. Same
+        authentication and fail-closed behavior as `POST /api/config/keys`.
+      operationId: managedListApiKeys
+      security:
+        - ManagedConfigToken: []
+      responses:
+        "200":
+          description: All keys, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count: { type: integer }
+                  keys: { type: array, items: { $ref: "#/components/schemas/ApiKey" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/config/keys/{id}:
+    delete:
+      tags: [API keys]
+      summary: Revoke an API key from the hosting control plane (managed bearer only).
+      description: |
+        Same idempotent semantics as `DELETE /api/keys/{id}`: an unknown id is
+        `404`; a known id always answers `200` with `revoked: true`, and
+        `already_revoked: true` when the key had been revoked before this call.
+        Same authentication and fail-closed behavior as `POST /api/config/keys`.
+      operationId: managedRevokeApiKey
+      security:
+        - ManagedConfigToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: The key is revoked.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+              example: { success: true, id: "b2f1c0de-1111-2222-3333-444455556666", revoked: true, already_revoked: false }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/keys/{id}:
     delete:
       tags: [API keys]
@@ -872,11 +967,13 @@ components:
       type: http
       scheme: bearer
       description: |
-        Optional managed-deployment alternative, valid **only** on
-        `POST /api/config/markup`: the `SHIPKIT_MANAGED_CONFIG_TOKEN` environment
-        value, sent as `Authorization: Bearer <token>` and compared in constant
-        time. When the environment variable is unset this scheme is disabled
-        (fail closed) and the endpoint requires a secret API key.
+        Optional managed-deployment scheme, valid **only** on
+        `POST /api/config/markup` and the `/api/config/keys` provisioning
+        routes: the `SHIPKIT_MANAGED_CONFIG_TOKEN` environment value, sent as
+        `Authorization: Bearer <token>` and compared in constant time. When the
+        environment variable is unset this scheme is disabled (fail closed):
+        the markup write then requires a secret API key, and the
+        `/api/config/keys` routes are disabled outright.
 
   parameters:
     SessionIdCamel:
