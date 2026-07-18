@@ -626,24 +626,46 @@ class Handlers(
                     return@withPayments fail(ctx, 502, "Could not verify payment; please retry")
                 }
 
-            session.status = verification.status
-            session.threeDsEci = verification.eci
-            session.threeDsCavv = verification.cavv
-            session.liabilityShift = verification.liabilityShift
-            if (verification.status in TERMINAL_STATUSES) {
+            // A persisted `approved` is the record of a REAL charge and must never
+            // be downgraded by a weaker verification read. A saved-card session's
+            // externalId is a gateway transaction id (not our externalId shape), so
+            // the lookup legitimately finds nothing and returns `pending` — stamping
+            // that over `approved` would re-open the charge gate on the saved-card
+            // retry path and charge the card a second time.
+            val effectiveStatus =
+                if (session.status == "approved" && verification.status != "approved") {
+                    log.info(
+                        "Keeping approved status for {} (verification said {})",
+                        session.sessionId,
+                        verification.status,
+                    )
+                    "approved"
+                } else {
+                    verification.status
+                }
+            session.status = effectiveStatus
+            if (verification.status == "approved" || session.status != "approved") {
+                session.threeDsEci = verification.eci
+                session.threeDsCavv = verification.cavv
+                session.liabilityShift = verification.liabilityShift
+            }
+            if (effectiveStatus in TERMINAL_STATUSES) {
                 session.completedAt = System.currentTimeMillis()
             }
             store.savePaymentSession(session)
 
             ctx.json(
                 mapOf(
-                    "status" to verification.status,
+                    "status" to effectiveStatus,
                     // CAVV is intentionally omitted — it is auth-only cryptographic
                     // data and never leaves the server (kept on the session for audit).
+                    // Report the stored session's 3-D Secure facts — for a kept
+                    // `approved` these are the record of the real charge, not the
+                    // weaker verification read that was just refused above.
                     "three_ds" to
                         mapOf(
-                            "eci" to verification.eci,
-                            "liability_shift" to verification.liabilityShift,
+                            "eci" to session.threeDsEci,
+                            "liability_shift" to session.liabilityShift,
                         ),
                 ),
             )
@@ -696,11 +718,17 @@ class Handlers(
                 } catch (e: IOException) {
                     return@withPayments fail(ctx, 502, "Could not verify payment; please retry")
                 }
-            session.status = verification.status
-            session.threeDsEci = verification.eci
-            session.threeDsCavv = verification.cavv
-            session.liabilityShift = verification.liabilityShift
-            store.savePaymentSession(session)
+            // The purchase DECISION below always uses the fresh verification —
+            // never prior state. The persisted record, however, must not regress: a
+            // stored `approved` documents a real charge, and stamping a transient
+            // `pending` over it re-opens charge gates on retry paths.
+            if (!(session.status == "approved" && verification.status != "approved")) {
+                session.status = verification.status
+                session.threeDsEci = verification.eci
+                session.threeDsCavv = verification.cavv
+                session.liabilityShift = verification.liabilityShift
+                store.savePaymentSession(session)
+            }
 
             if (verification.status != "approved" || !verification.liabilityShift) {
                 return@withPayments fail(
