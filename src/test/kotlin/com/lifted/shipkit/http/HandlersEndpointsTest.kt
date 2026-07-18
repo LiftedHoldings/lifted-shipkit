@@ -6,6 +6,7 @@ import com.lifted.shipkit.model.AddressResult
 import com.lifted.shipkit.model.BatchResult
 import com.lifted.shipkit.model.BoughtLabel
 import com.lifted.shipkit.model.CarrierMessage
+import com.lifted.shipkit.model.PaymentSession
 import com.lifted.shipkit.model.CustomsResult
 import com.lifted.shipkit.model.EndShipperResult
 import com.lifted.shipkit.model.LabelRecord
@@ -321,6 +322,34 @@ class HandlersEndpointsTest {
             // Unknown session -> 404.
             get(client.origin, "/api/payment/status/nope").use { assertEquals(404, it.code) }
         }
+    }
+
+    @Test
+    fun `status poll never downgrades a persisted approved charge`() {
+        // A saved-card session's externalId is a gateway txn id, so verifyPayment's
+        // externalId lookup legitimately finds nothing and reports "pending". The
+        // stored `approved` documents a REAL charge — stamping pending over it
+        // would re-open the charge gate on the saved-card retry path (double
+        // charge). The poll must keep reporting approved and keep it persisted.
+        every { payments.verifyPayment(any()) } returns PaymentVerification("pending")
+        store.savePaymentSession(
+            PaymentSession(
+                sessionId = "saved-idem-1",
+                amount = 7.32,
+                description = "saved-card purchase",
+                externalId = "223668",
+                createdAt = System.currentTimeMillis(),
+                status = "approved",
+            ),
+        )
+
+        JavalinTest.test(app()) { _, client ->
+            get(client.origin, "/api/payment/status/saved-idem-1").use {
+                assertEquals(200, it.code)
+                assertTrue(it.body!!.string().contains(""""status":"approved""""))
+            }
+        }
+        assertEquals("approved", store.getPaymentSession("saved-idem-1")!!.status)
     }
 
     // ---- Labels --------------------------------------------------------------
