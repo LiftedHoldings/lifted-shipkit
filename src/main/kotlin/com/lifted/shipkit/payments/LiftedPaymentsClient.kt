@@ -915,10 +915,7 @@ class LiftedPaymentsClient(
             }
 
         return GatewayResult(
-            transactionId =
-                (txn["id"] as? String)
-                    ?: (txn["transactionId"] as? String)
-                    ?: (txn["id"]?.toString() ?: txn["transactionId"]?.toString() ?: ""),
+            transactionId = idString(txn["id"]) ?: idString(txn["transactionId"]) ?: "",
             status = normalized,
             approved = normalized == "approved",
             eci = eci,
@@ -935,6 +932,37 @@ class LiftedPaymentsClient(
                     ?: gatewayStatus,
         )
     }
+
+    /**
+     * Normalize a gateway id to its canonical string. The gateway returns numeric
+     * transaction ids, which Gson decodes to [Double] — a naive `toString()` turns
+     * `223668` into `"223668.0"`, and that string 404s every subsequent
+     * `/payment/{id}` refund, capture, or verification lookup. A whole number is
+     * rendered without the decimal point; anything else passes through as text.
+     */
+    private fun idString(raw: Any?): String? =
+        when (raw) {
+            null -> {
+                null
+            }
+
+            is String -> {
+                raw.trim().takeIf { it.isNotEmpty() }
+            }
+
+            is Number -> {
+                val d = raw.toDouble()
+                if (d % 1.0 == 0.0 && !d.isNaN() && !d.isInfinite()) {
+                    d.toLong().toString()
+                } else {
+                    raw.toString()
+                }
+            }
+
+            else -> {
+                raw.toString().trim().takeIf { it.isNotEmpty() }
+            }
+        }
 
     /**
      * Read a gateway `status`, which may be a bare string or a nested object

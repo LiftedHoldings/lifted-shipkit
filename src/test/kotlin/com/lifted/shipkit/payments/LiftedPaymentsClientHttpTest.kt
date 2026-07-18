@@ -288,6 +288,26 @@ class LiftedPaymentsClientHttpTest {
     }
 
     @Test
+    fun `numeric gateway transaction ids survive without a trailing point-zero`() {
+        // The live gateway returns numeric ids; Gson decodes them to Double, and a
+        // naive toString() yields "223668.0" — a string that 404s every later
+        // /payment/{id} refund, capture, or verification lookup.
+        val http =
+            capturing(
+                200,
+                """{"id":223668,"status":{"status":"Approved"},
+                    "threeds":{"eci":"05","cavv":"cavv3ds01"}}""",
+                slot<Request>(),
+            )
+        val client = LiftedPaymentsClient(config, http)
+
+        val result = client.sale(BigDecimal("7.32"), cardToken = "tok_abc")
+
+        assertEquals("223668", result.transactionId)
+        assertTrue(result.approved)
+    }
+
+    @Test
     fun `sale approved WITHOUT a shift is refused (forced 3DS)`() {
         val slot = slot<Request>()
         val http =
