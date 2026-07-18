@@ -213,6 +213,37 @@ class PostgresLabelStoreTest {
     }
 
     @Test
+    fun `claimLabelPurchase wins on a session that does not exist yet`() {
+        // The saved-card flow claims BEFORE any session row exists (the session is
+        // only persisted after the charge). The claim must create-and-claim
+        // atomically, mirroring the in-memory store's set semantics.
+        assertTrue(store.claimLabelPurchase("fresh_pg"), "first claim on a fresh id must win")
+        assertFalse(store.claimLabelPurchase("fresh_pg"), "second claim must lose")
+
+        // A failed charge releases the claim; a retry must be able to re-claim.
+        store.releaseLabelPurchaseClaim("fresh_pg")
+        assertTrue(store.claimLabelPurchase("fresh_pg"))
+
+        // The post-charge session save must coexist with the placeholder claim row
+        // and keep the claim held.
+        store.savePaymentSession(
+            PaymentSession(
+                sessionId = "fresh_pg",
+                amount = 8.55,
+                description = "saved-card purchase",
+                externalId = "txn-1",
+                createdAt = System.currentTimeMillis(),
+                status = "approved",
+            ),
+        )
+        val loaded = store.getPaymentSession("fresh_pg")
+        assertNotNull(loaded)
+        assertEquals("approved", loaded!!.status)
+        assertEquals(8.55, loaded.amount, 1e-9)
+        assertFalse(store.claimLabelPurchase("fresh_pg"), "claim must survive the session upsert")
+    }
+
+    @Test
     fun `verification sessions are only valid once marked verified`() {
         val id = store.createVerificationSession("5551234567")
         assertNull(store.getValidVerificationSession(id), "unverified session is not valid")

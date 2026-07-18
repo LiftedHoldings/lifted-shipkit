@@ -514,10 +514,24 @@ class PostgresLabelStore(
 
     override fun claimLabelPurchase(sessionId: String): Boolean =
         withConnection { conn ->
+            // Claim-or-create: the saved-card flow claims BEFORE any session row
+            // exists (the session is only persisted after the charge), so a plain
+            // UPDATE would match zero rows and wrongly report "already in
+            // progress" forever. Insert a minimal placeholder row claimed=TRUE, or
+            // atomically flip an existing unclaimed row; a claimed or
+            // already-bought session updates zero rows and the claim is refused.
+            // The placeholder expires with normal retention, so a crashed claim
+            // self-heals via cleanupExpiredPaymentSessions.
             conn
                 .prepareStatement(
-                    "UPDATE shipkit_payment_sessions SET purchase_claimed = TRUE " +
-                        "WHERE session_id = ? AND purchase_claimed = FALSE AND label_url IS NULL",
+                    """
+                    INSERT INTO shipkit_payment_sessions
+                        (session_id, amount, status, currency, purchase_claimed, expires_at)
+                    VALUES (?, 0, 'claiming', 'USD', TRUE, now() + interval '$RETENTION_DAYS days')
+                    ON CONFLICT (session_id) DO UPDATE SET purchase_claimed = TRUE
+                    WHERE shipkit_payment_sessions.purchase_claimed = FALSE
+                      AND shipkit_payment_sessions.label_url IS NULL
+                    """.trimIndent(),
                 ).use { stmt ->
                     stmt.setString(1, sessionId)
                     stmt.executeUpdate() == 1
