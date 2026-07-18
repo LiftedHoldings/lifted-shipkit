@@ -603,6 +603,60 @@ class LiftedPaymentsClientHttpTest {
     }
 
     @Test
+    fun `numeric vault ids survive without a trailing point-zero`() {
+        // The live vault returns numeric ids (the sandbox echoes them as JSON
+        // numbers); Gson decodes them to Double, and a naive toString() would
+        // persist "8393.0:3548.0" — a vaultId whose every later charge lookup
+        // 404s. The billing id is also re-sent in the card-add body and must
+        // stay a clean integer.
+        val bodies = mutableListOf<String>()
+        var call = 0
+        val http = mockk<OkHttpClient>()
+        every { http.newCall(any()) } answers {
+            val req = firstArg<Request>()
+            bodies += bodyOf(req)
+            val body =
+                when (++call) {
+                    1 -> """{"id":8393}"""
+                    2 -> """{"id":6045}"""
+                    else -> """{"id":3548,"token":"vtok_9"}"""
+                }
+            val c = mockk<Call>()
+            every { c.execute() } returns
+                Response
+                    .Builder()
+                    .request(req)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("ok")
+                    .body(body.toResponseBody("application/json".toMediaType()))
+                    .build()
+            c
+        }
+
+        val saved =
+            LiftedPaymentsClient(frictionlessConfig, http).saveCard(
+                cardToken = "hf_card_tok",
+                billing =
+                    mapOf(
+                        "first_name" to "Ada",
+                        "last_name" to "Lovelace",
+                        "address1" to "1 Analytical Way",
+                        "city" to "London",
+                        "state" to "CA",
+                        "zip" to "90210",
+                    ),
+            )
+
+        assertEquals("8393:3548", saved.vaultId)
+        assertTrue(
+            bodies[2].contains(""""billing":{"id":"6045"}""") ||
+                bodies[2].contains(""""billing":{"id":6045}"""),
+            "card-add carries a clean billing id: ${bodies[2]}",
+        )
+    }
+
+    @Test
     fun `saveCard fails closed and deletes the orphan customer when no card id comes back`() {
         val methods = mutableListOf<String>()
         var call = 0
