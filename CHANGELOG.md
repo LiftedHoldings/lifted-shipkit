@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Postgres purchase claim for not-yet-persisted sessions** — the saved-card
+  flow claims its idempotency lock before any session row exists; the Postgres
+  store's UPDATE-based claim matched zero rows and reported every saved-card
+  purchase as "already in progress", permanently. The claim is now an atomic
+  claim-or-create, and the session upsert carries **every** money field
+  (amount, gateway transaction id, shipment/rate context) so a session saved
+  over the claim placeholder can no longer lose its charge record.
+- **Numeric gateway ids normalized** — the gateway returns numeric transaction,
+  vault-customer, vault-card, and billing ids; Gson decodes JSON numbers to
+  `Double`, and the previous `toString()` fallback rendered `223668` as
+  `"223668.0"` — a string that 404s every later `/payment/{id}` refund,
+  capture, or verification lookup, and poisons persisted `vaultId` references.
+  Whole numbers now render as plain integers everywhere an id is read.
+- **Status polls never downgrade a persisted `approved` charge** — a
+  verification read that returns `pending` (as it always does for a saved-card
+  session, whose reference is a gateway transaction id) no longer stamps
+  `pending` over a stored `approved`, closing a double-charge window on the
+  saved-card retry path when a poll landed between a successful charge and a
+  failed label buy. Purchase decisions still run on the fresh verification,
+  unconditionally.
+
 - **`verifyPayment()` externalId lookup route** now follows the gateway
   contract: `GET {gateway}/payments?filter[externalId]=…` (URL-encoded, Bearer
   auth) instead of the non-existent `/api/transaction?externalId=…` path. The

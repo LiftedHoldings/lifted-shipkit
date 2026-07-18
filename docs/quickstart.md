@@ -193,6 +193,19 @@ Watch the `onQuote`, `onPurchase`, and `onError` callbacks in your console to tr
 
 ---
 
+## Going to production
+
+Two things bite on a first production deployment that test keys never enforce:
+
+- **USPS requires an EndShipper.** With a **production** EasyPost key, every
+  USPS label buy must carry an EndShipper (the federally required responsible
+  sender). Create one once via `POST /api/endshipper/create` (name, company,
+  address, phone, email) — ShipKit stores the id and attaches it to every buy.
+  Test keys skip this check, so a flow that worked all the way through testing
+  can start failing with an opaque `400` the day you switch keys.
+- **Use a managed Postgres** (`SHIPKIT_STORE=postgres`, `sslmode=require`) —
+  the in-memory store loses keys, sessions, and label history on restart.
+
 ## Next steps
 
 - **[Integration guide](integration.md)** — full config table, callback reference, and React/Vue snippets.
