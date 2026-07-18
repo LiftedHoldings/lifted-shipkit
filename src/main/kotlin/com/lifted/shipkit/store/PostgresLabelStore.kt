@@ -431,7 +431,21 @@ class PostgresLabelStore(
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, to_timestamp(? / 1000.0),
                             now() + interval '$RETENTION_DAYS days')
                     ON CONFLICT (session_id) DO UPDATE SET
+                        -- Full-replace semantics (matching the in-memory store): a
+                        -- session saved over the minimal claim placeholder must
+                        -- carry ALL its money fields — amount, the gateway
+                        -- transaction reference (external_id), and the
+                        -- shipment/rate context — or billing events and refund
+                        -- reconciliation silently corrupt.
+                        amount = EXCLUDED.amount,
+                        description = EXCLUDED.description,
+                        external_id = EXCLUDED.external_id,
                         status = EXCLUDED.status,
+                        shipment_id = EXCLUDED.shipment_id,
+                        rate_id = EXCLUDED.rate_id,
+                        paid_base_rate = EXCLUDED.paid_base_rate,
+                        currency = EXCLUDED.currency,
+                        end_shipper_id = EXCLUDED.end_shipper_id,
                         -- COALESCE so a stale (pre-buy) write from a loser thread
                         -- racing the 3-D Secure return callback can never regress a
                         -- already-bought label back to NULL and 409 the paid buyer.
