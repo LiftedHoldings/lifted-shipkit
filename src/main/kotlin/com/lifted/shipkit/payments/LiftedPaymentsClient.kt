@@ -456,16 +456,23 @@ class LiftedPaymentsClient(
      * authentication to shift liability); `approved` reflects the gateway's own
      * decision.
      *
-     * @param amount    the server-computed charge (never a client-supplied number).
-     * @param cardToken a Maverick card token (Hosted Fields tokenization or a vault
-     *                  card token from [chargeSavedCard]).
-     * @param billing   optional billing details passed through to the gateway.
+     * @param amount     the server-computed charge (never a client-supplied number).
+     * @param cardToken  a Maverick card token (Hosted Fields tokenization or a vault
+     *                   card token from [chargeSavedCard]).
+     * @param billing    optional billing details passed through to the gateway.
+     * @param externalId caller-supplied idempotency/reference id registered on the
+     *                   charge. It is what [verifyFrictionlessCharge] later filters
+     *                   on, so a charge whose HTTP response was lost (network
+     *                   timeout) can be reconciled — and a retry adopted — instead
+     *                   of re-charging the card. Pre-register it BEFORE charging;
+     *                   omitted only where no idempotency key is available.
      */
     @Throws(IOException::class)
     fun saleFrictionless(
         amount: BigDecimal,
         cardToken: String,
         billing: Map<String, Any?>? = null,
+        externalId: String? = null,
     ): GatewayResult {
         requireFrictionless()
         if (cardToken.isBlank()) throw IOException("a card token is required to charge")
@@ -477,6 +484,10 @@ class LiftedPaymentsClient(
                 // Frictionless — 3-D Secure is explicitly OFF (a BOOLEAN false).
                 put("3ds", false)
                 put("source", "Internet")
+                // Pre-register the idempotency key so a lost-response charge can be
+                // reconciled by externalId ([verifyFrictionlessCharge]) rather than
+                // re-charged — same reconciliation the 3DS hosted-form path uses.
+                externalId?.trim()?.takeIf { it.isNotEmpty() }?.let { put("externalId", it) }
                 billing?.takeIf { it.isNotEmpty() }?.let { put("billing", it) }
             }
         val json = postJson("${config.gatewayBaseUrl}/payment/sale", body)
@@ -574,19 +585,44 @@ class LiftedPaymentsClient(
      * **Account-gated** — refuses with [IOException] unless
      * [LiftedPaymentsConfig.frictionlessAllowed] is true.
      *
-     * @param amount  the server-computed charge (never a client-supplied number).
-     * @param vaultId the saved-card reference from [saveCard].
-     * @param billing optional billing details passed through to the gateway.
+     * @param amount     the server-computed charge (never a client-supplied number).
+     * @param vaultId    the saved-card reference from [saveCard].
+     * @param billing    optional billing details passed through to the gateway.
+     * @param externalId idempotency/reference id registered on the charge so a
+     *                   lost-response timeout can be reconciled by
+     *                   [verifyFrictionlessCharge] instead of double-charging.
      */
     @Throws(IOException::class)
     fun chargeSavedCard(
         amount: BigDecimal,
         vaultId: String,
         billing: Map<String, Any?>? = null,
+        externalId: String? = null,
     ): GatewayResult {
         requireFrictionless()
         val token = vaultCardToken(vaultId)
-        return saleFrictionless(amount, token, billing)
+        return saleFrictionless(amount, token, billing, externalId)
+    }
+
+    /**
+     * Reconcile a **frictionless** (3ds-off) charge by its [externalId] — the
+     * idempotency key registered by [saleFrictionless]. Looks the transaction up
+     * on the processing host (`GET /payments?filter[externalId]=...`) and
+     * interprets it **without** a liability-shift requirement (a frictionless sale
+     * has no 3-D Secure authentication to shift liability, so the forced-3DS
+     * [verifyPayment] would misread a genuinely-approved frictionless charge as
+     * declined). Returns `null` when no single matching transaction exists yet.
+     *
+     * This is the saved-card rail's double-charge guard: when a charge's HTTP
+     * response is lost (network timeout) the card may already be charged, so a
+     * caller looks the charge up by [externalId] before charging again and adopts
+     * the prior charge if it is present and approved.
+     */
+    @Throws(IOException::class)
+    fun verifyFrictionlessCharge(externalId: String): GatewayResult? {
+        val txn = lookupByExternalId(externalId) ?: return null
+        // Frictionless: no 3-D Secure, so approval is NOT shift-gated.
+        return toGatewayResult(txn, requireShift = false)
     }
 
     /**
@@ -781,6 +817,20 @@ class LiftedPaymentsClient(
      */
     @Throws(IOException::class)
     fun verifyPayment(externalId: String): PaymentVerification {
+        val txn = lookupByExternalId(externalId) ?: return PaymentVerification(status = "pending")
+        return interpretTransaction(txn)
+    }
+
+    /**
+     * Look a transaction up by its [externalId] on the processing host —
+     * `GET /payments?filter[externalId]=...` — and return the single, exact-match
+     * record, or `null` (not-yet-present semantics) when the envelope does not
+     * prove exactly one matching record. Shared by [verifyPayment] (forced-3DS
+     * interpretation) and [verifyFrictionlessCharge] (frictionless interpretation)
+     * so the lookup + anti-unfiltered-list guards live in one place.
+     */
+    @Throws(IOException::class)
+    private fun lookupByExternalId(externalId: String): Map<*, *>? {
         // URL-encode the filter key (its brackets) and the reference value. The id
         // is server-generated today (so this is defense-in-depth), but a lookup
         // key must never be able to smuggle extra query params or a filter
@@ -805,8 +855,7 @@ class LiftedPaymentsClient(
                 log.warn("Lifted Payments transaction lookup failed (HTTP {})", response.code)
                 throw IOException("Failed to verify payment (HTTP ${response.code})")
             }
-            val txn =
-                singleFilteredTransaction(body) ?: return PaymentVerification(status = "pending")
+            val txn = singleFilteredTransaction(body) ?: return null
             // Exact-match guard (defense-in-depth beneath the totalCount check):
             // the returned record must POSITIVELY carry our externalId — any
             // record matched by a working filter necessarily does. A mismatch or
@@ -815,9 +864,9 @@ class LiftedPaymentsClient(
             val returnedId = (txn["externalId"] as? String)?.trim()
             if (returnedId != externalId) {
                 log.warn("Transaction externalId mismatch on lookup; ignoring the returned record")
-                return PaymentVerification(status = "pending")
+                return null
             }
-            return interpretTransaction(txn)
+            return txn
         }
     }
 

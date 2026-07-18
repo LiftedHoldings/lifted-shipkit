@@ -177,6 +177,84 @@ class UsageEventEmitterTest {
     }
 
     @Test
+    fun `a failed delivery is surfaced on the observable failed-delivery counter`() {
+        // Undercount must not be silent: a delivery that never succeeds increments
+        // an observable counter (instead of being swallowed with no signal).
+        val emitter =
+            UsageEventEmitter(
+                UsageEventsConfig("http://127.0.0.1:1/hook", bearerToken = "t"),
+                retryDelayMs = 10,
+            )
+        emitter.emitLabelPurchased(event())
+        // close() drains the worker (awaitTermination) so the delivery has run.
+        emitter.close()
+        assertEquals(
+            1,
+            emitter.failedDeliveryCount,
+            "the failed delivery is counted, not swallowed silently",
+        )
+        assertEquals(
+            0,
+            emitter.droppedEventCount,
+            "it reached delivery, so it is not a queue-full drop",
+        )
+    }
+
+    @Test
+    fun `a 4xx rejection increments the observable failed-delivery counter`() {
+        val received = ConcurrentLinkedQueue<Received>()
+        val latch = CountDownLatch(1)
+        val app = captureApp(received, latch, statuses = listOf(400))
+        JavalinTest.test(app) { _, client ->
+            UsageEventEmitter(UsageEventsConfig("${client.origin}/hook"), retryDelayMs = 10).use { e ->
+                e.emitLabelPurchased(event())
+                assertTrue(latch.await(5, TimeUnit.SECONDS))
+                e.close()
+                assertEquals(
+                    1,
+                    e.failedDeliveryCount,
+                    "a 4xx-rejected billing event is counted for reconciliation",
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `queue-full drops increment the observable dropped-event counter`() {
+        // Wedge the single worker inside a held webhook, then over-fill the tiny
+        // bounded queue. The overflow events must be counted as dropped — an
+        // observable signal that money_in/label_spend may under-count — not lost
+        // silently the way DiscardOldestPolicy did.
+        val releaseServer = CountDownLatch(1)
+        val serverHit = CountDownLatch(1)
+        val app =
+            Javalin.create().post("/hook") { ctx ->
+                serverHit.countDown()
+                releaseServer.await(5, TimeUnit.SECONDS)
+                ctx.status(200)
+            }
+        JavalinTest.test(app) { _, client ->
+            UsageEventEmitter(
+                UsageEventsConfig("${client.origin}/hook"),
+                retryDelayMs = 10,
+                maxQueuedEvents = 1,
+            ).use { emitter ->
+                // 1) Occupies the single worker, which blocks in the held webhook.
+                emitter.emitLabelPurchased(event())
+                assertTrue(serverHit.await(5, TimeUnit.SECONDS), "worker began delivering")
+                // 2) Fills the 1-slot queue.
+                emitter.emitLabelPurchased(event())
+                // 3) & 4) Queue full -> rejected -> counted as dropped.
+                emitter.emitLabelPurchased(event())
+                emitter.emitLabelPurchased(event())
+                val dropped = emitter.droppedEventCount
+                releaseServer.countDown()
+                assertTrue(dropped >= 1, "queue-full drops are counted, not silent (was $dropped)")
+            }
+        }
+    }
+
+    @Test
     fun `dollarsToCents rounds half-up to exact cents`() {
         assertEquals(874, LabelPurchasedEvent.dollarsToCents(8.74))
         assertEquals(736, LabelPurchasedEvent.dollarsToCents(7.36))

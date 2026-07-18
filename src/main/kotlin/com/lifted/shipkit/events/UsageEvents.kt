@@ -13,8 +13,10 @@ import java.time.Instant
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.RejectedExecutionHandler
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Configuration for the optional usage-event webhook. When set, every successful
@@ -84,8 +86,19 @@ class UsageEventEmitter(
     private val config: UsageEventsConfig?,
     httpClient: OkHttpClient? = null,
     private val retryDelayMs: Long = DEFAULT_RETRY_DELAY_MS,
+    maxQueuedEvents: Int = MAX_QUEUED_EVENTS,
 ) : AutoCloseable {
     private val log = LoggerFactory.getLogger(UsageEventEmitter::class.java)
+
+    /**
+     * Events dropped **before delivery** because the bounded queue was full
+     * (webhook host wedged under purchase load). Observable so operators can see
+     * that `money_in` / `label_spend` may under-count instead of it being silent.
+     */
+    private val droppedEvents = AtomicLong(0)
+
+    /** Events whose HTTP delivery ultimately failed (transport error / non-2xx after retry). */
+    private val failedDeliveries = AtomicLong(0)
 
     private val http: OkHttpClient =
         httpClient
@@ -96,10 +109,36 @@ class UsageEventEmitter(
                 .build()
 
     /**
+     * Handles queue-full (and post-shutdown) rejections. Replaces the silent
+     * [ThreadPoolExecutor.DiscardOldestPolicy]: a full queue now increments the
+     * observable [droppedEventCount] and logs a WARN with the event identity and
+     * queue size, so a dropped billing event can be noticed and reconciled.
+     * Still non-blocking — it never runs the task on the caller (purchase) thread.
+     */
+    private val rejectedHandler =
+        RejectedExecutionHandler { r, exec ->
+            val id = (r as? DeliveryTask)?.let { "${it.eventType}/${it.eventId}" } ?: "unknown"
+            if (exec.isShutdown) {
+                // Not a capacity loss — the emitter is closing; expected, low-noise.
+                log.debug("Usage event dropped (emitter shutting down): event={}", id)
+            } else {
+                val total = droppedEvents.incrementAndGet()
+                log.warn(
+                    "Usage event DROPPED: delivery queue full (queueSize={}, totalDropped={}, event={}); " +
+                        "operator-console money_in/label_spend may under-count this event",
+                    exec.queue.size,
+                    total,
+                    id,
+                )
+            }
+        }
+
+    /**
      * Single daemon worker with a **bounded** queue; created only when the
      * webhook is configured. A dead webhook host under purchase load must not
-     * grow the heap without bound — once [MAX_QUEUED_EVENTS] deliveries are
-     * pending, the oldest is dropped (best-effort telemetry, not a ledger).
+     * grow the heap without bound — once [maxQueuedEvents] deliveries are
+     * pending, further events are dropped by [rejectedHandler], which logs and
+     * increments [droppedEventCount] (best-effort telemetry, not a ledger).
      */
     private val executor: ExecutorService? =
         if (config != null) {
@@ -108,9 +147,9 @@ class UsageEventEmitter(
                 1,
                 0L,
                 TimeUnit.MILLISECONDS,
-                LinkedBlockingQueue(MAX_QUEUED_EVENTS),
+                LinkedBlockingQueue(maxQueuedEvents),
                 { r -> Thread(r, "shipkit-usage-events").apply { isDaemon = true } },
-                ThreadPoolExecutor.DiscardOldestPolicy(),
+                rejectedHandler,
             )
         } else {
             null
@@ -120,6 +159,20 @@ class UsageEventEmitter(
     val enabled: Boolean get() = config != null
 
     /**
+     * Count of events dropped **without any delivery attempt** because the
+     * bounded queue was full. A non-zero value means billing/analytics under-count
+     * that many purchases. Observable so the under-count is never silent.
+     */
+    val droppedEventCount: Long get() = droppedEvents.get()
+
+    /**
+     * Count of events whose HTTP delivery ultimately failed (transport error, or
+     * a non-2xx the receiver kept rejecting after the retry). Each is also logged
+     * at WARN with its identity so the billing event can be reconciled.
+     */
+    val failedDeliveryCount: Long get() = failedDeliveries.get()
+
+    /**
      * Report a successful label purchase. Returns immediately; delivery happens
      * on the background worker. Never throws.
      */
@@ -127,12 +180,40 @@ class UsageEventEmitter(
         val cfg = config ?: return
         try {
             val body = gson.toJson(envelope(event))
-            executor?.execute { deliver(cfg, body) }
+            // The submitted Runnable is the DeliveryTask itself so [rejectedHandler]
+            // can recover the event identity for its WARN on a queue-full drop.
+            executor?.execute(DeliveryTask("label.purchased", event.sessionId, body, cfg))
         } catch (e: RejectedExecutionException) {
-            log.debug("Usage event dropped (emitter shut down): {}", e.message)
+            // Defensive: rejectedHandler swallows rejections, so this is not
+            // normally reached; count it as a drop rather than lose it silently.
+            droppedEvents.incrementAndGet()
+            log.warn(
+                "Usage event dropped (executor rejected, session={}): {}",
+                event.sessionId,
+                e.message,
+            )
         } catch (e: Exception) {
-            log.warn("Usage event dropped (could not serialize/enqueue): {}", e.message)
+            droppedEvents.incrementAndGet()
+            log.warn(
+                "Usage event dropped (could not serialize/enqueue, session={}): {}",
+                event.sessionId,
+                e.message,
+            )
         }
+    }
+
+    /**
+     * The unit of background work: carries the event identity alongside the
+     * serialized body so both the delivery path and [rejectedHandler] can name
+     * the exact event in their logs. `run()` performs the fire-and-forget POST.
+     */
+    private inner class DeliveryTask(
+        val eventType: String,
+        val eventId: String,
+        val body: String,
+        private val cfg: UsageEventsConfig,
+    ) : Runnable {
+        override fun run() = deliver(cfg, this)
     }
 
     /** The canonical `label.purchased` envelope, version 1. */
@@ -166,28 +247,47 @@ class UsageEventEmitter(
      */
     private fun deliver(
         cfg: UsageEventsConfig,
-        body: String,
+        task: DeliveryTask,
     ) {
+        val id = "${task.eventType}/${task.eventId}"
         try {
-            val first = attempt(cfg, body)
+            val first = attempt(cfg, task.body)
             if (first != null && first in 200..299) return
             if (first != null && first in 400..499) {
-                log.warn("Usage event rejected by the receiver (HTTP {}); not retrying", first)
+                failedDeliveries.incrementAndGet()
+                log.warn(
+                    "Usage event delivery FAILED: receiver rejected (HTTP {}), not retrying, event={}; " +
+                        "reconcile — operator-console money_in/label_spend will under-count this event",
+                    first,
+                    id,
+                )
                 return
             }
             try {
                 Thread.sleep(retryDelayMs)
             } catch (e: InterruptedException) {
                 Thread.currentThread().interrupt()
+                failedDeliveries.incrementAndGet()
+                log.warn(
+                    "Usage event delivery FAILED: interrupted before retry, event={}; may under-count",
+                    id,
+                )
                 return
             }
-            val second = attempt(cfg, body)
+            val second = attempt(cfg, task.body)
             if (second == null || second !in 200..299) {
-                log.warn("Usage event delivery failed after retry (event dropped)")
+                failedDeliveries.incrementAndGet()
+                log.warn(
+                    "Usage event delivery FAILED after retry (event dropped): event={}, lastStatus={}; " +
+                        "reconcile — operator-console money_in/label_spend will under-count this event",
+                    id,
+                    second,
+                )
             }
         } catch (e: Exception) {
             // Fire-and-forget guarantee: nothing here may ever propagate.
-            log.warn("Usage event delivery error: {}", e.message)
+            failedDeliveries.incrementAndGet()
+            log.warn("Usage event delivery FAILED: {}, event={}; may under-count", e.message, id)
         }
     }
 

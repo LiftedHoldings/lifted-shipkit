@@ -37,6 +37,7 @@ import okhttp3.Response
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.io.IOException
 import java.math.BigDecimal
 import java.text.Normalizer
 import java.util.concurrent.Callable
@@ -651,7 +652,7 @@ class ApiIntegrationTest {
         }
         // The gate refuses BEFORE any charge is attempted.
         verify(exactly = 0) { payments.saveCard(any(), any()) }
-        verify(exactly = 0) { payments.chargeSavedCard(any(), any(), any()) }
+        verify(exactly = 0) { payments.chargeSavedCard(any(), any(), any(), any()) }
     }
 
     @Test
@@ -679,7 +680,7 @@ class ApiIntegrationTest {
                 """{"vault_id":"c:1","shipment_id":"s","rate_id":"r","idempotency_key":"k"}""",
             ).use { assertEquals(403, it.code, "a browser key may never charge a saved card") }
         }
-        verify(exactly = 0) { payments.chargeSavedCard(any(), any(), any()) }
+        verify(exactly = 0) { payments.chargeSavedCard(any(), any(), any(), any()) }
     }
 
     @Test
@@ -714,7 +715,9 @@ class ApiIntegrationTest {
         val payments = mockk<LiftedPaymentsClient>()
         every { easyPost.priceRate(any(), any(), any()) } returns
             PaymentPricing.Quote(amount = "8.74", baseRate = BigDecimal("7.36"), currency = "USD")
-        every { payments.chargeSavedCard(any(), any(), any()) } returns
+        // No prior charge exists for this externalId (fresh idempotency key).
+        every { payments.verifyFrictionlessCharge(any()) } returns null
+        every { payments.chargeSavedCard(any(), any(), any(), any()) } returns
             GatewayResult(transactionId = "txn_s", status = "approved", approved = true)
         every { easyPost.buyLabel(any(), any(), any(), any()) } returns boughtLabel()
         val cfg = config().copy(tier = TierMode.MANAGED, frictionlessAllowed = true)
@@ -735,7 +738,7 @@ class ApiIntegrationTest {
                 assertTrue(it.body!!.string().contains("https://label.example/1.png"))
             }
         }
-        verify(exactly = 1) { payments.chargeSavedCard(any(), any(), any()) }
+        verify(exactly = 1) { payments.chargeSavedCard(any(), any(), any(), any()) }
         verify(exactly = 1) { easyPost.buyLabel(any(), any(), any(), any()) }
     }
 
@@ -745,7 +748,9 @@ class ApiIntegrationTest {
         val payments = mockk<LiftedPaymentsClient>()
         every { easyPost.priceRate(any(), any(), any()) } returns
             PaymentPricing.Quote(amount = "8.74", baseRate = BigDecimal("7.36"), currency = "USD")
-        every { payments.chargeSavedCard(any(), any(), any()) } returns
+        // No prior charge exists for this externalId (fresh idempotency key).
+        every { payments.verifyFrictionlessCharge(any()) } returns null
+        every { payments.chargeSavedCard(any(), any(), any(), any()) } returns
             GatewayResult(transactionId = "txn_d", status = "declined", approved = false)
         val cfg = config().copy(tier = TierMode.MANAGED, frictionlessAllowed = true)
         val w = wire(easyPost = easyPost, payments = payments, config = cfg)
@@ -767,7 +772,9 @@ class ApiIntegrationTest {
         val payments = mockk<LiftedPaymentsClient>()
         every { easyPost.priceRate(any(), any(), any()) } returns
             PaymentPricing.Quote(amount = "8.74", baseRate = BigDecimal("7.36"), currency = "USD")
-        every { payments.chargeSavedCard(any(), any(), any()) } returns
+        // No prior charge exists for this externalId (fresh idempotency key).
+        every { payments.verifyFrictionlessCharge(any()) } returns null
+        every { payments.chargeSavedCard(any(), any(), any(), any()) } returns
             GatewayResult(transactionId = "txn_s", status = "approved", approved = true)
         // The buy fails the FIRST time (crash after a successful charge), then succeeds.
         var buyCalls = 0
@@ -792,8 +799,62 @@ class ApiIntegrationTest {
             }
         }
         // The money-safety invariant: charged EXACTLY once, bought twice.
-        verify(exactly = 1) { payments.chargeSavedCard(any(), any(), any()) }
+        verify(exactly = 1) { payments.chargeSavedCard(any(), any(), any(), any()) }
         verify(exactly = 2) { easyPost.buyLabel(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `a saved-card charge whose response is lost on timeout does NOT double-charge on retry`() {
+        val easyPost = mockk<EasyPostService>()
+        val payments = mockk<LiftedPaymentsClient>()
+        every { easyPost.priceRate(any(), any(), any()) } returns
+            PaymentPricing.Quote(amount = "8.74", baseRate = BigDecimal("7.36"), currency = "USD")
+        // The gateway charges the card, but every HTTP response is lost (timeout):
+        // each chargeSavedCard invocation = one real charge, so the money-safety
+        // invariant is that it is invoked AT MOST ONCE across both requests.
+        every { payments.chargeSavedCard(any(), any(), any(), any()) } throws
+            IOException("read timed out")
+        // Reconciliation by externalId: the charge is not yet queryable while the
+        // first request runs (pre-charge lookup + in-request recovery both find
+        // nothing), then the gateway indexes it, so the RETRY's pre-charge lookup
+        // discovers the already-approved charge and adopts it.
+        every { payments.verifyFrictionlessCharge(any()) } returnsMany
+            listOf(
+                null,
+                null,
+                GatewayResult(
+                    transactionId = "txn_recovered",
+                    status = "approved",
+                    approved = true,
+                ),
+            )
+        every { easyPost.buyLabel(any(), any(), any(), any()) } returns boughtLabel()
+        val cfg = config().copy(tier = TierMode.MANAGED, frictionlessAllowed = true)
+        val w = wire(easyPost = easyPost, payments = payments, config = cfg)
+
+        val reqBody =
+            """{"vault_id":"cust_1:card_1","shipment_id":"shp_1","rate_id":"rate_1","idempotency_key":"k-timeout"}"""
+        JavalinTest.test(w.app) { _, client ->
+            // First call: the charge times out and cannot yet be reconciled → 502.
+            post(client.origin, "/api/payment/charge-saved-card", w.key, reqBody).use {
+                assertEquals(502, it.code, "the charge response was lost")
+            }
+            // Retry with the SAME idempotency key: the pre-charge externalId lookup
+            // finds the prior charge and adopts it — the card is NOT charged again.
+            post(client.origin, "/api/payment/charge-saved-card", w.key, reqBody).use {
+                assertEquals(200, it.code, "the retry adopts the prior charge")
+                val body = it.body!!.string()
+                assertTrue(body.contains("https://label.example/1.png"), "label returned: $body")
+                assertTrue(body.contains(""""transaction_id":"txn_recovered""""), body)
+            }
+        }
+        // Money-safety: exactly ONE real charge attempt, reconciled by the
+        // DETERMINISTIC externalId (= "saved-<idempotency_key>"), then bought once.
+        verify(exactly = 1) {
+            payments.chargeSavedCard(any(), any(), any(), externalId = "saved-k-timeout")
+        }
+        verify { payments.verifyFrictionlessCharge("saved-k-timeout") }
+        verify(exactly = 1) { easyPost.buyLabel(any(), any(), any(), any()) }
     }
 
     @Test

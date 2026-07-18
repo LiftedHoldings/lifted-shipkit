@@ -14,6 +14,8 @@ import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -521,6 +523,47 @@ class LiftedPaymentsClientHttpTest {
         assertTrue(sent.contains(""""3ds":false"""), "3ds is explicitly OFF: $sent")
         assertTrue(sent.contains(""""card":{"token":"tok_f"}"""), sent)
         assertTrue(sent.contains(""""amount":"4.20""""), sent)
+    }
+
+    @Test
+    fun `saleFrictionless registers a pre-supplied externalId on the charge`() {
+        val slot = slot<Request>()
+        val http = capturing(200, """{"id":"txn_f","status":{"status":"Approved"}}""", slot)
+        LiftedPaymentsClient(frictionlessConfig, http)
+            .saleFrictionless(BigDecimal("4.20"), cardToken = "tok_f", externalId = "saved-k-1")
+
+        // The idempotency key is registered on the sale so a lost-response charge is
+        // reconcilable by externalId (verifyFrictionlessCharge) rather than doubled.
+        val sent = bodyOf(slot.captured)
+        assertTrue(sent.contains(""""externalId":"saved-k-1""""), "externalId registered: $sent")
+    }
+
+    @Test
+    fun `verifyFrictionlessCharge treats an approved no-3DS charge as approved`() {
+        // A frictionless charge carries no threeds block; the forced-3DS verifyPayment
+        // would misread it as declined, so the frictionless lookup must NOT shift-gate.
+        val body =
+            """
+            {"items":[{"id":"txn_f","externalId":"saved-k-1","status":{"status":"Approved"}}],
+             "_meta":{"totalCount":1}}
+            """.trimIndent()
+        val client = LiftedPaymentsClient(frictionlessConfig, http(200, body))
+
+        val r = client.verifyFrictionlessCharge("saved-k-1")
+        assertNotNull(r)
+        assertEquals("approved", r!!.status)
+        assertTrue(r.approved, "frictionless approval is not shift-gated")
+        assertEquals("txn_f", r.transactionId)
+    }
+
+    @Test
+    fun `verifyFrictionlessCharge returns null when no matching charge exists yet`() {
+        val client =
+            LiftedPaymentsClient(
+                frictionlessConfig,
+                http(200, """{"items":[],"_meta":{"totalCount":0}}"""),
+            )
+        assertNull(client.verifyFrictionlessCharge("saved-nope"))
     }
 
     @Test

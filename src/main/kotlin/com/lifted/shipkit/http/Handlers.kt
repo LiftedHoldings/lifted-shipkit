@@ -961,6 +961,15 @@ class Handlers(
      * card is charged before the label is bought — a buy that fails after a
      * successful charge does NOT re-charge on retry (the recorded `approved` session
      * short-circuits the charge, only the label buy is re-attempted).
+     *
+     * The charge carries a **deterministic externalId** (the session id, keyed off
+     * the idempotency key) registered on the gateway before the money call, so a
+     * charge whose HTTP response is lost (a network timeout after the gateway
+     * charged) is reconciled — not re-charged: the handler looks the charge up by
+     * externalId ([LiftedPaymentsClient.verifyFrictionlessCharge]) both before
+     * charging and after a charge IOException, and adopts an already-approved
+     * charge instead of charging the card twice. This mirrors the 3-D Secure
+     * hosted-form path, which reconciles by externalId via `verifyPayment`.
      * Emits `{label_url, qr_code_url, tracking_code, carrier, service, transaction_id, amount}`.
      */
     fun chargeSavedCard(ctx: Context) =
@@ -1035,17 +1044,67 @@ class Handlers(
             // — retry the buy WITHOUT charging again.
             val priorCharge = store.getPaymentSession(sessionId)
             if (priorCharge?.status != "approved") {
-                val result =
+                // Deterministic idempotency key registered on the gateway before the
+                // charge, so a lost-response charge can be reconciled (not
+                // re-charged) by externalId — see verifyFrictionlessCharge.
+                val externalId = sessionId
+
+                // (1) Reconcile BEFORE charging. A previous request whose HTTP
+                // response was lost may already have charged this card; if the
+                // gateway shows an approved charge for this externalId, adopt it and
+                // never charge a second time. A lookup error falls through to the
+                // charge, whose own lost-response recovery (2) still guards a double.
+                val existing =
                     try {
-                        client.chargeSavedCard(amount, vaultId, billing)
+                        client.verifyFrictionlessCharge(externalId)
                     } catch (e: IOException) {
-                        store.releaseLabelPurchaseClaim(sessionId)
-                        log.warn("Saved-card charge failed for {}: {}", sessionId, e.message)
-                        return@withPayments fail(
-                            ctx,
-                            502,
-                            "Could not charge the saved card; please retry",
+                        log.warn(
+                            "Saved-card pre-charge reconcile failed for {}: {}",
+                            sessionId,
+                            e.message,
                         )
+                        null
+                    }
+
+                val result =
+                    if (existing != null && existing.approved) {
+                        existing
+                    } else {
+                        try {
+                            client.chargeSavedCard(
+                                amount,
+                                vaultId,
+                                billing,
+                                externalId = externalId,
+                            )
+                        } catch (e: IOException) {
+                            // (2) The gateway MAY have charged the card before the
+                            // response was lost. Reconcile by the pre-registered
+                            // externalId BEFORE giving up; adopt an already-approved
+                            // charge so a client retry does not re-charge the card.
+                            val recovered =
+                                runCatching { client.verifyFrictionlessCharge(externalId) }
+                                    .getOrNull()
+                            if (recovered == null || !recovered.approved) {
+                                store.releaseLabelPurchaseClaim(sessionId)
+                                log.warn(
+                                    "Saved-card charge failed for {}: {}",
+                                    sessionId,
+                                    e.message,
+                                )
+                                return@withPayments fail(
+                                    ctx,
+                                    502,
+                                    "Could not charge the saved card; please retry",
+                                )
+                            }
+                            log.warn(
+                                "Saved-card charge response lost for {}; adopted the prior " +
+                                    "charge via externalId reconciliation (no re-charge)",
+                                sessionId,
+                            )
+                            recovered
+                        }
                     }
                 if (!result.approved) {
                     store.releaseLabelPurchaseClaim(sessionId)
@@ -1061,7 +1120,7 @@ class Handlers(
                         amount = amount.toDouble(),
                         description =
                             body["description"] as? String ?: "Shipping Label Purchase (saved card)",
-                        externalId = result.transactionId.ifBlank { sessionId },
+                        externalId = result.transactionId.ifBlank { externalId },
                         createdAt = System.currentTimeMillis(),
                         status = "approved",
                         shipmentId = shipmentId,

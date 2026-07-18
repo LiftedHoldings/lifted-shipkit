@@ -640,7 +640,9 @@ class ManagedOpsIntegrationTest {
                     baseRate = BigDecimal("7.36"),
                     currency = "USD",
                 )
-            every { payments.chargeSavedCard(any(), any(), any()) } returns
+            // No prior charge exists for this externalId (fresh idempotency key).
+            every { payments.verifyFrictionlessCharge(any()) } returns null
+            every { payments.chargeSavedCard(any(), any(), any(), any()) } returns
                 GatewayResult(transactionId = "txn_s", status = "approved", approved = true)
             every { easyPost.buyLabel(any(), any(), any(), any()) } returns
                 BoughtLabel(
