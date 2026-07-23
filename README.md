@@ -17,7 +17,7 @@ Add multi-carrier shipping-label buying to any store, with card payment locked d
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-00E18C.svg)](CONTRIBUTING.md)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-2E6BFF.svg)](build.gradle.kts)
 [![Secured by 3-D Secure](https://img.shields.io/badge/3--D%20Secure-required-19C7F5.svg)](docs/3d-secure.md)
-[![Lifted Payments](https://img.shields.io/badge/payments-Lifted%20Payments%203DS-2E6BFF.svg)](https://liftedholdings.com/payments)
+[![Lifted Payments](https://img.shields.io/badge/payments-Lifted%20Payments%203DS-2E6BFF.svg)](https://liftedpayments.com)
 
 [![Run in Postman](https://run.pstmn.io/button.svg)](https://god.gw.postman.com/run-collection/36630865-bd2412e8-cfe6-42e4-9fe6-e3ae9d025750?action=collection%2Ffork)
 
@@ -321,4 +321,4 @@ Searching GitHub for a shipping library? These are the topics this repo is filed
 
 MIT © 2026 Daniel Wilson Kemp / Lifted Holdings. See [LICENSE](LICENSE).
 
-Developer help: [support@liftedholdings.com](mailto:support@liftedholdings.com) · Payments powered by [Lifted Payments 3-D Secure — apply at liftedholdings.com/payments](https://liftedholdings.com/payments).
+Developer help: [support@liftedholdings.com](mailto:support@liftedholdings.com) · Payments powered by [Lifted Payments](https://liftedpayments.com) 3-D Secure — [apply at liftedholdings.com/payments](https://liftedholdings.com/payments).
